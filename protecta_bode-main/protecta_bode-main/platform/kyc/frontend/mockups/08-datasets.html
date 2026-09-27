@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunguza - Datasets & Sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#0b0b0d;--paper-2:#0e0e11;--panel:#111114;--panel-2:#16161a;--panel-3:#1c1c21;--ink:#f2f1ec;--mid:#8a8a90;--soft:#5a5a60;--rule:#1e1e22;--rule-strong:#2a2a30;--rule-ghost:#16161a;--accent:#00F0FF;--accent-ink:#66f7ff;--accent-soft:rgba(0,240,255,.10);--accent-fg:#03171b;--green:#34d399;--amber:#fbbf24;--red:#f87171;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--sans:'Geist','Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;max-width:1320px;margin:0 auto}
+.side{border-right:1px solid var(--rule-ghost);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--paper)}
+.brand{display:flex;align-items:center;gap:10px;padding:18px;border-bottom:1px solid var(--rule-ghost);font-family:var(--mono);font-weight:600;font-size:13px}
+.brand-mark{width:18px;height:18px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.brand-mark span:nth-child(1),.brand-mark span:nth-child(4){background:var(--ink)}
+.brand-mark span:nth-child(2),.brand-mark span:nth-child(3){background:var(--accent)}
+.side-group{padding:14px 8px 4px}
+.side-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);padding:0 12px 6px}
+.side-link{display:flex;align-items:center;gap:10px;padding:7px 12px;font-family:var(--mono);font-size:12.5px;color:var(--mid);border-left:2px solid transparent;background:transparent;border:none;width:100%;text-align:left;cursor:pointer}
+.side-link:hover{color:var(--ink)}
+.side-link.on{color:var(--ink);background:var(--panel);border-left-color:var(--accent)}
+.ic{width:5px;height:5px;background:var(--mid);flex-shrink:0}
+.side-link.on .ic{background:var(--accent)}
+.side-foot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--rule-ghost);font-family:var(--mono);font-size:11px;color:var(--mid)}
+.side-foot .row{display:flex;justify-content:space-between;padding:3px 0}
+.side-foot .ok{color:var(--accent)}
+.side-foot .signout{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border:1px solid var(--rule-strong);border-radius:5px;color:var(--mid);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:border-color .15s,color .15s}
+.side-foot .signout:hover{border-color:var(--ink);color:var(--ink)}
+.side-foot .signout .glyph{width:5px;height:5px;flex:0 0 auto;background:var(--mid)}
+.side-foot .signout:hover .glyph{background:var(--ink)}
+.top{border-bottom:1px solid var(--rule-ghost);display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--paper);position:sticky;top:0;z-index:30}
+.crumbs{font-family:var(--mono);font-size:12px;color:var(--mid);display:flex;gap:6px;align-items:center}
+.crumbs .sep{color:var(--soft)}
+.crumbs .here{color:var(--ink)}
+.page{padding:28px 32px 80px;max-width:1280px;margin:0 auto}
+.page-head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:22px;margin-bottom:18px;border-bottom:1px solid var(--rule-ghost)}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)}
+.page-h1{font-size:30px;letter-spacing:-.025em;font-weight:500;margin:8px 0 6px;line-height:1.05}
+.page-sub{color:var(--mid);max-width:64ch}
+.card{background:var(--panel);padding:18px 20px;margin-bottom:14px}
+.card-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-ghost);display:flex;justify-content:space-between;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;background:transparent !important;border:1px solid var(--rule-strong);color:var(--ink);transition:all .15s}
+.btn.primary{background:transparent !important;color:var(--accent);border:1px solid var(--accent)}
+.btn.primary:hover{background:transparent !important;color:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule-ghost)}
+.btn.ghost:hover{background:transparent !important;border-color:var(--accent);color:var(--accent)}
+.btn.small{padding:7px 10px;font-size:11px}
+.badge{font-family:var(--mono);font-size:10px;padding:3px 7px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;border:1px solid transparent}
+.b-ok{color:var(--ink) !important;background:transparent !important;border:1px solid var(--rule-strong) !important}
+.b-warn{color:var(--ink) !important;background:transparent !important;border:1px solid var(--rule-strong) !important}
+.b-err{color:var(--red) !important;background:transparent !important;border:1px solid var(--red) !important}
+.kv{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.kv td{border:1px solid var(--rule-ghost);padding:8px 10px;overflow:hidden;text-overflow:ellipsis;word-break:break-word;vertical-align:middle}
+.kv .k{color:var(--mid);font-family:var(--mono);font-size:11.5px;width:28%;white-space:nowrap}
+.kv .v{font-weight:500;word-break:break-word}
+.mono{font-family:var(--mono);font-size:11.5px;word-break:break-word}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th{padding:8px 12px;text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--rule-ghost);background:var(--panel-2);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--rule-ghost);overflow:hidden;text-overflow:ellipsis;word-break:break-word;vertical-align:middle}
+tr:hover td{background:var(--panel-2)}
+.path{font-family:var(--mono);font-size:11px;color:var(--mid);background:var(--paper-2);border:1px solid var(--rule-ghost);padding:10px 12px;white-space:pre-wrap;word-break:break-word;line-height:1.7}
+/* single column layout for datasets page */
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><div class="brand-mark"><span></span><span></span><span></span><span></span></div>chunguza</div>
+  <div class="side-group" style="padding-top:14px">
+    <div class="side-label">Overview</div>
+    <button class="side-link" onclick="location.href='index.html'"><span class="ic"></span>Mockup Index</button>
+    <button class="side-link" onclick="location.href='01-login.html'"><span class="ic"></span>Login Screen</button>
+    <button class="side-link" onclick="location.href='02-dashboard.html'"><span class="ic"></span>Dashboard</button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Screening &amp; Ops</div>
+    <button class="side-link" onclick="location.href='03-screen.html'"><span class="ic"></span>Single Screen</button>
+    <button class="side-link" onclick="location.href='04-screening-detail.html'"><span class="ic"></span>Screen Detail</button>
+    <button class="side-link" onclick="location.href='05-bulk-screen.html'"><span class="ic"></span>Bulk Screen</button>
+    <button class="side-link" onclick="location.href='06-entity-search.html'"><span class="ic"></span>Entity Search</button>
+    <button class="side-link" onclick="location.href='13-analyst-workspace.html'"><span class="ic"></span>Analyst Workspace <span class="tag">cockpit</span></button>
+    <button class="side-link" onclick="location.href='07-cases.html'"><span class="ic"></span>Cases</button>
+    <button class="side-link on"><span class="ic"></span>Datasets &amp; Sync</button>
+    <button class="side-link" onclick="location.href='09-reports.html'"><span class="ic"></span>Reports Index</button>
+    <button class="side-link" onclick="location.href='14-printable-report.html'"><span class="ic"></span>Printable Report <span class="tag">pdf</span></button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Admin &amp; Security</div>
+    <button class="side-link" onclick="location.href='10-settings.html'"><span class="ic"></span>Settings &amp; Policies</button>
+    <button class="side-link" onclick="location.href='11-api-keys.html'"><span class="ic"></span>API Key Vault</button>
+    <button class="side-link" onclick="location.href='12-user-profiles.html'"><span class="ic"></span>User Profiles &amp; RBAC</button>
+  </div>
+  <div class="side-foot">
+    <div class="row"><span>active user</span><span class="ok">Hassan Dahir</span></div>
+    <div class="row"><span>schedule</span><span style="color:var(--ink)">01:00 UTC daily</span></div>
+    <div class="row"><span>stale &gt;</span><span>48h</span></div>
+    <a class="signout" href="01-login.html"><span class="glyph"></span><span>Sign out</span></a>
+  </div>
+</aside>
+
+<main style="background:var(--paper);min-width:0">
+  <header class="top">
+    <div class="crumbs"><span>console</span><span class="sep">/</span><span>system</span><span class="sep">/</span><span class="here">datasets</span></div>
+    <div class="top-spacer"></div>
+    <div class="user-badge" onclick="location.href='12-user-profiles.html'" style="display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--rule-strong);padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:11.5px;cursor:pointer">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block"></span>
+      <span>Hassan Dahir</span>
+      <span style="color:var(--accent-ink);font-weight:600">[Super User]</span>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">// system · opensanctions sync</div>
+        <h1 class="page-h1">Datasets & Sync</h1>
+        <p class="page-sub">Atomic snapshot pipeline. Daily Celery pull from <span style="font-family:var(--mono);font-size:12px">data.opensanctions.org</span> - only container with internet. Broken downloads never replace the working index.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost">View Logs</button>
+        <button class="btn primary"> Trigger Sync (admin)</button>
+      </div>
+    </div>
+
+    <!-- SINGLE COLUMN DATASETS -->
+    <div>
+      <!-- Current Dataset -->
+      <div class="card">
+        <div class="card-h">Current dataset <span class="badge b-ok">fresh · synced 7h ago</span></div>
+        <table class="kv">
+          <tr><td class="k">Name</td><td class="v mono">opensanctions_default</td></tr>
+          <tr><td class="k">Version</td><td class="v mono">2026-08-06 · index.json</td></tr>
+          <tr><td class="k">Entities</td><td class="v mono">1,428,551</td></tr>
+          <tr><td class="k">Source</td><td class="v mono">https://data.opensanctions.org/…/entities.ftm.json</td></tr>
+          <tr><td class="k">Checksum</td><td class="v mono" style="font-size:11px">sha256: a4f2c9…9e11 · verified</td></tr>
+          <tr><td class="k">Last succeeded</td><td class="v mono">2026-08-06 19:04 UTC · completed in 214s</td></tr>
+          <tr><td class="k">Stale?</td><td class="v" style="color:var(--green)">No - 7h &lt; 48h threshold</td></tr>
+        </table>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--mid);border:1px solid var(--rule-ghost);padding:4px 8px;background:var(--panel-2)">yente dataset: default</span>
+          <span style="font-family:var(--mono);font-size:11px;color:var(--mid);border:1px solid var(--rule-ghost);padding:4px 8px;background:var(--panel-2)">index: opensanctions</span>
+        </div>
+      </div>
+
+      <!-- Sync History -->
+      <div class="card">
+        <div class="card-h">Sync history <span style="font-family:var(--mono);font-size:11px;color:var(--soft);text-transform:none;letter-spacing:0">dataset_syncs · last 6</span></div>
+        <table>
+          <thead><tr><th>Version</th><th>Entities</th><th>Status</th><th>Started</th><th>Duration</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">2026-08-06</td><td class="mono">1,428,551</td><td><span class="badge b-ok">succeeded</span></td><td class="mono" style="font-size:11px">19:00 UTC</td><td class="mono" style="font-size:11px">214s</td></tr>
+            <tr><td class="mono">2026-08-05</td><td class="mono">1,427,902</td><td><span class="badge b-ok">succeeded</span></td><td class="mono" style="font-size:11px">01:00 UTC</td><td class="mono" style="font-size:11px">198s</td></tr>
+            <tr><td class="mono">2026-08-04</td><td class="mono">1,426,884</td><td><span class="badge b-ok">succeeded</span></td><td class="mono" style="font-size:11px">01:00 UTC</td><td class="mono" style="font-size:11px">201s</td></tr>
+            <tr><td class="mono">2026-08-03</td><td class="mono">1,425,121</td><td><span class="badge b-ok">succeeded</span></td><td class="mono" style="font-size:11px">01:02 UTC</td><td class="mono" style="font-size:11px">205s</td></tr>
+            <tr><td class="mono">2026-08-02</td><td class="mono">-</td><td><span class="badge b-err">failed</span></td><td class="mono" style="font-size:11px">01:00 UTC</td><td class="mono" style="font-size:11px">12s · checksum mismatch</td></tr>
+            <tr><td class="mono">2026-08-01</td><td class="mono">1,424,903</td><td><span class="badge b-ok">succeeded</span></td><td class="mono" style="font-size:11px">01:00 UTC</td><td class="mono" style="font-size:11px">190s</td></tr>
+          </tbody>
+        </table>
+        <p style="font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:8px">Failed run (2026-08-02) was quarantined under <span style="color:var(--mid)">/failed/</span> - current index untouched.</p>
+      </div>
+
+      <!-- Atomic Snapshot Layout -->
+      <div class="card">
+        <div class="card-h">Atomic snapshot layout</div>
+        <div class="path">/data/opensanctions/
+├── <span style="color:var(--green)">current/</span>   <- active index (Elasticsearch)
+│    ├── entities.ftm.json
+│    ├── index.json (manifest)
+│    └── sha256.txt
+├── snapshots/2026-08-06/  <span style="color:var(--mid)"><- new download + validate</span>
+├── snapshots/2026-08-05/
+└── failed/   <- quarantined (2026-08-02)</div>
+        <p style="font-size:12.5px;color:var(--mid);margin-top:10px">Validated + checksummed before atomic swap. Zero downtime.</p>
+      </div>
+
+      <!-- Sync Trigger -->
+      <div class="card">
+        <div class="card-h">Sync trigger (admin)</div>
+        <p style="font-size:12.5px;color:var(--mid)">Requires <span style="font-family:var(--mono);color:var(--ink)">X-API-Key: admin</span> -> <span style="font-family:var(--mono)">POST /v1/datasets/sync</span></p>
+        <div style="margin-top:10px;background:var(--panel-2);border:1px solid var(--rule-ghost);padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--mid)">
+          -> INSERT dataset_syncs (running) … RETURNING id<br>
+          -> sync_opensanctions_dataset.delay()<br>
+          <- { sync_id: 47, status: "started" }
+        </div>
+        <p style="font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:8px">If Celery unavailable -> inline fallback (dev).</p>
+        <button class="btn primary" style="width:100%;justify-content:center;margin-top:10px"> Trigger now (admin) -></button>
+      </div>
+
+      <!-- Freshness Check -->
+      <div class="card">
+        <div class="card-h">Freshness check</div>
+        <table class="kv">
+          <tr><td class="k">Threshold</td><td class="v mono">48h (stale_data_threshold_hours)</td></tr>
+          <tr><td class="k">Now</td><td class="v mono">2026-08-07 02:04 UTC</td></tr>
+          <tr><td class="k">Age</td><td class="v mono">7h</td></tr>
+          <tr><td class="k">Banner</td><td class="v"><span class="badge b-ok">fresh</span> · else <span class="badge b-warn">stale</span> + alert</td></tr>
+        </table>
+      </div>
+
+      <div class="card" style="background:var(--panel-2);border:1px dashed var(--rule-strong)">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--mid)">Network isolation</div>
+        <p style="font-size:12.5px;color:var(--mid);margin-top:6px">api, yente, elasticsearch, postgres, redis - <span style="color:var(--red)">no internet</span>. Only celery-worker reaches <span style="font-family:var(--mono)">data.opensanctions.org</span>.</p>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</body>
+</html>

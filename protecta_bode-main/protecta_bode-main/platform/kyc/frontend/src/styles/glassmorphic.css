@@ -1,0 +1,294 @@
+/*
+ * v2 Design System - HomePageV2 overrides
+ *
+ * Solid borders, sharp edges, CSS variable colors.
+ * Animations and responsive rules preserved.
+ */
+
+/* ── Glass card base (v2: solid panel, no blur) ─────────── */
+
+.glass-card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+
+/* ── Bento card hover ─────────────────────────────────────── */
+
+.bento-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+}
+
+/* ── Pipeline step hover ──────────────────────────────────── */
+
+.pipeline-glass-step:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+}
+
+/* ── Pricing highlight card ───────────────────────────────── */
+
+.pricing-highlight {
+  border: 2px solid var(--accent) !important;
+  background: var(--accent-soft) !important;
+  border-radius: 0 !important;
+}
+
+.pricing-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 0;
+  letter-spacing: 0.04em;
+}
+
+/* ── Hero gradient mesh ───────────────────────────────────── */
+
+.hero-gradient-mesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 600px 400px at 30% 20%, color-mix(in oklab, var(--accent) 6%, transparent), transparent),
+    radial-gradient(ellipse 500px 350px at 70% 60%, rgba(96, 165, 250, 0.04), transparent),
+    radial-gradient(ellipse 400px 300px at 50% 40%, rgba(167, 139, 250, 0.03), transparent);
+}
+
+/* ── Hero gradient text ───────────────────────────────────── */
+
+.hero-gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 50%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Scanning card ────────────────────────────────────────── */
+
+.scanning-card {
+  border-color: var(--rule) !important;
+  border-radius: 0 !important;
+}
+
+/* Scan line animation */
+.scan-line {
+  animation: scanMove 2.5s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+  0%   { top: 10%; }
+  50%  { top: 85%; }
+  100% { top: 10%; }
+}
+
+/* Hero arrow pulse */
+.hero-arrow {
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50%      { opacity: 1;   transform: translateX(4px); }
+}
+
+/* ── CTA button effects (v2: minimal, no glow) ──────────── */
+
+.cta-primary {
+  transition: transform 0.2s ease;
+}
+
+.cta-primary:hover {
+  transform: translateY(-1px);
+}
+
+.cta-secondary {
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.cta-secondary:hover {
+  transform: translateY(-1px);
+  border-color: var(--ink);
+}
+
+/* ── V2 scroll reveal ─────────────────────────────────────── */
+
+.v2-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  transition-delay: var(--reveal-delay, 0s);
+}
+
+.v2-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Hero gradient patterns - fine security guilloche + crosshatch ── */
+
+.pattern-guilloche-rainbow::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cdefs%3E%3Cpattern id='g' width='200' height='200' patternUnits='userSpaceOnUse'%3E%3Cpath d='M0 20 Q25 5 50 20 T100 20 T150 20 T200 20' fill='none' stroke='%2300F0FF' stroke-width='0.8'/%3E%3Cpath d='M0 40 Q25 25 50 40 T100 40 T150 40 T200 40' fill='none' stroke='%2300F0FF' stroke-width='0.6'/%3E%3Cpath d='M0 60 Q25 45 50 60 T100 60 T150 60 T200 60' fill='none' stroke='%2300F0FF' stroke-width='0.8'/%3E%3Cpath d='M0 80 Q25 65 50 80 T100 80 T150 80 T200 80' fill='none' stroke='%2300F0FF' stroke-width='0.6'/%3E%3Cpath d='M0 100 Q25 85 50 100 T100 100 T150 100 T200 100' fill='none' stroke='%2300F0FF' stroke-width='0.8'/%3E%3Cpath d='M0 120 Q25 105 50 120 T100 120 T150 120 T200 120' fill='none' stroke='%2300F0FF' stroke-width='0.6'/%3E%3Cpath d='M0 140 Q25 125 50 140 T100 140 T150 140 T200 140' fill='none' stroke='%2300F0FF' stroke-width='0.8'/%3E%3Cpath d='M0 160 Q25 145 50 160 T100 160 T150 160 T200 160' fill='none' stroke='%2300F0FF' stroke-width='0.6'/%3E%3Cpath d='M0 180 Q25 165 50 180 T100 180 T150 180 T200 180' fill='none' stroke='%2300F0FF' stroke-width='0.8'/%3E%3Cpath d='M0 30 Q25 45 50 30 T100 30 T150 30 T200 30' fill='none' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cpath d='M0 70 Q25 85 50 70 T100 70 T150 70 T200 70' fill='none' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cpath d='M0 110 Q25 125 50 110 T100 110 T150 110 T200 110' fill='none' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cpath d='M0 150 Q25 165 50 150 T100 150 T150 150 T200 150' fill='none' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cpath d='M0 190 Q25 205 50 190 T100 190 T150 190 T200 190' fill='none' stroke='%2300F0FF' stroke-width='0.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='200' height='200' fill='url(%23g)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+.pattern-crosshatch-rainbow::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cline x1='0' y1='0' x2='24' y2='24' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cline x1='24' y1='0' x2='0' y2='24' stroke='%2300F0FF' stroke-width='0.5'/%3E%3Cline x1='0' y1='12' x2='12' y2='24' stroke='%2300F0FF' stroke-width='0.35'/%3E%3Cline x1='12' y1='0' x2='24' y2='12' stroke='%2300F0FF' stroke-width='0.35'/%3E%3Cline x1='24' y1='12' x2='12' y2='24' stroke='%2300F0FF' stroke-width='0.35'/%3E%3Cline x1='12' y1='0' x2='0' y2='12' stroke='%2300F0FF' stroke-width='0.35'/%3E%3C/svg%3E");
+  background-size: 24px 24px;
+}
+
+/* ── Verifiable Credentials section ──────────────────────── */
+
+/* Credential card - v2: solid border, no glassmorphism */
+.vc-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.vc-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      color-mix(in oklab, var(--accent) 4%, transparent) 19px,
+      color-mix(in oklab, var(--accent) 4%, transparent) 20px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      color-mix(in oklab, var(--accent) 4%, transparent) 19px,
+      color-mix(in oklab, var(--accent) 4%, transparent) 20px
+    );
+  pointer-events: none;
+}
+
+/* Signing seal pulse */
+.vc-seal {
+  animation: sealPulse 3s ease-in-out infinite;
+}
+
+@keyframes sealPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 color-mix(in oklab, var(--accent) 30%, transparent),
+      0 0 20px color-mix(in oklab, var(--accent) 10%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px transparent,
+      0 0 40px color-mix(in oklab, var(--accent) 20%, transparent);
+  }
+}
+
+/* JWT token scroll */
+.vc-jwt-scroll {
+  animation: jwtScroll 20s linear infinite;
+}
+
+@keyframes jwtScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Claim row stagger reveal */
+.vc-claim-row {
+  opacity: 0;
+  transform: translateX(-8px);
+  animation: claimReveal 0.5s ease forwards;
+}
+
+@keyframes claimReveal {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* DID resolution line animation */
+.vc-resolve-line {
+  stroke-dasharray: 200;
+  stroke-dashoffset: 200;
+  animation: resolveDraw 2s ease forwards;
+}
+
+@keyframes resolveDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Credential hover - v2: border change only */
+.vc-card:hover {
+  border-color: var(--ink);
+  transform: translateY(-1px);
+  transition: all 0.25s ease;
+}
+
+/* Flow step connector animation */
+.vc-flow-connector {
+  animation: vcFlowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes vcFlowPulse {
+  0%, 100% { opacity: 0.3; }
+  50%      { opacity: 0.7; }
+}
+
+/* Responsive: VC section grid */
+@media (max-width: 768px) {
+  .vc-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Bento grid responsive ────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .v2-stagger-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .v2-stagger-grid > * {
+    grid-column: span 1 !important;
+  }
+
+}
+
+@media (max-width: 640px) {
+  .scanning-card {
+    width: 100% !important;
+  }
+}
+
+/* ── Mobile responsive - hero + scanning grid ────────────── */
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 80px 16px 48px !important;
+    min-height: auto !important;
+  }
+
+  .scanning-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    max-width: 400px !important;
+  }
+
+  .scanning-result-card {
+    padding: 20px !important;
+  }
+}

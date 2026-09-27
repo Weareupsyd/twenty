@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunguza - Screening Report · SCR-2026-04871</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#0b0b0d;--paper-2:#0e0e11;--panel:#111114;--panel-2:#16161a;--panel-3:#1c1c21;--ink:#f2f1ec;--mid:#8a8a90;--soft:#5a5a60;--rule:#1e1e22;--rule-strong:#2a2a30;--rule-ghost:#16161a;--accent:#00F0FF;--accent-ink:#66f7ff;--accent-soft:rgba(0,240,255,.10);--accent-fg:#03171b;--green:#34d399;--amber:#fbbf24;--red:#f87171;--purple:#a78bfa;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--sans:'Geist','Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;max-width:1320px;margin:0 auto}
+.side{border-right:1px solid var(--rule-ghost);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--paper)}
+.brand{display:flex;align-items:center;gap:10px;padding:18px;border-bottom:1px solid var(--rule-ghost);font-family:var(--mono);font-weight:600;font-size:13px}
+.brand-mark{width:18px;height:18px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.brand-mark span:nth-child(1),.brand-mark span:nth-child(4){background:var(--ink)}
+.brand-mark span:nth-child(2),.brand-mark span:nth-child(3){background:var(--accent)}
+.side-group{padding:14px 8px 4px}
+.side-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);padding:0 12px 6px}
+.side-link{display:flex;align-items:center;gap:10px;padding:7px 12px;font-family:var(--mono);font-size:12.5px;color:var(--mid);border-left:2px solid transparent;background:transparent;border-top:none;border-right:none;border-bottom:none;width:100%;text-align:left;cursor:pointer}
+.side-link:hover{color:var(--ink)}
+.side-link.on{color:var(--ink);background:var(--panel);border-left-color:var(--accent)}
+.ic{width:5px;height:5px;background:var(--mid);flex-shrink:0}
+.side-link.on .ic{background:var(--accent)}
+.side-foot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--rule-ghost);font-family:var(--mono);font-size:11px;color:var(--mid)}
+.side-foot .row{display:flex;justify-content:space-between;padding:3px 0}
+.side-foot .ok{color:var(--accent)}
+.side-foot .signout{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border:1px solid var(--rule-strong);border-radius:5px;color:var(--mid);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:border-color .15s,color .15s}
+.side-foot .signout:hover{border-color:var(--ink);color:var(--ink)}
+.side-foot .signout .glyph{width:5px;height:5px;flex:0 0 auto;background:var(--mid)}
+.side-foot .signout:hover .glyph{background:var(--ink)}
+.top{border-bottom:1px solid var(--rule-ghost);display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--paper);position:sticky;top:0;z-index:30}
+.crumbs{font-family:var(--mono);font-size:12px;color:var(--mid);display:flex;gap:6px;align-items:center}
+.crumbs .sep{color:var(--soft)}
+.crumbs .here{color:var(--ink)}
+.top-spacer{flex:1}
+.page{padding:28px 32px 80px;max-width:1280px;margin:0 auto}
+.page-head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding-bottom:22px;margin-bottom:16px;border-bottom:1px solid var(--rule-ghost)}
+.page-h1{font-size:30px;letter-spacing:-.025em;font-weight:600;line-height:1.05;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.page-sub{color:var(--mid);margin-top:6px;font-size:13px}
+.page-sub b{color:var(--ink)}
+.pill{font-family:var(--mono);font-size:10px;padding:3px 8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:4px;border:1px solid transparent}
+.pill-crit{color:var(--red) !important;background:transparent !important;border:1px solid var(--red) !important}
+.pill-high{color:var(--red) !important;background:transparent !important;border:1px solid var(--red) !important}
+.pill-med{color:var(--ink) !important;background:transparent !important;border:1px solid var(--rule-strong) !important}
+.pill-green{color:var(--ink) !important;background:transparent !important;border:1px solid var(--rule-strong) !important}
+.pill-cyan{color:var(--ink) !important;background:transparent !important;border:1px solid var(--rule-strong) !important}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;background:transparent !important;border:1px solid var(--rule-strong);color:var(--ink);transition:all .15s}
+.btn.primary{background:transparent !important;color:var(--accent);border:1px solid var(--accent)}
+.btn.primary:hover{background:transparent !important;color:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule-ghost)}
+.btn.ghost:hover{background:transparent !important;border-color:var(--accent);color:var(--accent)}
+.btn.green{background:transparent;color:var(--green);border:1px solid var(--green)}
+.btn.green:hover{background:rgba(52,211,153,.08)}
+.btn.red{background:transparent;color:var(--red);border:1px solid rgba(248,113,113,.45)}
+.icon-btn{width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--rule-ghost);background:transparent;color:var(--mid);cursor:pointer;border-radius:4px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);margin-bottom:18px}
+.stat{padding:14px 16px;border-right:1px solid var(--rule-ghost)}
+.stat:last-child{border-right:none}
+.stat .l{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mid)}
+.stat .v{font-size:20px;font-weight:600;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat .s{font-family:var(--mono);font-size:10.5px;color:var(--soft);margin-top:2px}
+/* single column layout for report - everything stacked vertically */
+.card{background:var(--panel);padding:18px 20px;margin-bottom:14px}
+.card-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-ghost);display:flex;align-items:center;gap:8px}
+.card-h .cnt{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--soft);text-transform:none;letter-spacing:0}
+.kv{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.kv td{border:1px solid var(--rule-ghost);padding:8px 10px;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;word-break:break-word;white-space:normal}
+.kv .k{color:var(--mid);font-family:var(--mono);font-size:11.5px;width:18%;white-space:nowrap}
+.kv .v{font-weight:500}
+.kv .mono{font-family:var(--mono);font-size:12px;word-break:break-word}
+.match{background:var(--panel-2);padding:14px 16px;margin-bottom:10px;border:1px solid var(--rule-ghost)}
+.match.crit{border-color:rgba(248,113,113,.28)}
+.match.high{border-color:rgba(251,191,36,.22)}
+.match.med{border-color:rgba(251,191,36,.22)}
+.match-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.match-caption{font-weight:600;font-size:13px}
+.score{font-family:var(--mono);font-size:12px;padding:2px 7px;border-radius:4px;font-weight:600}
+.score.crit{background:var(--red);color:#fff}
+.score.high{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+.score.med{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.22)}
+.rk{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent}
+.rk.san{color:var(--red);background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.22)}
+.rk.pep{color:var(--amber);background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.18)}
+.rk.dep{color:var(--accent);background:rgba(0,240,255,.08);border-color:rgba(0,240,255,.14)}
+.explain{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:8px}
+.ex-plain{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:11.5px;padding:4px 0;border-bottom:1px solid var(--rule-ghost)}
+.ex-plain:last-child{border-bottom:none}
+.ex-plain .lbl{color:var(--mid);min-width:108px}
+.ex-plain .val{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;margin-left:auto}
+.ex-plain .pct{color:var(--soft);font-size:10.5px;min-width:38px;text-align:right}
+.src{font-family:var(--mono);font-size:11px;color:var(--mid);margin-top:6px}
+.src a{color:var(--accent-ink);text-decoration:none}
+.dr{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--rule-ghost);font-size:12.5px}
+.dr:last-child{border-bottom:none}
+.dr .k{color:var(--mid);font-family:var(--mono);font-size:11.5px;flex-shrink:0}
+.dr .v{font-weight:500;text-align:right;font-size:12.5px;word-break:break-word;min-width:0}
+.dr .v.ok{color:var(--green)}
+.dr .v.w{color:var(--amber)}
+.dr .v.e{color:var(--red)}
+.legend{display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:var(--mid);margin-top:10px;flex-wrap:wrap}
+.legend i{width:10px;height:10px;display:inline-block;border-radius:4px;margin-right:6px;vertical-align:-1px}
+.risk-big{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.verdict{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;border-radius:4px;display:inline-block;margin-top:8px}
+.verdict.crit{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+.quote{padding:10px 14px;background:var(--panel-2);font-size:12.5px;color:var(--mid);margin:10px 0;border:1px solid rgba(248,113,113,.22);border-radius:4px}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><div class="brand-mark"><span></span><span></span><span></span><span></span></div>chunguza</div>
+  <div class="side-group" style="padding-top:14px">
+    <div class="side-label">Overview</div>
+    <button class="side-link" onclick="location.href='index.html'"><span class="ic"></span>Mockup Index</button>
+    <button class="side-link" onclick="location.href='01-login.html'"><span class="ic"></span>Login Screen</button>
+    <button class="side-link" onclick="location.href='02-dashboard.html'"><span class="ic"></span>Dashboard</button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Screening &amp; Ops</div>
+    <button class="side-link" onclick="location.href='03-screen.html'"><span class="ic"></span>Single Screen</button>
+    <button class="side-link on"><span class="ic"></span>Screen Detail</button>
+    <button class="side-link" onclick="location.href='05-bulk-screen.html'"><span class="ic"></span>Bulk Screen</button>
+    <button class="side-link" onclick="location.href='06-entity-search.html'"><span class="ic"></span>Entity Search</button>
+    <button class="side-link" onclick="location.href='13-analyst-workspace.html'"><span class="ic"></span>Analyst Workspace <span class="tag">cockpit</span></button>
+    <button class="side-link" onclick="location.href='07-cases.html'"><span class="ic"></span>Cases</button>
+    <button class="side-link" onclick="location.href='08-datasets.html'"><span class="ic"></span>Datasets &amp; Sync</button>
+    <button class="side-link" onclick="location.href='09-reports.html'"><span class="ic"></span>Reports Index</button>
+    <button class="side-link" onclick="location.href='14-printable-report.html'"><span class="ic"></span>Printable Report <span class="tag">pdf</span></button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Admin &amp; Security</div>
+    <button class="side-link" onclick="location.href='10-settings.html'"><span class="ic"></span>Settings &amp; Policies</button>
+    <button class="side-link" onclick="location.href='11-api-keys.html'"><span class="ic"></span>API Key Vault</button>
+    <button class="side-link" onclick="location.href='12-user-profiles.html'"><span class="ic"></span>User Profiles &amp; RBAC</button>
+  </div>
+  <div class="side-foot">
+    <div class="row"><span>active user</span><span class="ok">Amina Warsame</span></div>
+    <div class="row"><span>role</span><span class="ok">MLRO Reviewer</span></div>
+    <div class="row"><span>reference</span><span style="color:var(--ink);font-family:var(--mono)">SCR-2026-04871</span></div>
+    <a class="signout" href="01-login.html"><span class="glyph"></span><span>Sign out</span></a>
+  </div>
+</aside>
+
+<main style="background:var(--paper);min-width:0">
+  <header class="top">
+    <div class="crumbs"><span>console</span><span class="sep">/</span><a href="09-reports.html" style="color:var(--mid);text-decoration:none">reports</a><span class="sep">/</span><span>SCR-2026-04871</span><span class="sep">/</span><span class="here">report detail</span></div>
+    <div class="top-spacer"></div>
+    <div class="user-badge" onclick="location.href='12-user-profiles.html'" style="display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--rule-strong);padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:11.5px;cursor:pointer">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--purple);display:inline-block"></span>
+      <span>Amina Warsame</span>
+      <span style="color:var(--accent-ink);font-weight:600">[Senior Reviewer]</span>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <h1 class="page-h1">Screening Report <span class="pill pill-crit">Critical</span> <span class="pill pill-cyan">sanction</span></h1>
+        <p class="page-sub"><b>Hassan Ali Mohamud</b> · <span style="font-family:var(--mono);font-size:12px">Person · Somalia · DOB 1982-04-11</span> · threshold 0.82 · <span style="font-family:var(--mono);font-size:12px">query via <span style="color:var(--accent-ink)">POST /v1/screen</span></span></p>
+        <p class="page-sub" style="margin-top:4px">Reference <span style="font-family:var(--mono);color:var(--ink)">SCR-2026-04871</span> · immutable · PDF via <span style="font-family:var(--mono)">GET /v1/screen/SCR-…/report</span></p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        <button class="btn solid" onclick="location.href='14-printable-report.html'"> Print Regulatory Report</button>
+        <button class="btn primary" onclick="location.href='13-analyst-workspace.html'"> Triage Cockpit</button>
+        <button class="btn green" onclick="location.href='07-cases.html'">＋ Attach to Case</button>
+        <button class="btn ghost" onclick="location.href='03-screen.html'">Re-screen</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="l">Risk level</div><div class="v" style="color:var(--red)">Critical</div><div class="s">sanction hit</div></div>
+      <div class="stat"><div class="l">Max score</div><div class="v">0.94</div><div class="s">name 0.96</div></div>
+      <div class="stat"><div class="l">Matches</div><div class="v">3</div><div class="s">above 0.82</div></div>
+      <div class="stat"><div class="l">Sanctions</div><div class="v" style="color:var(--red)">2</div><div class="s">topics: sanction</div></div>
+      <div class="stat"><div class="l">PEP</div><div class="v" style="color:var(--amber)">1</div><div class="s">related</div></div>
+      <div class="stat"><div class="l">Processing</div><div class="v" style="font-size:18px">187 ms</div><div class="s">yente fuzzy</div></div>
+    </div>
+
+    <!-- SINGLE COLUMN REPORT: everything stacked vertically to reduce crowding -->
+    <div>
+      <!-- Query -->
+      <div class="card">
+        <div class="card-h">Query - submitted payload <span class="cnt">auto-detected as Person</span></div>
+        <table class="kv">
+          <tr><td class="k">Name</td><td class="v mono">Hassan Ali Mohamud</td><td class="k">Country</td><td class="v mono">Somalia</td></tr>
+          <tr><td class="k">Aliases</td><td class="v mono">-</td><td class="k">DOB</td><td class="v mono">1982-04-11</td></tr>
+          <tr><td class="k">Nationality</td><td class="v mono">Somalia</td><td class="k">Threshold</td><td class="v mono">0.82</td></tr>
+          <tr><td class="k">Address</td><td class="v mono" colspan="3">Mogadishu, Banaadir</td></tr>
+        </table>
+        <div class="quote"><b style="color:var(--red)"> Requires human review.</b> Automated screening result - identity and relationship findings require analyst verification before action. <span style="font-family:var(--mono);font-size:11px">risk_level == Critical || sanction</span></div>
+      </div>
+
+      <!-- Matches -->
+      <div class="card">
+        <div class="card-h">Matches <span class="pill pill-cyan">3</span> <span class="cnt">sorted by score · filtered ≥ 0.82</span></div>
+
+        <div class="match crit">
+          <div class="match-head">
+            <span class="match-caption">Hassan Ali Mohamud</span>
+            <span class="score crit">0.94</span>
+            <span class="rk san">sanction</span>
+            <span class="rk pep">crime - fraud</span>
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--soft)">Person · NK-…-7712</span>
+          </div>
+          <div style="font-size:12px;color:var(--mid);margin-bottom:4px">Datasets: <span style="color:var(--ink)">us_ofac_sdn, eu_fsfw, gb_hmt_sanctions</span> · Countries: <span style="color:var(--ink)">SO, AE</span></div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--mid)">Identifiers: <span style="color:var(--ink)">OFAC ID 13247</span> · Last updated 2026-07-29</div>
+          <div class="explain">
+            <div class="ex-plain"><span class="lbl">name_score</span><span class="val">0.96</span><span class="pct">96%</span></div>
+            <div class="ex-plain"><span class="lbl">country_score</span><span class="val">0.88</span><span class="pct">88%</span></div>
+            <div class="ex-plain"><span class="lbl">birth_date</span><span class="val">0.92</span><span class="pct">92%</span></div>
+            <div class="ex-plain"><span class="lbl">address_score</span><span class="val">0.41</span><span class="pct">41%</span></div>
+          </div>
+          <div class="src">Sources: <a href="#">OFAC SDN </a> · <a href="#">EU FSF </a> · <a href="#">UK HMT </a></div>
+        </div>
+
+        <div class="match high">
+          <div class="match-head">
+            <span class="match-caption">Xasan Cali Maxamuud (alias)</span>
+            <span class="score high">0.89</span>
+            <span class="rk san">sanction</span>
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--soft)">Person · NK-…-7720</span>
+          </div>
+          <div style="font-size:12px;color:var(--mid)">Datasets: <span style="color:var(--ink)">us_ofac_sdn</span> · Also known as Hassan Mohamud</div>
+          <div class="explain">
+            <div class="ex-plain"><span class="lbl">name_score</span><span class="val">0.91</span><span class="pct">91%</span></div>
+            <div class="ex-plain"><span class="lbl">country_score</span><span class="val">0.84</span><span class="pct">84%</span></div>
+          </div>
+          <div class="src">Sources: <a href="#">OFAC SDN </a></div>
+        </div>
+
+        <div class="match med">
+          <div class="match-head">
+            <span class="match-caption">Mohamud Hassan Ali - linked company director</span>
+            <span class="score med">0.84</span>
+            <span class="rk pep">pep</span>
+            <span class="rk dep">state-owned</span>
+            <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--soft)">Person · PE-…-9912</span>
+          </div>
+          <div style="font-size:12px;color:var(--mid)">Datasets: <span style="color:var(--ink)">pep, wikidata</span> · Role: Director, Horizon Logistics FZE</div>
+          <div class="explain">
+            <div class="ex-plain"><span class="lbl">name_score</span><span class="val">0.86</span><span class="pct">86%</span></div>
+            <div class="ex-plain"><span class="lbl">birth_date</span><span class="val">0.72</span><span class="pct">72%</span></div>
+          </div>
+          <div class="src">Sources: <a href="#">OpenSanctions PEP </a></div>
+        </div>
+
+        <div style="font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:8px">Match objects are <span style="color:var(--mid)">ScreenMatch</span> - entity_id, caption, score, risk_categories[], datasets[], countries[], source_links[], match_explanation.</div>
+      </div>
+
+      <!-- Relationships -->
+      <div class="card">
+        <div class="card-h">Relationships <span class="cnt">via collect_relationships()</span></div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;background:var(--panel-2);padding:10px 12px;border:1px solid rgba(251,191,36,.22);gap:12px">
+            <div><div style="font-family:var(--mono);font-size:11px;color:var(--soft)">associate · shared address</div><div style="font-weight:600">Horizon Logistics FZE <span style="font-family:var(--mono);font-size:11px;color:var(--mid)">(SO) - Company</span></div><div style="font-family:var(--mono);font-size:11px;color:var(--mid);word-break:break-word">source: opensanctions · yente embedded</div></div>
+            <span class="rk san" style="flex-shrink:0">sanction</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;background:var(--panel-2);padding:10px 12px;border:1px solid rgba(0,240,255,.18);gap:12px">
+            <div><div style="font-family:var(--mono);font-size:11px;color:var(--soft)">director of</div><div style="font-weight:600">Baraka Import-Export LLC</div><div style="font-family:var(--mono);font-size:11px;color:var(--mid);word-break:break-word">local_relationships · confirmed_by analyst (Layer B)</div></div>
+            <span class="rk dep" style="flex-shrink:0">Local</span>
+          </div>
+        </div>
+        <p style="font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:8px">Phase 2: Neo4j will add 2-hop paths, shared directors, PEP-linked companies - see <span style="color:var(--mid)">TODO(phase2)</span>.</p>
+      </div>
+
+      <!-- Risk Assessment (no extra left border - red on "Critical" is sufficient) -->
+      <div class="card">
+        <div class="card-h">Risk Assessment</div>
+        <div class="risk-big" style="color:var(--red)">Critical</div>
+        <div class="verdict crit">Requires human review · Immediate escalation</div>
+        <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-family:var(--mono);font-size:11px">
+          <div style="background:var(--panel-2);padding:10px;border:1px solid rgba(248,113,113,.18)"><div style="color:var(--mid)">classification</div><div style="color:var(--red);font-weight:600;margin-top:4px">sanction = true<br>crime = true</div></div>
+          <div style="background:var(--panel-2);padding:10px;border:1px solid var(--rule-ghost)"><div style="color:var(--mid)">risk_categories</div><div style="color:var(--ink);margin-top:4px">sanction, crime<br><span style="color:var(--soft)">+ pep (related)</span></div></div>
+        </div>
+        <p style="font-size:12.5px;color:var(--mid);margin-top:12px;line-height:1.6">Crime/media records are <b style="color:var(--ink)">NOT proof of guilt</b>. Present as sourced records requiring review - per platform guardrails.</p>
+      </div>
+
+      <!-- Recommendations -->
+      <div class="card">
+        <div class="card-h">Recommendations</div>
+        <p style="font-size:13px;color:var(--mid);margin-bottom:8px"><span style="color:var(--red)"></span> Sanctions hit - block transaction & escalate to compliance officer before release.</p>
+        <p style="font-size:13px;color:var(--mid);margin-bottom:8px"><span style="color:var(--amber)">ℹ</span> PEP link detected - enhanced due diligence (source of funds/wealth).</p>
+        <p style="font-size:13px;color:var(--mid)"><span style="color:var(--green)"></span> Reference archived - provide <span style="font-family:var(--mono);color:var(--ink)">SCR-2026-04871</span> to regulator/auditor.</p>
+      </div>
+
+      <!-- Data Freshness -->
+      <div class="card">
+        <div class="card-h">Data Freshness</div>
+        <div class="dr"><span class="k">Dataset</span><span class="v" style="font-family:var(--mono);font-size:11px">opensanctions-default</span></div>
+        <div class="dr"><span class="k">Version</span><span class="v" style="font-family:var(--mono);font-size:11px">2026-08-06</span></div>
+        <div class="dr"><span class="k">Last sync</span><span class="v ok" style="font-family:var(--mono);font-size:11px">2026-08-06 19:04 UTC · 7h ago</span></div>
+        <div class="dr"><span class="k">Stale?</span><span class="v ok">No (&lt;48h)</span></div>
+        <div class="dr"><span class="k">Path</span><span class="v" style="font-family:var(--mono);font-size:11px">/data/opensanctions/current</span></div>
+      </div>
+
+      <!-- Audit Trail -->
+      <div class="card">
+        <div class="card-h">Audit Trail</div>
+        <div class="dr"><span class="k">Reference</span><span class="v" style="font-family:var(--mono)">SCR-2026-04871</span></div>
+        <div class="dr"><span class="k">Created</span><span class="v" style="font-family:var(--mono);font-size:11px">2026-08-06 19:12:04 UTC</span></div>
+        <div class="dr"><span class="k">Requested by</span><span class="v" style="font-family:var(--mono);font-size:11px">a.johnson@chunguza.app</span></div>
+        <div class="dr"><span class="k">Processing</span><span class="v" style="font-family:var(--mono)">187 ms</span></div>
+        <div class="dr"><span class="k">Threshold</span><span class="v" style="font-family:var(--mono)">0.82</span></div>
+        <div class="dr"><span class="k">Match found</span><span class="v e">Yes · 3</span></div>
+        <div class="dr"><span class="k">Immutable</span><span class="v ok">Yes · stored PG</span></div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn ghost" style="flex:1;justify-content:center;font-size:11px">GET /v1/screen/SCR…</button>
+          <button class="btn ghost" style="flex:1;justify-content:center;font-size:11px">⤓ PDF</button>
+        </div>
+      </div>
+
+      <!-- Analyst note -->
+      <div class="card" style="background:var(--panel-2);border:1px dashed var(--rule-strong)">
+        <div style="font-family:var(--mono);font-size:11px;color:var(--mid);margin-bottom:6px">Analyst note (system)</div>
+        <p style="font-size:12.5px;color:var(--mid);font-style:italic">“Automated screening result. Identity and relationship findings require analyst verification.”</p>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</body>
+</html>

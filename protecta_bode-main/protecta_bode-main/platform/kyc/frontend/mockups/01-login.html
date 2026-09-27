@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunguza - Sign In · AML Screening Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#0b0b0d;
+  --paper-2:#0e0e11;
+  --panel:#111114;
+  --panel-2:#16161a;
+  --panel-3:#1c1c21;
+  --ink:#f2f1ec;
+  --mid:#8a8a90;
+  --soft:#5a5a60;
+  --rule:#1e1e22;
+  --rule-strong:#2a2a30;
+  --rule-ghost:#16161a;
+  --accent:#00F0FF;
+  --accent-ink:#66f7ff;
+  --green:#10b981;
+  --green-hover:#059669;
+  --whatsapp:#25D366;
+  --pattern-opacity:0.25;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Geist','Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html, body {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+.login {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+/* ═══ LEFT: BRAND PANE ═══ */
+.pane-brand {
+  position: relative;
+  overflow: hidden;
+  padding: 36px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: radial-gradient(ellipse 90% 70% at 20% 30%, rgba(0,240,255,0.05) 0%, transparent 80%), var(--paper);
+}
+
+.pattern-container {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--pattern-opacity);
+}
+.pattern-svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 15px;
+  position: relative;
+  z-index: 2;
+}
+.brand-mark {
+  width: 20px; height: 20px;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+}
+.brand-mark span:nth-child(1), .brand-mark span:nth-child(4) { background: var(--ink); }
+.brand-mark span:nth-child(2), .brand-mark span:nth-child(3) { background: var(--accent); }
+
+.brand-center {
+  margin: auto 0;
+  position: relative;
+  max-width: 520px;
+  z-index: 2;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.eyebrow::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+h1 {
+  font-size: 32px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--ink);
+}
+h1 span {
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.feat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--mid);
+}
+.feat-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(17,17,20,0.75);
+  border: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 14px;
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+}
+.feat-item .ck { color: var(--accent); font-weight: 700; }
+.feat-item b { color: var(--ink); }
+
+/* ═══ RIGHT: SIGN-IN CARD ═══ */
+.pane-form {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 36px;
+  background: var(--paper-2);
+  height: 100vh;
+  overflow: hidden;
+}
+.pane-form::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0; width: 2px;
+  background: linear-gradient(180deg, rgba(0,240,255,.3) 0%, rgba(16,185,129,.4) 50%, rgba(0,240,255,.3) 100%);
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(14,14,17,.92);
+  border: 1px solid #24242c;
+  border-radius: 14px;
+  padding: 28px 28px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+}
+
+.card-nav {
+  display: flex;
+  gap: 4px;
+  background: var(--panel-2);
+  padding: 3px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid var(--rule-ghost);
+}
+.card-tab {
+  flex: 1;
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  color: var(--mid);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  transition: all .15s;
+}
+.card-tab.active {
+  background: var(--panel-3);
+  color: var(--ink);
+  font-weight: 600;
+  border: 1px solid var(--rule);
+}
+
+.lbl {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--mid);
+  margin: 0 0 5px;
+}
+.inp {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  outline: none;
+  transition: border-color 140ms;
+}
+.inp:focus { border-color: var(--green); }
+.inp::placeholder { color: var(--soft); }
+
+/* --- GREEN LOGIN BUTTON --- */
+.btn-login {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  background: var(--green);
+  border: 1px solid var(--green);
+  color: #ffffff;
+  transition: all .15s;
+  box-shadow: 0 2px 8px rgba(16,185,129,0.25);
+}
+.btn-login:hover {
+  background: var(--green-hover);
+  border-color: var(--green-hover);
+}
+.btn-login svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.div-or {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--soft);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  margin: 14px 0;
+}
+.div-or::before, .div-or::after {
+  content: ""; flex: 1; height: 1px; background: var(--rule-ghost);
+}
+
+/* --- CYAN OUTLINE/GHOST WhatsApp BUTTON --- */
+.btn-whatsapp-outline {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 10px;
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  transition: all .15s;
+  text-decoration: none;
+}
+.btn-whatsapp-outline:hover {
+  background: rgba(0,240,255,0.12);
+  box-shadow: 0 6px 22px rgba(0,240,255,0.28);
+}
+.btn-whatsapp-outline:active {
+  transform: translateY(1px);
+}
+.btn-whatsapp-outline:disabled,
+.btn-whatsapp-outline.loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-whatsapp-outline.loading span {
+  content: "Signing in…";
+}
+.btn-whatsapp-outline svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--accent);
+}
+
+.card-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule-ghost);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+.footer-link {
+  color: var(--mid);
+  cursor: pointer;
+  transition: color .15s;
+}
+.footer-link:hover {
+  color: var(--accent);
+}
+.footer-sep {
+  color: var(--soft);
+}
+
+.msg-box {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+  display: none;
+}
+.msg-box.err { background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); color: #f87171; }
+.msg-box.ok { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+
+.status {
+  position: absolute;
+  right: 24px;
+  bottom: 16px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--soft);
+}
+.status .ok { color: var(--green); }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-body {
+  width: 100%;
+  max-width: 380px;
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: 8px;
+  padding: 24px;
+}
+
+@media (max-width: 860px) {
+  .login { grid-template-columns: 1fr; }
+  .pane-brand { display: none; }
+  .pane-form { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="login">
+
+  <!-- ═══ LEFT: BRAND PANE ═══ -->
+  <div class="pane-brand">
+    <div class="pattern-container">
+      <svg class="pattern-svg" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" viewBox="0 0 800 1000">
+        <defs>
+          <pattern id="africanPrint" width="200" height="200" patternUnits="userSpaceOnUse">
+            <g stroke="#ffffff" stroke-opacity="0.10" stroke-width="0.8" fill="none">
+              <path d="M0,0 L200,200 M200,0 L0,200"/>
+              <circle cx="100" cy="100" r="40"/>
+            </g>
+            <g stroke="#f2f1ec" stroke-opacity="0.25" stroke-width="1.6" fill="none">
+              <path d="M0,20 L15,5 L30,20 L45,5 L60,20 L75,5 L90,20 L105,5 L120,20 L135,5 L150,20 M165,5 L180,20 L195,5"/>
+              <polygon points="100,55 135,90 100,125 65,90"/>
+            </g>
+            <g stroke="#00F0FF" stroke-opacity="0.35" stroke-width="1.4" fill="none">
+              <circle cx="100" cy="90" r="4" fill="#00F0FF" fill-opacity="0.3"/>
+            </g>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#africanPrint)"/>
+      </svg>
+    </div>
+
+    <!-- Brand Header -->
+    <div class="brand">
+      <div class="brand-mark"><span></span><span></span><span></span><span></span></div>
+      chunguza <span style="font-size:10px;font-weight:400;color:var(--mid);letter-spacing:0.04em;margin-left:4px">[swahili: investigate · examine]</span>
+    </div>
+
+    <!-- Center Hero -->
+    <div class="brand-center">
+      <div class="eyebrow">// security portal · auth gateway</div>
+      <h1>Screen every name.<br><span>Trust every remittance.</span></h1>
+      
+      <div class="feat">
+        <div class="feat-item">
+          <span class="ck"></span>
+          <span><b>Global Sanctions &amp; PEP:</b> 1.48M+ entities · 230+ jurisdictions · OpenSanctions</span>
+        </div>
+      </div>
+    </div>
+
+    <div><!-- Foot spacer --></div>
+  </div>
+
+  <!-- ═══ RIGHT: SIGN-IN PANE ═══ -->
+  <div class="pane-form">
+    <div class="card">
+      <div class="eyebrow" id="formEyebrow">// security portal · sign in</div>
+
+      <!-- Form Navigation Tabs -->
+      <div class="card-nav">
+        <button class="card-tab active" id="tabSignin" onclick="switchForm('signin')">Sign In</button>
+        <button class="card-tab" id="tabSignup" onclick="switchForm('signup')">Create Account</button>
+        <button class="card-tab" id="tabReset" onclick="switchForm('reset')">Reset Password</button>
+      </div>
+
+      <div id="msgBox" class="msg-box"></div>
+
+      <!-- 1. SIGN IN FORM -->
+      <form id="formSignin" onsubmit="handleLogin(event)">
+        <label class="lbl" for="loginEmail">Work Email</label>
+        <input class="inp" id="loginEmail" type="email" value="analyst@chunguza.app" placeholder="name@chunguza.app" required autocomplete="username">
+
+        <label class="lbl" for="loginPassword">Password</label>
+        <input class="inp" id="loginPassword" type="password" value="••••••••••••" placeholder="••••••••••••" required autocomplete="current-password">
+
+        <div class="rowline">
+          <a href="#" onclick="switchForm('reset'); return false;">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-login" id="btnSignInSubmit">
+          <!-- Green Login Icon -->
+          <svg viewBox="0 0 24 24">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+          </svg>
+          Sign In
+        </button>
+
+        <div class="div-or">or quick access</div>
+
+        <!-- CYAN OUTLINE/GHOST WhatsApp LOGIN BUTTON -->
+        <button type="button" class="btn-whatsapp-outline" onclick="openWhatsAppModal()" id="btnWhatsAppSignin">
+          <span>Sign in -></span>
+        </button>
+
+        <div class="card-footer">
+          <span class="footer-link">Terms</span>
+          <span class="footer-sep">·</span>
+          <span class="footer-link">Privacy</span>
+          <span class="footer-sep">·</span>
+          <span class="footer-link">Help</span>
+        </div>
+      </form>
+
+      <!-- 2. CREATE ACCOUNT FORM -->
+      <form id="formSignup" style="display:none;" onsubmit="handleSignup(event)">
+        <label class="lbl" for="regName">Full Name</label>
+        <input class="inp" id="regName" type="text" placeholder="e.g. Abdirahman Farah" required>
+
+        <label class="lbl" for="regEmail">Work Email</label>
+        <input class="inp" id="regEmail" type="email" placeholder="name@chunguza.app" required>
+
+        <label class="lbl" for="regPassword">Password</label>
+        <input class="inp" id="regPassword" type="password" placeholder="At least 6 characters" minlength="6" required>
+
+        <label class="lbl" for="regRole">Role</label>
+        <select class="inp" id="regRole">
+          <option value="analyst">AML Analyst</option>
+          <option value="reviewer">Senior Reviewer (MLRO)</option>
+          <option value="superuser">Super User (Admin)</option>
+          <option value="auditor">Regulatory Auditor</option>
+        </select>
+
+        <label class="lbl" for="regPhone">WhatsApp Number (Optional)</label>
+        <input class="inp" id="regPhone" type="tel" placeholder="+256701234567">
+
+        <button type="submit" class="btn-login" id="btnSignUpSubmit">
+          <svg viewBox="0 0 24 24">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6M23 11h-6"/>
+          </svg>
+          Create User Account
+        </button>
+      </form>
+
+      <!-- 3. RESET PASSWORD FORM -->
+      <form id="formReset" style="display:none;" onsubmit="handleResetRequest(event)">
+        <div id="resetStep1">
+          <label class="lbl" for="resetEmail">Registered Work Email</label>
+          <input class="inp" id="resetEmail" type="email" placeholder="name@chunguza.app" required>
+
+          <button type="submit" class="btn-login" id="btnResetReq">Request Password Reset</button>
+        </div>
+
+        <div id="resetStep2" style="display:none;">
+          <label class="lbl" for="resetToken">Reset Token</label>
+          <input class="inp" id="resetToken" type="text" placeholder="Enter token received" required>
+
+          <label class="lbl" for="newPassword">New Password</label>
+          <input class="inp" id="newPassword" type="password" placeholder="Enter new password" minlength="6" required>
+
+          <button type="button" class="btn-login" onclick="handleResetConfirm()">Set New Password</button>
+        </div>
+      </form>
+
+    </div>
+    <div class="status">status <span class="ok">● vpc-isolated</span> · auth <span class="ok">ready</span></div>
+  </div>
+
+</div>
+
+<!-- WHATSAPP OTP MODAL -->
+<div class="modal-overlay" id="waModal">
+  <div class="modal-body">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-family:var(--mono);font-size:15px;color:var(--accent);display:flex;align-items:center;gap:8px;">
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:var(--accent);">
+          <path d="M3 3v18h18V3H3zm15 15H6V6h12v12zm-2-4h-3v3h-3v-3H8v-3h3V6h3v3h3v3H11z"/>
+        </svg>
+        WhatsApp Sign in
+      </h3>
+      <button onclick="closeWhatsAppModal()" style="background:none;border:none;color:var(--mid);font-size:18px;cursor:pointer;"></button>
+    </div>
+
+    <div id="waStep1">
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px;">Enter your phone number registered with WhatsApp to receive a 6-digit login verification OTP.</p>
+      <label class="lbl" for="waPhone">Phone Number</label>
+      <input class="inp" id="waPhone" type="tel" placeholder="+256701234567" value="+256701234567">
+      <button class="btn-whatsapp-outline" type="button" onclick="requestWaOtp()"><span>Send OTP -></span></button>
+    </div>
+
+    <div id="waStep2" style="display:none;">
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px;">Enter the 6-digit verification code sent to your WhatsApp number.</p>
+      <label class="lbl" for="waOtpCode">6-Digit Code</label>
+      <input class="inp" id="waOtpCode" type="text" placeholder="123456" maxlength="6" style="letter-spacing:4px;font-family:var(--mono);font-size:18px;text-align:center;">
+      <button class="btn-whatsapp-outline" type="button" onclick="verifyWaOtp()"><span>Verify &amp; Sign in -></span></button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showMsg(txt, isOk) {
+  const el = document.getElementById("msgBox");
+  el.textContent = txt;
+  el.className = "msg-box " + (isOk ? "ok" : "err");
+  el.style.display = "block";
+}
+function hideMsg() {
+  document.getElementById("msgBox").style.display = "none";
+}
+
+function switchForm(type) {
+  hideMsg();
+  document.getElementById("formSignin").style.display = type === "signin" ? "block" : "none";
+  document.getElementById("formSignup").style.display = type === "signup" ? "block" : "none";
+  document.getElementById("formReset").style.display = type === "reset" ? "block" : "none";
+
+  document.getElementById("tabSignin").className = "card-tab " + (type === "signin" ? "active" : "");
+  document.getElementById("tabSignup").className = "card-tab " + (type === "signup" ? "active" : "");
+  document.getElementById("tabReset").className = "card-tab " + (type === "reset" ? "active" : "");
+
+  const ey = document.getElementById("formEyebrow");
+  if (type === "signin") ey.textContent = "// security portal · sign in";
+  else if (type === "signup") ey.textContent = "// security portal · create account";
+  else ey.textContent = "// security portal · reset password";
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  hideMsg();
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value;
+
+  try {
+    const res = await fetch("/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Login failed");
+
+    localStorage.setItem("chunguza_token", data.access_token);
+    localStorage.setItem("chunguza_user", JSON.stringify(data.user));
+    showMsg("Login successful! Redirecting...", true);
+    setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+  } catch (err) {
+    showMsg(err.message, false);
+  }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  hideMsg();
+  const full_name = document.getElementById("regName").value.trim();
+  const email = document.getElementById("regEmail").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const role = document.getElementById("regRole").value;
+  const whatsapp_number = document.getElementById("regPhone").value.trim() || null;
+
+  try {
+    const res = await fetch("/v1/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ full_name, email, password, role, whatsapp_number })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Registration failed");
+
+    localStorage.setItem("chunguza_token", data.access_token);
+    localStorage.setItem("chunguza_user", JSON.stringify(data.user));
+    showMsg("User account created successfully! Redirecting...", true);
+    setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+  } catch (err) {
+    showMsg(err.message, false);
+  }
+}
+
+async function handleResetRequest(e) {
+  e.preventDefault();
+  hideMsg();
+  const email = document.getElementById("resetEmail").value.trim();
+
+  try {
+    const res = await fetch("/v1/auth/reset-password/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Password reset request failed");
+
+    showMsg(data.message, true);
+    if (data.reset_token) {
+      document.getElementById("resetToken").value = data.reset_token;
+    }
+    document.getElementById("resetStep1").style.display = "none";
+    document.getElementById("resetStep2").style.display = "block";
+  } catch (err) {
+    showMsg(err.message, false);
+  }
+}
+
+async function handleResetConfirm() {
+  hideMsg();
+  const token = document.getElementById("resetToken").value.trim();
+  const new_password = document.getElementById("newPassword").value;
+
+  try {
+    const res = await fetch("/v1/auth/reset-password/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, new_password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Password reset confirm failed");
+
+    showMsg("Password updated! Switching to Sign In...", true);
+    setTimeout(() => {
+      switchForm("signin");
+      document.getElementById("resetStep1").style.display = "block";
+      document.getElementById("resetStep2").style.display = "none";
+    }, 1200);
+  } catch (err) {
+    showMsg(err.message, false);
+  }
+}
+
+function openWhatsAppModal() {
+  document.getElementById("waModal").style.display = "flex";
+  document.getElementById("waStep1").style.display = "block";
+  document.getElementById("waStep2").style.display = "none";
+}
+function closeWhatsAppModal() {
+  document.getElementById("waModal").style.display = "none";
+}
+
+async function requestWaOtp() {
+  const phone_number = document.getElementById("waPhone").value.trim();
+  if (!phone_number) { alert("Please enter phone number."); return; }
+
+  try {
+    const res = await fetch("/v1/auth/whatsapp/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone_number })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to send OTP");
+
+    if (data.otp_code) {
+      document.getElementById("waOtpCode").value = data.otp_code;
+    }
+    document.getElementById("waStep1").style.display = "none";
+    document.getElementById("waStep2").style.display = "block";
+  } catch (err) {
+    alert("Error sending WhatsApp OTP: " + err.message);
+  }
+}
+
+async function verifyWaOtp() {
+  const phone_number = document.getElementById("waPhone").value.trim();
+  const otp_code = document.getElementById("waOtpCode").value.trim();
+
+  try {
+    const res = await fetch("/v1/auth/whatsapp/verify-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone_number, otp_code })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "OTP verification failed");
+
+    localStorage.setItem("chunguza_token", data.access_token);
+    localStorage.setItem("chunguza_user", JSON.stringify(data.user));
+    closeWhatsAppModal();
+    showMsg("WhatsApp authentication successful! Redirecting...", true);
+    setTimeout(() => { window.location.href = "/dashboard"; }, 800);
+  } catch (err) {
+    alert("Error: " + err.message);
+  }
+}
+</script>
+</body>
+</html>

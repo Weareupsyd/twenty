@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Protecta Bode — Login (mockup)</title>
+<link rel="stylesheet" href="assets/hugeicons.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/mockup.css" />
+<style>
+  /* tight preview switcher, not part of the product UI */
+  .state-switch {
+    position: fixed; top: 14px; right: 14px; z-index: 70; display: flex; gap: 4px;
+    padding: 4px; border-radius: 999px; background: rgba(11,28,72,.92);
+    box-shadow: 0 10px 26px rgba(11,28,72,.35);
+  }
+  .state-switch button {
+    border: 0; border-radius: 999px; padding: 6px 13px; background: transparent;
+    color: #b9c6e4; font-family: var(--mono); font-size: 9.5px;
+  }
+  .state-switch button.on { background: var(--orange); color: #fff; font-weight: 700; }
+  .mockup-tag {
+    position: fixed; left: 14px; bottom: 14px; z-index: 70;
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px;
+    border-radius: 999px; background: rgba(11,28,72,.92); color: #dbe4f7;
+    font-family: var(--mono); font-size: 9.5px; box-shadow: 0 10px 26px rgba(11,28,72,.35);
+  }
+  .mockup-tag a { color: #f2a36b; font-weight: 700; }
+  .mockup-tag .hgi-stroke { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="state-switch" role="tablist" aria-label="Login state preview">
+  <button class="on" data-state="signin" role="tab" aria-selected="true">Sign in</button>
+  <button data-state="request" role="tab" aria-selected="false">Send verification</button>
+  <button data-state="verify" role="tab" aria-selected="false">Enter code</button>
+</div>
+
+<div class="login-wrap">
+  <section class="login-card" aria-labelledby="login-title">
+
+    <!-- Logo fills the card width: larger mark, far less white space -->
+    <a class="login-brand" href="landing.html" aria-label="Protecta Bode home">
+      <img src="assets/protecta-bode-logo-trim.png" alt="Protecta Bode by Liberty General Insurance" />
+    </a>
+
+    <!-- ── State 1: Sign in (solid NAVY button) ── -->
+    <div data-panel="signin">
+      <p class="login-eyebrow">Protecta Bode portal</p>
+      <h1 id="login-title">Sign in</h1>
+      <form onsubmit="event.preventDefault(); window.location.href='portal.html'">
+        <div class="field">
+          <label for="username">Username (phone number or email)</label>
+          <input id="username" autocomplete="username" placeholder="e.g. 0772 123 456 or you@example.com" value="0772 123 456" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" value="demopassword" />
+        </div>
+        <!-- Solid brand navy -->
+        <button class="btn navy block lg" type="submit">
+          <i class="hgi-stroke hgi-user-circle" aria-hidden="true"></i> Sign in
+        </button>
+      </form>
+      <div class="login-or" aria-hidden="true"><span>or</span></div>
+      <button class="btn wa block lg" type="button" onclick="showState('request')">
+        <i class="hgi-stroke hgi-whatsapp" aria-hidden="true"></i> Sign in with WhatsApp
+      </button>
+      <button class="text-button" type="button" onclick="showState('request')">
+        New customer? Create an account or set up / reset your password
+      </button>
+    </div>
+
+    <!-- ── State 2: Request code (solid ORANGE button) ── -->
+    <div data-panel="request" hidden>
+      <p class="login-eyebrow">Account setup</p>
+      <h1>Create or set up your login</h1>
+      <p class="login-sub">Enter the phone number on your account and we’ll send a one-time code. New customers add their email to register.</p>
+      <form onsubmit="event.preventDefault(); showState('verify')">
+        <div class="field">
+          <label for="setup-phone">Phone number</label>
+          <input id="setup-phone" inputmode="tel" placeholder="e.g. 0772 123 456" />
+        </div>
+        <div class="field">
+          <label for="setup-email">Email address <span style="text-transform:none;letter-spacing:0">(new customers)</span></label>
+          <input id="setup-email" type="email" placeholder="you@example.com" />
+          <span class="hint">Existing accounts receive codes at their registered email.</span>
+        </div>
+        <!-- Solid orange -->
+        <button class="btn orange block lg" type="submit">
+          <i class="hgi-stroke hgi-mail-01" aria-hidden="true"></i> Send verification code
+        </button>
+      </form>
+      <button class="text-button" type="button" onclick="showState('signin')">Back to sign in</button>
+    </div>
+
+    <!-- ── State 3: Verify (OTP slots) ── -->
+    <div data-panel="verify" hidden>
+      <p class="login-eyebrow">Account setup</p>
+      <h1>Verify and set password</h1>
+      <p class="login-sub">Enter the six-digit code we sent, then choose the password you’ll use next time.</p>
+      <form onsubmit="event.preventDefault(); window.location.href='portal.html'">
+        <div class="field">
+          <label>One-time code</label>
+          <div class="otp-slots" role="group" aria-label="Six-digit verification code">
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 1" autofocus />
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
+            <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+          </div>
+          <span class="hint">Sandbox mode: use the code shown below.</span>
+        </div>
+        <div class="otp-note">Sandbox code: <b>418 203</b></div>
+        <div class="field" style="margin-top:11px">
+          <label for="new-pass">New password</label>
+          <input id="new-pass" type="password" placeholder="At least 12 characters" />
+        </div>
+        <!-- Confirm stays navy; resend stays orange -->
+        <button class="btn navy block lg" type="submit">
+          <i class="hgi-stroke hgi-lock-password" aria-hidden="true"></i> Save password and continue
+        </button>
+        <button class="btn orange block lg" type="button" style="margin-top:8px" onclick="toast('Verification code resent')">
+          <i class="hgi-stroke hgi-reload" aria-hidden="true"></i> Resend verification code
+        </button>
+      </form>
+      <button class="text-button" type="button" onclick="showState('request')">Use a different phone number</button>
+    </div>
+
+    <div class="login-foot">
+      <a href="landing.html">← Back to Protecta Bode</a>
+      <a href="tel:+256312246500">Help: 0312 246500</a>
+    </div>
+  </section>
+</div>
+
+<div class="mockup-tag">
+  <i class="hgi-stroke hgi-eye"></i> Mockup — <a href="index.html">← all screens</a>
+</div>
+
+<script src="assets/mockup.js"></script>
+<script>
+  function showState(name) {
+    document.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== name })
+    document.querySelectorAll('.state-switch button').forEach(b => {
+      const on = b.dataset.state === name
+      b.classList.toggle('on', on)
+      b.setAttribute('aria-selected', String(on))
+    })
+    const first = document.querySelector(`[data-panel="${name}"] input`)
+    if (first) first.focus()
+  }
+  document.querySelectorAll('.state-switch button').forEach(b => {
+    b.addEventListener('click', () => showState(b.dataset.state))
+  })
+  /* OTP slots: advance on single digit, allow paste of 6 */
+  document.querySelectorAll('.otp-slots input').forEach((inp, i, all) => {
+    inp.addEventListener('input', () => {
+      inp.value = inp.value.replace(/\D/g, '').slice(0, 1)
+      if (inp.value && i < all.length - 1) all[i + 1].focus()
+    })
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) all[i - 1].focus()
+    })
+    inp.addEventListener('paste', e => {
+      const d = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6)
+      if (!d) return
+      e.preventDefault()
+      d.split('').forEach((v, k) => { if (all[i + k]) all[i + k].value = v })
+      all[Math.min(i + d.length, all.length - 1)].focus()
+    })
+  })
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Protecta Bode — Quote flow (mockup)</title>
+<link rel="stylesheet" href="assets/hugeicons.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/mockup.css" />
+<style>
+  /* Public flow header: small logo REMOVED — back link + steps + help only */
+  .q-header {
+    display: flex; align-items: center; gap: 16px; width: min(1120px, 100%);
+    min-height: 60px; margin: 0 auto; padding: 8px 24px;
+    border-bottom: 1px solid var(--rule-ghost);
+  }
+  .q-back { display: inline-flex; align-items: center; gap: 7px; color: var(--navy); font-family: var(--mono); font-size: 10.5px; font-weight: 600; }
+  .q-back:hover { color: var(--accent-ink); }
+  .q-steps { display: flex; align-items: center; gap: 6px; margin: 0 auto; }
+  .q-step {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px;
+    border: 1px solid var(--rule); border-radius: 999px; background: var(--white);
+    color: var(--soft); font-family: var(--mono); font-size: 9px; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .q-step.done { border-color: rgba(30,123,76,.4); color: var(--ok); }
+  .q-step.now { border-color: var(--navy); background: var(--navy); color: var(--white); font-weight: 700; }
+  .q-step .hgi-stroke { font-size: 12px; }
+  .q-help { display: inline-flex; align-items: center; gap: 7px; color: var(--mid); font-family: var(--mono); font-size: 10px; }
+  .q-help .hgi-stroke { color: var(--orange); font-size: 14px; }
+  .q-body { width: min(1120px, 100%); margin: 0 auto; padding: clamp(24px, 4vw, 44px) 24px 70px; }
+  .q-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 34px; align-items: start; }
+  .q-title { color: var(--navy); font-family: var(--display); font-size: clamp(22px, 2.6vw, 28px); font-weight: 600; letter-spacing: -.03em; }
+  .q-sub { margin-top: 5px; color: var(--mid); font-size: 13px; }
+  .q-aside { padding: 18px; border: 1px solid var(--sky-line); border-radius: var(--r-lg); background: var(--sky-soft); }
+  .q-aside h3 { color: var(--navy); font-family: var(--display); font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .q-aside .row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--rule-strong); font-size: 12px; }
+  .q-aside .row:last-of-type { border-bottom: 0; }
+  .q-aside .row span { color: var(--mid); }
+  .q-aside .row b { color: var(--navy); }
+  .q-aside .total { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--navy); }
+  .q-aside .total b { font-family: var(--display); font-size: 21px; }
+  @media (max-width: 860px) {
+    .q-grid { grid-template-columns: 1fr; }
+    .q-steps { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header WITHOUT the small Protecta Bode logo (per feedback) -->
+<header class="q-header">
+  <a class="q-back" href="landing.html"><i class="hgi-stroke hgi-arrow-left-01"></i> Protecta Bode</a>
+  <nav class="q-steps" aria-label="Quote progress">
+    <span class="q-step done"><i class="hgi-stroke hgi-check"></i> Vehicle</span>
+    <span class="q-step now">Details</span>
+    <span class="q-step">Pay</span>
+    <span class="q-step">Done</span>
+  </nav>
+  <a class="q-help" href="tel:+256312246500"><i class="hgi-stroke hgi-call"></i><span>Help: 0312 246500</span></a>
+</header>
+
+<main class="q-body">
+  <div class="q-grid">
+    <section>
+      <h1 class="q-title">Tell us about your driver</h1>
+      <p class="q-sub">Step 2 of 4 — we use this to issue the schedule on your policy.</p>
+
+      <form style="margin-top:22px; max-width:560px" onsubmit="event.preventDefault(); location.href='portal.html'">
+        <div class="field-row">
+          <div class="field">
+            <label for="d-name">Driver full name</label>
+            <input id="d-name" value="Sarah Namutebi" required />
+          </div>
+          <div class="field">
+            <label for="d-phone">Phone number</label>
+            <input id="d-phone" inputmode="tel" value="+256 772 123 456" required />
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="d-licence">Driving licence no.</label>
+            <input id="d-licence" value="UG 0045129" required />
+          </div>
+          <div class="field">
+            <label for="d-dob">Date of birth</label>
+            <input id="d-dob" type="date" value="1990-06-14" required />
+          </div>
+        </div>
+        <div class="field">
+          <label for="d-email">Email for documents</label>
+          <input id="d-email" type="email" value="sarah.namutebi@example.com" required />
+          <span class="hint">Your policy PDF and receipts are sent here.</span>
+        </div>
+        <label class="check" style="display:flex;gap:9px;align-items:flex-start;margin:6px 0 16px;font-size:12.5px">
+          <input type="checkbox" checked style="width:16px;height:16px;margin-top:2px;accent-color:var(--orange)" />
+          I confirm the driver is the regular user of the vehicle and accept the terms.
+        </label>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn ghost" type="button"><i class="hgi-stroke hgi-arrow-left-01"></i> Back</button>
+          <button class="btn orange lg" type="submit">Review &amp; pay <i class="hgi-stroke hgi-arrow-right-01"></i></button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="q-aside" aria-label="Quote summary">
+      <h3><i class="hgi-stroke hgi-shield-check" style="color:var(--orange);font-size:15px;vertical-align:-3px"></i> Your cover</h3>
+      <div class="row"><span>Car value</span><b>UGX 30,000,000</b></div>
+      <div class="row"><span>Rate</span><b>1.5%</b></div>
+      <div class="row"><span>Car body</span><b>Included</b></div>
+      <div class="row"><span>Third party</span><b>Included</b></div>
+      <div class="row"><span>Driver cover</span><b>Included</b></div>
+      <div class="row total"><span>Annual premium</span><b>UGX 450,000</b></div>
+      <p style="margin-top:10px;color:var(--mid);font-size:10.5px;line-height:1.5">Terms and Conditions apply. Underwritten by Liberty General Insurance Uganda.</p>
+    </aside>
+  </div>
+</main>
+
+<div class="mockup-tag" style="position:fixed;left:14px;bottom:14px;z-index:70;display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:rgba(11,28,72,.92);color:#dbe4f7;font-family:var(--mono);font-size:9.5px;box-shadow:0 10px 26px rgba(11,28,72,.35)">
+  <i class="hgi-stroke hgi-eye"></i> Mockup — <a href="index.html" style="color:#f2a36b;font-weight:700">← all screens</a>
+</div>
+
+</body>
+</html>

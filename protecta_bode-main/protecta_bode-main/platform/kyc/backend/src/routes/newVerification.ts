@@ -1,0 +1,3188 @@
+import express, { Request, Response } from 'express';
+import multer from 'multer';
+import { body, param } from 'express-validator';
+import crypto from 'crypto';
+import { v5 as uuidv5 } from 'uuid';
+import { authenticateAPIKeyOrHandoff, authenticateUser, checkSandboxMode, hashHandoffToken } from '@/middleware/auth.js';
+import { verificationRateLimit } from '@/middleware/rateLimit.js';
+import { idempotencyMiddleware } from '@/middleware/idempotency.js';
+import { catchAsync, ValidationError, FileUploadError } from '@/middleware/errorHandler.js';
+import { validate } from '@/middleware/validate.js';
+import { StorageService } from '@/services/storage.js';
+import { VerificationService } from '@/services/verification.js';
+import { OCRService } from '@/services/ocr.js';
+import { BarcodeService } from '@/services/barcode.js';
+import { extractMRZFromText, alpha3ToAlpha2 } from '@/services/mrz.js';
+import { FaceRecognitionService } from '@/services/faceRecognition.js';
+import { logger, logVerificationEvent } from '@/utils/logger.js';
+import { validateFileType } from '@/middleware/fileValidation.js';
+import { supabase } from '@/config/database.js';
+import { VERIFICATION_THRESHOLDS, getFaceMatchingThresholdSync, getLivenessThresholdSync } from '@/config/verificationThresholds.js';
+import {
+  createLivenessProvider,
+  verifyHeadTurnLiveness,
+  HEAD_TURN_PASS_THRESHOLD,
+  HeadTurnLivenessMetadataSchema,
+  VerificationStatus,
+  SharpTamperDetector,
+  DocumentZoneValidator,
+  createDeepfakeDetector,
+  decryptSecret,
+  FLOW_PRESETS,
+  applyPassportOverride,
+  cropBothAsDataUris,
+  mergeLabeledAddressFields,
+} from '@kabila/shared';
+import type {
+  HeadTurnLivenessMetadata,
+  FrontExtractionResult,
+  BackExtractionResult,
+  LiveCaptureResult,
+  SessionState,
+  LLMProviderConfig,
+  FlowConfig,
+  VerificationMode,
+} from '@kabila/shared';
+import { createAMLProviders } from '@/providers/aml/index.js';
+import { amlPortEnabled } from '@/aml/flag.js';
+import { computeRiskScore } from '@/services/riskScoring.js';
+import { analyzeVelocity } from '@/services/velocityAnalysis.js';
+import { analyzeGeoRisk } from '@/services/geoAnalysis.js';
+import { broadcastStatusChange } from '@/services/realtime.js';
+import { saveSessionState, loadSessionState } from '@/services/sessionPersistence.js';
+
+import { VerificationSession } from '@/verification/session/VerificationSession.js';
+import type { SessionDeps, SessionHydration, AgeVerificationResult, StepResult } from '@/verification/session/VerificationSession.js';
+import { computeFaceMatch } from '@/verification/face/faceMatchService.js';
+import { mapStatusForResponse, buildVerificationResponse } from '@/verification/statusReader.js';
+import { SessionFlowError } from '@/verification/exceptions.js';
+import { WebhookService } from '@/services/webhook.js';
+import { storeVaultEntry, extractIdentityData } from '@/services/vaultService.js';
+import {
+  buildVerificationWebhookPayload,
+  normalizeAmlScreening,
+  SUBJECT_TYPES,
+} from '@/services/verificationWebhook.js';
+import type { VerificationSource } from '@/types/index.js';
+import { config } from '@/config/index.js';
+import { createAndSendPhoneOtp, verifyPhoneOtp } from '@/services/phoneOtpService.js';
+import {
+  computeDocumentPHash,
+  computeFaceLSH,
+  runDedupCheck,
+  getDedupSettings,
+  type DuplicateFlag,
+} from '@/services/duplicateDetection.js';
+import { decryptSMSConfig } from '@/services/smsService.js';
+import sharp from 'sharp';
+import engineClient from '@/services/engineClient.js';
+import { loadActiveRulesForDeveloper, evaluateRules } from '@/services/complianceEngine.js';
+import type { ComplianceContext } from '@/services/complianceEngine.js';
+import { generateVoiceChallenge, verifyChallengeTranscription } from '@/verification/voice/challengeGenerator.js';
+import { computeVoiceMatch } from '@/verification/voice/voiceMatchService.js';
+
+const router = express.Router();
+const voiceAuthAvailable = config.capabilities?.voiceAuth !== false;
+
+/**
+ * Convert an external (possibly non-UUID, opaque) subject id into the internal
+ * users.id UUID required by the `users` FK. Valid UUIDs pass through unchanged;
+ * any other opaque string is deterministically mapped via UUIDv5 so the same
+ * external id always resolves to the same internal user (dedup-friendly). The
+ * original opaque string is stored separately in `external_user_id` and echoed
+ * verbatim on webhooks.
+ */
+const EXTERNAL_USER_NAMESPACE = '1f4d4d4d-4d4d-4d4d-8d4d-4d4d4d4d4d4d';
+function toInternalUserId(externalId: string): string {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(externalId)) {
+    return externalId;
+  }
+  // UUIDv5 namespaced hash is stable - same external id -> same internal user.
+  return uuidv5(externalId, EXTERNAL_USER_NAMESPACE);
+}
+
+// Defensive fallbacks for verification modes that may not be in an older shared package build.
+// These are only used if FLOW_PRESETS[mode] returns undefined (e.g., stale Docker cache).
+const INLINE_FLOW_FALLBACKS: Partial<Record<string, FlowConfig>> = {
+  document_only: { preset: 'document_only' as VerificationMode, requiresBack: true, requiresLiveness: false, requiresFaceMatch: false, totalSteps: 3, afterFront: 'AWAITING_BACK' as any, afterCrossVal: 'COMPLETE' as any },
+  identity:      { preset: 'identity' as VerificationMode,      requiresBack: false, requiresLiveness: true,  requiresFaceMatch: true,  totalSteps: 3, afterFront: 'AWAITING_LIVE' as any,  afterCrossVal: 'AWAITING_LIVE' as any },
+};
+
+const storageService = new StorageService();
+const verificationService = new VerificationService();
+const ocrService = new OCRService();
+const barcodeService = new BarcodeService();
+const faceRecognitionService = new FaceRecognitionService();
+const webhookService = new WebhookService();
+const amlProviders = createAMLProviders();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize:  10 * 1024 * 1024, // 10 MB for image files
+    fieldSize: 10 * 1024 * 1024, // 10 MB for text fields (liveness_metadata contains base64 frames)
+  },
+});
+
+/** Addons that can be requested per-verification */
+interface VerificationAddons {
+  aml_screening?: boolean;
+  address_verification?: boolean;
+}
+
+/** Create a VerificationSession with real service deps, optionally hydrated from DB */
+function createSession(isSandbox: boolean, hydration?: SessionHydration, addons?: VerificationAddons, developerAmlEnabled?: boolean, flow?: FlowConfig, voiceAuthEnabled?: boolean): VerificationSession {
+  // The combined stack's full Yente screen is independent of AML_PROVIDER.
+  // Previously we gated automation only on createAMLProviders(), which is empty
+  // in the bundled deployment, so no automatic screen ever ran. The native
+  // AML port (enabled unless explicitly disabled) supplies the full pipeline;
+  // configured lightweight providers remain a fallback for standalone deploys.
+  const fullScreeningConfigured = (config.nodeEnv === 'test'
+    ? process.env.AML_TS_PORT === 'true'
+    : amlPortEnabled()) || Boolean(process.env.YENTE_URL);
+  const screeningBackendAvailable = fullScreeningConfigured || (amlProviders.length > 0 && !isSandbox);
+  const amlEnabled = screeningBackendAvailable
+    && developerAmlEnabled !== false
+    && addons?.aml_screening !== false;
+
+  const deps: SessionDeps = {
+    extractFront: async (buffer: Buffer): Promise<FrontExtractionResult> => {
+      // Save buffer to temp storage, run OCR, extract face
+      // This is a simplified adapter - the route handler does storage before calling
+      throw new Error('extractFront should not be called directly - route handles buffer');
+    },
+    extractBack: async (buffer: Buffer): Promise<BackExtractionResult> => {
+      throw new Error('extractBack should not be called directly - route handles buffer');
+    },
+    processLiveCapture: async (buffer: Buffer): Promise<LiveCaptureResult> => {
+      throw new Error('processLiveCapture should not be called directly - route handles buffer');
+    },
+    computeFaceMatch,
+    faceMatchThreshold: getFaceMatchingThresholdSync(isSandbox),
+    livenessThreshold: getLivenessThresholdSync(isSandbox),
+    screenAML: amlEnabled
+      ? async (fullName, dob, nationality, identity) => {
+        const { runUnifiedScreening } = await import('@/services/unifiedScreening.js');
+        return runUnifiedScreening({
+          verificationId: hydration?.session_id || null,
+          name: fullName,
+          dateOfBirth: dob ?? null,
+          nationality: nationality ?? null,
+          country: identity?.country || nationality || null,
+          idNumber: identity?.idNumber ?? null,
+          gender: identity?.gender ?? null,
+          address: identity?.address ?? null,
+          requestedBy: 'verification-pipeline',
+        });
+      }
+      : undefined,
+    voiceAuthEnabled: voiceAuthAvailable && voiceAuthEnabled === true,
+    voiceMatchThreshold: isSandbox ? 0.50 : 0.55,
+  };
+
+  return new VerificationSession(deps, hydration, flow);
+}
+
+/** Hydrate a session from DB for a given verification ID */
+async function hydrateSession(verificationId: string, isSandbox: boolean, developerId?: string): Promise<VerificationSession> {
+  const savedState = await loadSessionState(verificationId);
+  const hydration: SessionHydration = savedState ? {
+    session_id: savedState.session_id,
+    current_step: savedState.current_step,
+    issuing_country: savedState.issuing_country,
+    rejection_reason: savedState.rejection_reason,
+    rejection_detail: savedState.rejection_detail,
+    front_extraction: savedState.front_extraction,
+    back_extraction: savedState.back_extraction,
+    cross_validation: savedState.cross_validation,
+    face_match: savedState.face_match,
+    liveness: (savedState as any).liveness ?? null,
+    deepfake_check: (savedState as any).deepfake_check ?? null,
+    aml_screening: (savedState as any).aml_screening ?? null,
+    unified_screening: (savedState as any).unified_screening ?? null,
+    age_estimation: (savedState as any).age_estimation ?? null,
+    velocity_analysis: (savedState as any).velocity_analysis ?? null,
+    geo_analysis: (savedState as any).geo_analysis ?? null,
+    voice_match: (savedState as any).voice_match ?? null,
+    created_at: savedState.created_at,
+    completed_at: savedState.completed_at,
+  } : {
+    session_id: verificationId,
+  };
+
+  // Read developer_id + verification_mode from the verification_requests row
+  let addons: VerificationAddons | undefined;
+  let resolvedDeveloperId = developerId;
+  const { data: row, error: rowError } = await supabase
+    .from('verification_requests')
+    .select('developer_id, verification_mode, addons')
+    .eq('id', verificationId)
+    .single();
+  if (rowError) {
+    logger.error('hydrateSession: failed to read verification_requests', {
+      verificationId, error: rowError.message, code: (rowError as any).code,
+    });
+  }
+  if (!resolvedDeveloperId && row?.developer_id) {
+    resolvedDeveloperId = row.developer_id;
+  }
+  if (row?.addons && typeof row.addons === 'object') {
+    addons = row.addons as VerificationAddons;
+  }
+
+  // Look up developer's settings (aml_enabled, voice_auth_enabled)
+  let developerAmlEnabled: boolean | undefined;
+  let voiceAuthEnabled: boolean | undefined;
+  if (resolvedDeveloperId) {
+    const { data: dev } = await supabase
+      .from('developers')
+      .select('aml_enabled, voice_auth_enabled')
+      .eq('id', resolvedDeveloperId)
+      .single();
+    if (dev) {
+      if (typeof dev.aml_enabled === 'boolean') developerAmlEnabled = dev.aml_enabled;
+      if (typeof dev.voice_auth_enabled === 'boolean') {
+        // Ignore stale database preferences when this deployment omits voice models.
+        voiceAuthEnabled = voiceAuthAvailable && dev.voice_auth_enabled;
+      }
+    }
+  }
+
+  // Resolve flow config from verification_mode
+  const mode = (row?.verification_mode as VerificationMode) || 'full';
+  let flow = FLOW_PRESETS[mode] ?? INLINE_FLOW_FALLBACKS[mode] ?? FLOW_PRESETS.full;
+
+  // Passports are single-sided - dynamically skip back step on re-hydration
+  flow = applyPassportOverride(flow, savedState?.front_extraction?.ocr?.detected_document_type as string | undefined);
+
+  if (mode !== 'full') {
+    logger.info('hydrateSession flow resolution', {
+      verificationId, mode, preset: flow.preset, afterFront: flow.afterFront,
+    });
+  }
+
+  return createSession(isSandbox, hydration, addons, developerAmlEnabled, flow, voiceAuthEnabled);
+}
+
+/** Record a step completion timestamp in the verification_requests row. */
+async function recordStepTimestamp(verificationId: string, step: 'front' | 'back' | 'live'): Promise<void> {
+  try {
+    const { data } = await supabase.from('verification_requests')
+      .select('step_timestamps').eq('id', verificationId).single();
+    const timestamps = { ...(data?.step_timestamps || {}), [step]: new Date().toISOString() };
+    await supabase.from('verification_requests')
+      .update({ step_timestamps: timestamps }).eq('id', verificationId);
+  } catch (err) {
+    logger.warn('Failed to record step timestamp (non-blocking)', {
+      verificationId, step, error: err instanceof Error ? err.message : 'Unknown',
+    });
+  }
+}
+
+// ─── Developer LLM config lookup ────────────────────────────────
+
+/** Look up developer's LLM provider config. Returns undefined if not configured. */
+async function getDeveloperLLMConfig(developerId: string): Promise<LLMProviderConfig | undefined> {
+  try {
+    const { data } = await supabase
+      .from('developers')
+      .select('llm_provider, llm_api_key_encrypted, llm_endpoint_url')
+      .eq('id', developerId)
+      .single();
+
+    if (!data?.llm_provider || !data?.llm_api_key_encrypted) return undefined;
+
+    const apiKey = decryptSecret(data.llm_api_key_encrypted, config.encryptionKey);
+    return {
+      provider: data.llm_provider as LLMProviderConfig['provider'],
+      apiKey,
+      endpointUrl: data.llm_endpoint_url || undefined,
+    };
+  } catch (err) {
+    logger.debug('getDeveloperLLMConfig: failed to load LLM config', {
+      developerId,
+      error: err instanceof Error ? err.message : 'Unknown',
+    });
+    return undefined;
+  }
+}
+
+// ─── Step adapters: Run extraction and then delegate to session ──
+
+/** Run front OCR extraction and build FrontExtractionResult */
+async function extractFrontDocument(
+  documentPath: string,
+  documentId: string,
+  documentType: string,
+  issuingCountry?: string,
+  verificationId?: string,
+  llmConfig?: LLMProviderConfig,
+  imageBuffer?: Buffer,
+): Promise<FrontExtractionResult> {
+  const ocrData = await ocrService.processDocument(documentId, documentPath, documentType, issuingCountry, verificationId, llmConfig);
+
+  // NOTE: average confidence is computed further below, after MRZ enrichment -
+  // MRZ-sourced fields contribute their own scores and must be counted.
+
+  // Detect face - use buffer-based detection to get bounding box for zone validation
+  let faceConfidence = 0;
+  let faceEmbedding: number[] | null = null;
+  let faceBoundingBox: { x: number; y: number; width: number; height: number } | null = null;
+  try {
+    if (imageBuffer) {
+      const faceResult = await faceRecognitionService.detectFaceFromBuffer(imageBuffer);
+      if (faceResult) {
+        faceConfidence = faceResult.confidence;
+        faceEmbedding = Array.from(faceResult.embedding);
+        faceBoundingBox = faceResult.boundingBox;
+      }
+    } else {
+      const faceResult = await faceRecognitionService.detectFace(documentPath);
+      faceConfidence = faceResult.confidence;
+      faceEmbedding = faceResult.embedding;
+    }
+  } catch {
+    faceConfidence = 0;
+  }
+
+  // Attempt MRZ detection on front document (passports, some ID cards)
+  let mrzFromFront: string[] | null = null;
+  let detectedCountry = issuingCountry || null;
+  if (ocrData?.raw_text) {
+    const mrzResult = extractMRZFromText(ocrData.raw_text);
+    if (mrzResult) {
+      mrzFromFront = mrzResult.raw_lines;
+
+      // A MRZ whose check digits validate is the most trustworthy source in the
+      // pipeline - it is checksum-protected, unlike free-text OCR. Fields taken from
+      // it must carry a matching confidence, otherwise they leave confidence_scores
+      // empty and the average below collapses to its 0.5 fallback, which sits under
+      // Gate 1's minimum and rejects an otherwise perfect read.
+      const mrzConfidence = mrzResult.check_digits_valid ? 0.99 : 0.75;
+      ocrData.confidence_scores = ocrData.confidence_scores || {};
+      const takeFromMRZ = (key: string, value: string | null | undefined): boolean => {
+        if (!value) return false;
+        ocrData.confidence_scores![key] = mrzConfidence;
+        return true;
+      };
+
+      // Use MRZ fields as high-confidence overrides if OCR missed them
+      if (!ocrData.name && takeFromMRZ('name', mrzResult.fields.full_name)) {
+        ocrData.name = mrzResult.fields.full_name!;
+      }
+      if (!ocrData.document_number && takeFromMRZ('document_number', mrzResult.fields.document_number)) {
+        ocrData.document_number = mrzResult.fields.document_number!;
+      }
+      if (!ocrData.date_of_birth && takeFromMRZ('date_of_birth', mrzResult.fields.date_of_birth)) {
+        ocrData.date_of_birth = mrzResult.fields.date_of_birth!;
+      }
+      if (!ocrData.expiration_date && takeFromMRZ('expiration_date', mrzResult.fields.expiry_date)) {
+        ocrData.expiration_date = mrzResult.fields.expiry_date!;
+      }
+      // Auto-detect issuing_country from MRZ if not provided
+      if (!detectedCountry && mrzResult.fields.issuing_country) {
+        detectedCountry = alpha3ToAlpha2(mrzResult.fields.issuing_country) || null;
+      }
+      if (detectedCountry) ocrData.issuing_country = detectedCountry;
+
+      logger.info('MRZ enrichment applied', {
+        checkDigitsValid: mrzResult.check_digits_valid,
+        format: mrzResult.format,
+        confidence: mrzConfidence,
+      });
+    }
+  }
+
+  // Calculate average confidence - after MRZ enrichment, so MRZ-sourced fields count
+  const confidenceScores = ocrData?.confidence_scores || {};
+  const values = Object.values(confidenceScores).filter((v): v is number => typeof v === 'number');
+  const avgConfidence = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0.5;
+
+  // ── Tamper detection + zone validation (soft flags - Phase 1) ──────
+  let authenticity: FrontExtractionResult['authenticity'] = undefined;
+  if (imageBuffer) {
+    try {
+      const tamperResult = await new SharpTamperDetector().analyze(imageBuffer);
+      authenticity = {
+        score: tamperResult.score,
+        flags: tamperResult.flags,
+        isAuthentic: tamperResult.isAuthentic,
+        ganScore: tamperResult.details?.frequency?.ganScore,
+      };
+
+      // Zone validation if face bounding box is available
+      if (faceBoundingBox) {
+        const meta = await sharp(imageBuffer).metadata();
+        if (meta.width && meta.height) {
+          const zoneResult = new DocumentZoneValidator().validate(
+            faceBoundingBox,
+            meta.width,
+            meta.height,
+            documentType,
+            detectedCountry || 'US',
+          );
+          authenticity.zoneScore = zoneResult.score;
+          if (zoneResult.violations.length > 0) {
+            authenticity.flags = [...authenticity.flags, ...zoneResult.violations.map(v => v.split(':')[0])];
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn('Tamper/zone detection failed (non-blocking)', {
+        error: err instanceof Error ? err.message : 'Unknown',
+      });
+    }
+  }
+
+  // Extract face crop as base64 - padded + whitespace-trimmed headshot
+  // (ears/hair/chin preserved)
+  let idFaceBase64: string | null = null;
+  if (imageBuffer && faceBoundingBox) {
+    try {
+      const crops = await cropBothAsDataUris(sharp, imageBuffer, faceBoundingBox);
+      idFaceBase64 = crops.id_face_base64;
+    } catch (err) {
+      logger.warn('Failed to extract cropped face from ID image', { error: err });
+    }
+  }
+
+  return {
+    ocr: {
+      full_name: ocrData?.name || '',
+      date_of_birth: ocrData?.date_of_birth || '',
+      id_number: ocrData?.document_number || '',
+      expiry_date: ocrData?.expiration_date || '',
+      nationality: ocrData?.nationality || '',
+      issuing_country: detectedCountry || undefined,
+      ...ocrData, // preserve all raw fields
+    },
+    face_embedding: faceEmbedding,
+    face_confidence: faceConfidence,
+    ocr_confidence: avgConfidence,
+    mrz_from_front: mrzFromFront,
+    authenticity,
+    id_face_base64: idFaceBase64,
+  };
+}
+
+/** Run back barcode extraction and build BackExtractionResult */
+async function extractBackDocument(
+  documentPath: string,
+  documentId?: string,
+  issuingCountry?: string,
+): Promise<BackExtractionResult> {
+  let barcodeData;
+  try {
+    barcodeData = await barcodeService.scanBackOfId(documentPath);
+  } catch {
+    barcodeData = null;
+  }
+
+  const qrPayload = barcodeData?.pdf417_data?.parsed_data ? {
+    first_name: barcodeData.pdf417_data.parsed_data.firstName || '',
+    last_name: barcodeData.pdf417_data.parsed_data.lastName || '',
+    full_name: [barcodeData.pdf417_data.parsed_data.firstName, barcodeData.pdf417_data.parsed_data.lastName].filter(Boolean).join(' '),
+    date_of_birth: barcodeData.pdf417_data.parsed_data.dateOfBirth || '',
+    id_number: barcodeData.pdf417_data.parsed_data.licenseNumber || barcodeData.parsed_data?.id_number || '',
+    expiry_date: barcodeData.pdf417_data.parsed_data.expirationDate || '',
+    nationality: '',
+    sex: barcodeData.pdf417_data.parsed_data.gender || '',
+    address: [
+      barcodeData.pdf417_data.parsed_data.address,
+      barcodeData.pdf417_data.parsed_data.city,
+      barcodeData.pdf417_data.parsed_data.state,
+      barcodeData.pdf417_data.parsed_data.zipCode,
+    ].filter(Boolean).join(', ') || '',
+  } : (barcodeData?.parsed_data ? {
+    first_name: barcodeData.parsed_data.first_name || '',
+    last_name: barcodeData.parsed_data.last_name || '',
+    full_name: [barcodeData.parsed_data.first_name, barcodeData.parsed_data.last_name].filter(Boolean).join(' '),
+    date_of_birth: barcodeData.parsed_data.date_of_birth || '',
+    id_number: barcodeData.parsed_data.id_number || '',
+    expiry_date: barcodeData.parsed_data.expiry_date || '',
+    nationality: '',
+    sex: (barcodeData.parsed_data as any).sex || (barcodeData.parsed_data as any).gender || '',
+    address: (barcodeData.parsed_data as any).address || '',
+  } : null);
+
+  // Attempt MRZ detection from raw OCR text (especially for non-US documents)
+  const rawText = barcodeData?.raw_text || '';
+  const mrzResult = extractMRZFromText(rawText);
+
+  // If barcode scan failed but MRZ was detected, build qr_payload from MRZ fields
+  let finalQrPayload = qrPayload;
+  let barcodeFormat: 'PDF417' | 'QR_CODE' | 'DATA_MATRIX' | 'CODE_128' | 'MRZ_TD1' | 'MRZ_TD2' | 'MRZ_TD3' | null = barcodeData?.pdf417_data ? 'PDF417' : (barcodeData?.barcode_data ? 'QR_CODE' : null);
+
+  if (!qrPayload && mrzResult && mrzResult.fields) {
+    // Populate cross-validation fields from MRZ data
+    finalQrPayload = {
+      first_name: mrzResult.fields.first_name || '',
+      last_name: mrzResult.fields.last_name || '',
+      full_name: mrzResult.fields.full_name || '',
+      date_of_birth: mrzResult.fields.date_of_birth || '',
+      id_number: mrzResult.fields.document_number || '',
+      expiry_date: mrzResult.fields.expiry_date || '',
+      nationality: mrzResult.fields.nationality || '',
+      sex: mrzResult.fields.sex || '',
+      address: '',
+    };
+    // Tag the barcode_format as MRZ
+    const mrzFormatMap: Record<string, 'MRZ_TD1' | 'MRZ_TD2' | 'MRZ_TD3'> = {
+      TD1: 'MRZ_TD1', TD2: 'MRZ_TD2', TD3: 'MRZ_TD3',
+    };
+    barcodeFormat = mrzFormatMap[mrzResult.format] || null;
+  }
+
+  // Fallback: If barcode and MRZ were not found or if issuing country is UG (or non-US national ID),
+  // run OCR on back document image to extract text fields (e.g. District, Sub-county, Parish, Village, Address)
+  if (!finalQrPayload || Object.values(finalQrPayload).every(v => !v) || issuingCountry === 'UG') {
+    try {
+      const docId = documentId || 'back_doc';
+      const backOcr = await ocrService.processDocument(docId, documentPath, 'national_id', issuingCountry || 'UG');
+      if (backOcr) {
+        finalQrPayload = {
+          ...(finalQrPayload || {}),
+          first_name: (backOcr as any).first_name || (finalQrPayload as any)?.first_name || '',
+          last_name: (backOcr as any).last_name || (finalQrPayload as any)?.last_name || '',
+          full_name: backOcr.name || (backOcr as any).full_name || (finalQrPayload as any)?.full_name || '',
+          date_of_birth: backOcr.date_of_birth || (finalQrPayload as any)?.date_of_birth || '',
+          id_number: backOcr.document_number || (backOcr as any).id_number || (finalQrPayload as any)?.id_number || '',
+          expiry_date: backOcr.expiration_date || (backOcr as any).expiry_date || (finalQrPayload as any)?.expiry_date || '',
+          nationality: backOcr.nationality || (finalQrPayload as any)?.nationality || '',
+          sex: (backOcr as any).sex || (backOcr as any).gender || (finalQrPayload as any)?.sex || (mrzResult?.fields?.sex ?? '') || '',
+          address: backOcr.address || (finalQrPayload as any)?.address || [(backOcr as any).village, (backOcr as any).parish, (backOcr as any).sub_county, (backOcr as any).district, 'Uganda'].filter(Boolean).join(', ') || '',
+          issuing_country: backOcr.issuing_country || issuingCountry || 'UG',
+          district: (backOcr as any).district || '',
+          sub_county: (backOcr as any).sub_county || (backOcr as any).county || '',
+          parish: (backOcr as any).parish || '',
+          village: (backOcr as any).village || '',
+          raw_text: backOcr.raw_text || rawText || '',
+        } as any;
+      }
+    } catch (err) {
+      logger.debug('Back document OCR fallback did not yield additional fields', { error: err });
+    }
+  }
+
+  // Fill in any blank Ugandan address fields (village/parish/sub_county/district/address)
+  // by parsing "LABEL: value" lines directly out of the barcode raw_text. This
+  // aligns barcode_data with what's visible in raw_text so fields don't come back
+  // empty when the barcode scan successfully read the lines but the structured
+  // parser (AAMVA/PDF417/MRZ) didn't emit them.
+  if (finalQrPayload) {
+    const mergedRaw = (finalQrPayload as any).raw_text || rawText || '';
+    const withRaw: any = { ...(finalQrPayload as any), raw_text: mergedRaw };
+    const merged = mergeLabeledAddressFields(withRaw, mergedRaw) as any;
+    if (!merged.issuing_country) merged.issuing_country = issuingCountry || 'UG';
+    finalQrPayload = merged;
+  }
+
+  // Build MRZ result for Gate 2
+  const hasMrz = mrzResult !== null;
+  const mrzForGate = hasMrz ? {
+    raw_lines: mrzResult!.raw_lines,
+    fields: mrzResult!.fields as any,
+    checksums_valid: mrzResult!.check_digits_valid,
+  } : (rawText && /[A-Z<]{30,}/.test(rawText) ? {
+    raw_lines: rawText.split('\n').filter((l: string) => /^[A-Z0-9<]{30,}$/.test(l.trim())),
+    checksums_valid: true,
+  } : null);
+
+  return {
+    qr_payload: finalQrPayload,
+    mrz_result: mrzForGate,
+    barcode_format: barcodeFormat,
+    raw_barcode_data: barcodeData?.pdf417_data?.raw_data || barcodeData?.barcode_data || null,
+  };
+}
+
+/** Liveness provider - instantiated once, reused across requests */
+const livenessProvider = createLivenessProvider();
+
+/** Run live capture processing and build LiveCaptureResult */
+async function extractLiveCapture(
+  selfiePath: string,
+  frontDocPath: string | null,
+  selfieBuffer: Buffer,
+  isSandbox: boolean = false,
+  headTurnMetadata?: HeadTurnLivenessMetadata,
+): Promise<LiveCaptureResult> {
+  // Detect face from buffer - returns bounding box (reused for deepfake crop below)
+  let faceConfidence = 0;
+  let faceEmbedding: number[] | null = null;
+  let faceBBox: { x: number; y: number; width: number; height: number } | null = null;
+  try {
+    const faceResult = await faceRecognitionService.detectFaceFromBuffer(selfieBuffer);
+    if (faceResult) {
+      faceConfidence = faceResult.confidence;
+      faceEmbedding = Array.from(faceResult.embedding);
+      faceBBox = faceResult.boundingBox;
+    }
+  } catch {
+    faceConfidence = 0;
+  }
+
+  // Liveness detection: head-turn (active) or passive heuristics
+  let livenessScore = 0;
+  let livenessPassed = false;
+  let livenessSignals: LiveCaptureResult['liveness_signals'];
+  let livenessChecks: LiveCaptureResult['liveness_checks'];
+  let livenessMode: 'passive' | 'head_turn' = 'passive';
+  // Head-turn uses its own weighted-score threshold (0.70); passive uses the
+  // environment-appropriate heuristic threshold (0.55 prod / 0.45 sandbox).
+  const passiveLivenessThreshold = getLivenessThresholdSync(isSandbox);
+  let livenessThreshold = passiveLivenessThreshold;
+
+  if (headTurnMetadata) {
+    livenessMode = 'head_turn';
+    livenessThreshold = HEAD_TURN_PASS_THRESHOLD;
+    // Head-turn liveness - server-side face analysis of captured frames
+    try {
+      const headTurnResult = await verifyHeadTurnLiveness(headTurnMetadata, faceRecognitionService);
+      livenessScore = headTurnResult.score;
+      livenessPassed = headTurnResult.passed;
+      livenessChecks = headTurnResult.checks;
+      logger.info('Head-turn liveness verification complete', {
+        score: livenessScore.toFixed(3),
+        passed: livenessPassed,
+        threshold: livenessThreshold,
+        reason: headTurnResult.reason,
+        challenge: headTurnMetadata.challenge_direction,
+        frameCount: headTurnMetadata.frames.length,
+      });
+    } catch (err) {
+      logger.error('Head-turn liveness verifier failed, falling back to passive', { error: err });
+      livenessMode = 'passive';
+      livenessThreshold = passiveLivenessThreshold;
+    }
+  }
+
+  if (livenessMode === 'passive' || (livenessScore === 0 && !livenessPassed)) {
+    livenessMode = 'passive';
+    livenessThreshold = passiveLivenessThreshold;
+    // Passive liveness - image-based heuristics
+    try {
+      const detailed = livenessProvider.assessLivenessDetailed
+        ? await livenessProvider.assessLivenessDetailed({ buffer: selfieBuffer })
+        : { score: await livenessProvider.assessLiveness({ buffer: selfieBuffer }), signals: undefined as any };
+      livenessScore = detailed.score;
+      livenessSignals = detailed.signals;
+      livenessPassed = livenessScore >= livenessThreshold;
+      logger.info('Passive liveness assessment complete', {
+        provider: livenessProvider.name,
+        score: livenessScore.toFixed(3),
+        threshold: livenessThreshold,
+        passed: livenessPassed,
+        isSandbox,
+        signals: Object.fromEntries((detailed.signals || []).map((s: any) => [s.key, +s.score.toFixed(3)])),
+      });
+    } catch (err) {
+      logger.error('Liveness provider failed, defaulting to fail-safe', { error: err });
+      // Fail-safe: if the provider crashes, score 0 - do NOT auto-pass
+      livenessScore = 0;
+      livenessPassed = false;
+    }
+  }
+
+  // ── Deepfake detection (Tier 2 - soft flag) ──────────────────────
+  // Reuses faceBBox from the buffer detection above (no redundant face detect)
+  let deepfake_check: LiveCaptureResult['deepfake_check'] = undefined;
+  try {
+    if (faceBBox) {
+      const detector = createDeepfakeDetector();
+      const crop = await detector.extractFaceCrop(selfieBuffer, faceBBox);
+      const dfResult = await detector.detect(crop);
+      deepfake_check = dfResult;
+      if (dfResult.fakeProbability > 0.80) {
+        logger.warn('Deepfake detected in live capture (soft flag)', {
+          realProbability: dfResult.realProbability.toFixed(3),
+          fakeProbability: dfResult.fakeProbability.toFixed(3),
+        });
+      }
+    }
+  } catch (err) {
+    logger.warn('Deepfake detection failed (non-blocking)', {
+      error: err instanceof Error ? err.message : 'Unknown',
+    });
+  }
+
+  return {
+    face_embedding: faceEmbedding,
+    face_confidence: faceConfidence,
+    liveness_passed: livenessPassed,
+    liveness_score: livenessScore,
+    liveness_threshold: livenessThreshold,
+    liveness_provider: livenessProvider.name,
+    liveness_mode: livenessMode,
+    liveness_signals: livenessSignals,
+    liveness_checks: livenessChecks,
+    deepfake_check,
+  };
+}
+
+// ─── Status mapping - delegated to statusReader.ts ──────────────────
+
+// ─── Webhook trigger helper ──────────────────────────────
+
+/**
+ * Auto-store verified identity in vault if developer has vault_auto_store enabled.
+ * Called AFTER res.json() - fire-and-forget, never throws.
+ */
+async function autoVaultIfEnabled(
+  verificationId: string,
+  developerId: string,
+  state: SessionState,
+  finalResult: string | null,
+): Promise<void> {
+  if (finalResult !== 'verified') return;
+
+  try {
+    const { data: dev } = await supabase
+      .from('developers')
+      .select('vault_auto_store')
+      .eq('id', developerId)
+      .single();
+
+    if (!dev?.vault_auto_store) return;
+
+    // Check not already stored
+    const { data: existing } = await supabase
+      .from('identity_vault')
+      .select('vault_token')
+      .eq('verification_id', verificationId)
+      .eq('developer_id', developerId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (existing) return;
+
+    const identityData = extractIdentityData(state);
+    if (!identityData) return;
+
+    await storeVaultEntry(developerId, verificationId, identityData);
+  } catch (err) {
+    logger.error('autoVaultIfEnabled failed:', {
+      verificationId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Look up the api_key row's service-key context (is_service / service_product /
+ * service_environment) so webhook payloads can include them. Returns null
+ * fields when apiKeyId is missing or the row doesn't exist. Failure-tolerant:
+ * any DB error returns null context (webhook still fires without service-key
+ * fields rather than skipping delivery).
+ */
+async function lookupServiceKeyContext(apiKeyId?: string): Promise<{
+  is_service: boolean;
+  service_product: string | null;
+  service_environment: string | null;
+}> {
+  if (!apiKeyId) {
+    return { is_service: false, service_product: null, service_environment: null };
+  }
+  try {
+    const { data } = await supabase
+      .from('api_keys')
+      .select('is_service, service_product, service_environment')
+      .eq('id', apiKeyId)
+      .single();
+    return {
+      is_service: data?.is_service === true,
+      service_product: data?.service_product ?? null,
+      service_environment: data?.service_environment ?? null,
+    };
+  } catch {
+    return { is_service: false, service_product: null, service_environment: null };
+  }
+}
+
+/**
+ * Resolve a human-review reason for a manual_review event. Prefers the stored
+ * `manual_review_reason` on the row; falls back to state-derived signals.
+ */
+async function loadReviewReason(verificationId: string, state: SessionState): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('verification_requests')
+      .select('manual_review_reason')
+      .eq('id', verificationId)
+      .single();
+    if (data?.manual_review_reason) return data.manual_review_reason;
+  } catch {
+    // fall through to state-derived reason
+  }
+  if (state.cross_validation?.verdict === 'REVIEW') return 'Cross-validation requires review';
+  if (state.face_match?.skipped_reason) return `Face match skipped: ${state.face_match.skipped_reason}`;
+  return null;
+}
+
+/**
+ * Fire AML screening events (screening.completed / screening.hit) when the
+ * automatic screen ran. AML results are always distinguishable from identity
+ * results: these are separate event names carrying the normalized aml_screening
+ * block, and a hit is never reported as completed-clear.
+ */
+async function fireScreeningEvents(
+  verificationId: string,
+  developerId: string,
+  userId: string,
+  state: SessionState,
+  isSandbox: boolean,
+  apiKeyId?: string,
+): Promise<void> {
+  const screening = normalizeAmlScreening(state);
+  if (!screening) return;
+  const isHit = screening.status === 'hit' || screening.matches.length > 0;
+  const serviceCtx = await lookupServiceKeyContext(apiKeyId);
+  const eventId = crypto.randomUUID();
+
+  const buildFor = (event: string) =>
+    buildVerificationWebhookPayload({
+      event,
+      verificationId,
+      userId,
+      state,
+      status: isHit ? 'manual_review' : 'verified',
+      eventId,
+      serviceCtx,
+    });
+
+  try {
+    const completed = await webhookService.getActiveWebhooksForDeveloper(developerId, isSandbox, 'screening.completed', apiKeyId);
+    if (completed.length > 0) {
+      const payload = await buildFor('screening.completed');
+      for (const webhook of completed) {
+        webhookService.sendWebhook(webhook, verificationId, payload).catch((err) =>
+          logger.error('screening.completed delivery error (fire-and-forget):', {
+            webhookId: webhook.id, verificationId,
+            error: err instanceof Error ? err.message : String(err),
+          }));
+      }
+    }
+    if (isHit) {
+      const hits = await webhookService.getActiveWebhooksForDeveloper(developerId, isSandbox, 'screening.hit', apiKeyId);
+      if (hits.length > 0) {
+        const payload = await buildFor('screening.hit');
+        for (const webhook of hits) {
+          webhookService.sendWebhook(webhook, verificationId, payload).catch((err) =>
+            logger.error('screening.hit delivery error (fire-and-forget):', {
+              webhookId: webhook.id, verificationId,
+              error: err instanceof Error ? err.message : String(err),
+            }));
+        }
+      }
+    }
+  } catch (err) {
+    logger.error('fireScreeningEvents failed:', {
+      verificationId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Fire webhooks if the verification has reached a terminal state.
+ * Called AFTER res.json() so it never delays the HTTP response.
+ * Errors are caught and logged - never thrown.
+ */
+async function fireWebhooksIfTerminal(
+  verificationId: string,
+  developerId: string,
+  userId: string,
+  state: SessionState,
+  mapped: { final_result: string | null },
+  isSandbox: boolean,
+  apiKeyId?: string
+): Promise<void> {
+  if (mapped.final_result === null) return; // not terminal yet
+
+  // Map terminal result to webhook event type
+  const eventType = mapped.final_result === 'verified' ? 'verification.completed'
+    : mapped.final_result === 'failed' ? 'verification.failed'
+    : 'verification.manual_review';
+
+  try {
+    // Screening events fire alongside the terminal verification event.
+    await fireScreeningEvents(verificationId, developerId, userId, state, isSandbox, apiKeyId);
+
+    const webhooks = await webhookService.getActiveWebhooksForDeveloper(developerId, isSandbox, eventType, apiKeyId);
+    if (webhooks.length === 0) return;
+
+    const serviceCtx = await lookupServiceKeyContext(apiKeyId);
+    const reviewReason = mapped.final_result === 'manual_review'
+      ? await loadReviewReason(verificationId, state)
+      : null;
+    const failureReason = mapped.final_result === 'failed'
+      ? (state.rejection_detail ?? state.rejection_reason)
+      : null;
+
+    const payload = await buildVerificationWebhookPayload({
+      event: eventType,
+      verificationId,
+      userId,
+      state,
+      status: mapped.final_result,
+      eventId: crypto.randomUUID(),
+      serviceCtx,
+      reviewReason,
+      failureReason,
+    });
+
+    for (const webhook of webhooks) {
+      webhookService.sendWebhook(webhook, verificationId, payload).catch(err => {
+        logger.error('Webhook delivery error (fire-and-forget):', {
+          webhookId: webhook.id,
+          verificationId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+  } catch (err) {
+    logger.error('fireWebhooksIfTerminal failed:', {
+      verificationId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/**
+ * Fire a specific webhook event (non-terminal).
+ * Called AFTER res.json() so it never delays the HTTP response.
+ * Errors are caught and logged - never thrown.
+ */
+async function fireWebhookEvent(
+  eventType: string,
+  verificationId: string,
+  developerId: string,
+  userId: string,
+  state: SessionState,
+  isSandbox: boolean,
+  apiKeyId?: string
+): Promise<void> {
+  try {
+    const webhooks = await webhookService.getActiveWebhooksForDeveloper(developerId, isSandbox, eventType, apiKeyId);
+    if (webhooks.length === 0) return;
+
+    // Resolve the current verification status for the payload
+    const mapped = mapStatusForResponse(state);
+    const currentStatus = mapped.final_result || 'processing';
+
+    const serviceCtx = await lookupServiceKeyContext(apiKeyId);
+
+    const payload = await buildVerificationWebhookPayload({
+      event: eventType,
+      verificationId,
+      userId,
+      state,
+      status: currentStatus,
+      eventId: crypto.randomUUID(),
+      serviceCtx,
+      failureReason: state.rejection_detail ?? null,
+    });
+
+    for (const webhook of webhooks) {
+      webhookService.sendWebhook(webhook, verificationId, payload).catch(err => {
+        logger.error('Webhook delivery error (fire-and-forget):', {
+          webhookId: webhook.id,
+          verificationId,
+          event: eventType,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+  } catch (err) {
+    logger.error('fireWebhookEvent failed:', {
+      verificationId,
+      event: eventType,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+// ─── Auth helper ──────────────────────────────
+
+async function requireOwnedVerification(req: Request, verificationId: string) {
+  // Session tokens are scoped to a single verification - enforce binding
+  if (req.sessionVerificationId && req.sessionVerificationId !== verificationId) {
+    throw new ValidationError('Session token is not authorized for this verification', 'verification_id', verificationId);
+  }
+
+  const developerId = (req as any).developer.id;
+  const verification = await verificationService.getVerificationRequestForDeveloper(verificationId, developerId);
+  if (!verification) {
+    throw new ValidationError('Verification request not found', 'verification_id', verificationId);
+  }
+  return verification;
+}
+
+// ─── Routes ──────────────────────────────────
+
+router.post('/initialize',
+  authenticateAPIKeyOrHandoff,
+  checkSandboxMode,
+  idempotencyMiddleware,
+  verificationRateLimit,
+  [
+    // user_id is an opaque external subject id - accept any non-empty string,
+    // not just a UUID (Odoo sends e.g. "stable-external-subject-id").
+    body('user_id').isString().trim().isLength({ min: 1, max: 255 }).withMessage('User ID must be a non-empty opaque string (max 255 chars)'),
+    body('document_type').optional().isIn(['passport', 'drivers_license', 'national_id', 'auto']).withMessage('Invalid document type'),
+    body('issuing_country').optional().isLength({ min: 2, max: 2 }).isAlpha().withMessage('Issuing country must be a 2-letter ISO code'),
+    body('sandbox').optional().isBoolean().withMessage('Sandbox must be a boolean'),
+    body('source').optional().isIn(['api', 'vaas', 'demo']).withMessage('Source must be api, vaas, or demo'),
+    body('addons').optional().isObject().withMessage('Addons must be an object'),
+    body('addons.aml_screening').optional().isBoolean().withMessage('aml_screening must be a boolean'),
+    body('addons.address_verification').optional().isBoolean().withMessage('address_verification must be a boolean'),
+    body('verification_mode').optional().isIn(['full', 'document_only', 'identity', 'age_only']).withMessage('verification_mode must be "full", "document_only", "identity", or "age_only"'),
+    body('age_threshold').optional().isInt({ min: 1, max: 99 }).withMessage('age_threshold must be an integer between 1 and 99'),
+    // External correlation metadata (Odoo KYC/AML integration). Opaque strings.
+    body('external_reference').optional().isString().trim().isLength({ max: 255 }).withMessage('external_reference must be a string (max 255 chars)'),
+    body('external_system').optional().isString().trim().isLength({ max: 64 }).withMessage('external_system must be a string (max 64 chars)'),
+    body('subject_type').optional().isIn([...SUBJECT_TYPES]).withMessage(`subject_type must be one of: ${SUBJECT_TYPES.join(', ')}`),
+    body('odoo_partner_id').optional().isString().trim().isLength({ max: 255 }).withMessage('odoo_partner_id must be a string (max 255 chars)'),
+    body('odoo_guarantor_id').optional().isString().trim().isLength({ max: 255 }).withMessage('odoo_guarantor_id must be a string (max 255 chars)'),
+    body('odoo_lead_id').optional().isString().trim().isLength({ max: 255 }).withMessage('odoo_lead_id must be a string (max 255 chars)'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { user_id, document_type = 'national_id', issuing_country = 'UG' } = req.body;
+    const addons: VerificationAddons = req.body.addons || {};
+    const source: VerificationSource = req.body.source || 'api';
+    const verificationMode: string = req.body.verification_mode || 'full';
+
+    // External correlation metadata (opaque strings; echoed unchanged on webhooks).
+    const externalReference: string | null = req.body.external_reference?.trim() || null;
+    const externalSystem: string | null = req.body.external_system?.trim() || null;
+    const subjectType: string | null = req.body.subject_type || null;
+    const odooPartnerId: string | null = req.body.odoo_partner_id?.trim() || null;
+    const odooGuarantorId: string | null = req.body.odoo_guarantor_id?.trim() || null;
+    const odooLeadId: string | null = req.body.odoo_lead_id?.trim() || null;
+
+    // Map the opaque external subject id to the internal users.id UUID.
+    const internalUserId = toInternalUserId(user_id);
+    req.body.user_id = internalUserId;
+    await new Promise((resolve, reject) => {
+      authenticateUser(req as any, res as any, (err: any) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    });
+
+    const isSandbox = req.isSandbox || false;
+    const developerId = (req as any).developer.id;
+
+    // ─── Compliance Orchestration ──────────────────────────────
+    let complianceApplied: { ruleset: string; rule: string; action: unknown }[] = [];
+    let resolvedMode = verificationMode;
+    let resolvedAddons = { ...addons };
+
+    try {
+      const rulesets = await loadActiveRulesForDeveloper(developerId);
+      if (rulesets.length > 0) {
+        const complianceCtx: ComplianceContext = {
+          country: issuing_country?.toUpperCase(),
+          document_type,
+          verification_mode: verificationMode,
+          metadata: req.body.metadata || {},
+        };
+
+        const { matches, merged } = evaluateRules(rulesets, complianceCtx);
+
+        if (matches.length > 0) {
+          complianceApplied = matches.map(m => ({
+            ruleset: m.ruleset_name,
+            rule: m.rule_description || m.rule_id,
+            action: m.action,
+          }));
+
+          // Apply resolved mode (more restrictive wins)
+          if (merged.set_mode) resolvedMode = merged.set_mode;
+
+          // Apply addons
+          if (merged.require_address) resolvedAddons.address_verification = true;
+          if (merged.require_aml) resolvedAddons.aml_screening = true;
+
+          // Store compliance decisions in addons for downstream pipeline steps
+          if (merged.force_manual_review) (resolvedAddons as any).compliance_force_manual_review = true;
+          if (merged.require_liveness) (resolvedAddons as any).compliance_require_liveness = merged.require_liveness;
+          if (merged.flags?.length) (resolvedAddons as any).compliance_flags = merged.flags;
+        }
+      }
+    } catch (err) {
+      // Compliance evaluation is non-blocking - log and continue
+      logger.error('Compliance evaluation failed:', {
+        developerId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    // Recompute ageThreshold using resolvedMode in case compliance changed the mode
+    const resolvedAgeThreshold: number | null = resolvedMode === 'age_only'
+      ? (req.body.age_threshold ?? 18)
+      : null;
+
+    // Create DB record with source tag
+    const verificationRecord = await verificationService.createVerificationRequest({
+      user_id: internalUserId,
+      developer_id: developerId,
+      is_sandbox: isSandbox,
+      source,
+      addons: Object.keys(resolvedAddons).length > 0 ? resolvedAddons as Record<string, unknown> : undefined,
+    });
+
+    // Set session start timestamp, verification mode, age threshold, client IP,
+    // compliance overrides, and external correlation metadata.
+    const { error: updateError } = await supabase.from('verification_requests').update({
+      session_started_at: new Date().toISOString(),
+      verification_mode: resolvedMode,
+      client_ip: req.ip || req.socket?.remoteAddress || null,
+      step_timestamps: { init: new Date().toISOString() },
+      ...((req as any).apiKey?.id && { api_key_id: (req as any).apiKey.id }),
+      ...(resolvedAgeThreshold !== null && { age_threshold: resolvedAgeThreshold }),
+      ...((resolvedAddons as any).compliance_force_manual_review && {
+        manual_review_reason: 'Compliance rule: force_manual_review',
+      }),
+      external_reference: externalReference,
+      external_system: externalSystem,
+      subject_type: subjectType,
+      odoo_partner_id: odooPartnerId,
+      odoo_guarantor_id: odooGuarantorId,
+      odoo_lead_id: odooLeadId,
+      external_user_id: user_id,
+    }).eq('id', verificationRecord.id);
+    if (updateError) {
+      logger.error('Failed to update verification_mode', {
+        verificationId: verificationRecord.id,
+        verification_mode: resolvedMode,
+        error: updateError.message,
+        code: updateError.code,
+        details: updateError.details,
+        hint: updateError.hint,
+      });
+    }
+
+    // Resolve flow config from verification_mode
+    const flow = FLOW_PRESETS[resolvedMode as VerificationMode] ?? INLINE_FLOW_FALLBACKS[resolvedMode] ?? FLOW_PRESETS.full;
+
+    // Create session and save initial state
+    const issuingCountryUpper = issuing_country?.toUpperCase() || null;
+    const session = createSession(isSandbox, { session_id: verificationRecord.id, issuing_country: issuingCountryUpper }, resolvedAddons, undefined, flow);
+    await saveSessionState(verificationRecord.id, session.getState());
+
+    logVerificationEvent('verification_initialized', verificationRecord.id, {
+      userId: user_id,
+      documentType: document_type,
+      developerId,
+      sandbox: isSandbox,
+    });
+
+    // ─── Generate session token ─────────────────────────────────
+    // Short-lived token for hosted verification page - replaces raw API key in URLs.
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const sessionTokenHash = hashHandoffToken(sessionToken);
+    const sessionTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    const { error: tokenError } = await supabase
+      .from('verification_requests')
+      .update({
+        session_token_hash: sessionTokenHash,
+        session_token_expires_at: sessionTokenExpiresAt.toISOString(),
+        session_api_key_id: (req as any).apiKey?.id || null,
+      })
+      .eq('id', verificationRecord.id);
+
+    if (tokenError) {
+      logger.error('Failed to store session token', {
+        verificationId: verificationRecord.id,
+        error: tokenError.message,
+      });
+    }
+
+    // The integrated stack is mounted under /kyc; PUBLIC_APP_URL carries
+    // that prefix, while standalone installs may continue using FRONTEND_URL.
+    const frontendBase = (
+      process.env.PUBLIC_APP_URL
+      || process.env.FRONTEND_URL
+      || req.headers.origin
+      || req.headers.referer?.replace(/\/[^/]*$/, '')
+      || `${req.protocol}://${req.get('host')}`
+    ).replace(/\/+$/, '');
+    const verificationUrl = `${frontendBase}/user-verification?session=${sessionToken}`;
+
+    const isAgeOnly = resolvedMode === 'age_only';
+    const mapped = mapStatusForResponse(session.getState(), flow);
+
+    const modeMessages: Record<string, string> = {
+      full: 'Verification initialized successfully - ready to upload front document',
+      document_only: 'Document-only verification initialized - upload front document',
+      identity: 'Identity verification initialized - upload front document',
+      age_only: 'Age verification initialized - upload front document to check age',
+    };
+
+    res.status(201).json({
+      success: true,
+      verification_id: verificationRecord.id,
+      user_id,
+      session_token: sessionToken,
+      verification_url: verificationUrl,
+      verification_mode: resolvedMode,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      // Echo the external correlation metadata unchanged.
+      external_reference: externalReference,
+      external_system: externalSystem,
+      subject_type: subjectType,
+      ...(odooPartnerId !== null && { odoo_partner_id: odooPartnerId }),
+      ...(odooGuarantorId !== null && { odoo_guarantor_id: odooGuarantorId }),
+      ...(odooLeadId !== null && { odoo_lead_id: odooLeadId }),
+      ...(isAgeOnly && { age_threshold: resolvedAgeThreshold }),
+      ...(complianceApplied.length > 0 && {
+        compliance_applied: complianceApplied,
+        ...((resolvedAddons as any).compliance_require_liveness && {
+          require_liveness: (resolvedAddons as any).compliance_require_liveness,
+        }),
+        ...((resolvedAddons as any).compliance_flags && {
+          compliance_flags: (resolvedAddons as any).compliance_flags,
+        }),
+      }),
+      message: modeMessages[resolvedMode] || modeMessages.full,
+    });
+
+    // Fire verification.initialized (external system accepted the session) and
+    // verification.started (session created) after the response is sent.
+    fireWebhookEvent(
+      'verification.initialized',
+      verificationRecord.id, developerId, internalUserId,
+      session.getState(), isSandbox, (req as any).apiKey?.id
+    );
+    fireWebhookEvent(
+      'verification.started',
+      verificationRecord.id, developerId, internalUserId,
+      session.getState(), isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+// ─── Re-verification: liveness-only re-check for returning users ────────────
+router.post('/re-verify',
+  authenticateAPIKeyOrHandoff,
+  checkSandboxMode,
+  verificationRateLimit,
+  [
+    body('user_id').isUUID().withMessage('User ID must be a valid UUID'),
+    body('previous_verification_id').isUUID().withMessage('Previous verification ID must be a valid UUID'),
+    body('source').optional().isIn(['api', 'vaas', 'demo']).withMessage('Source must be api, vaas, or demo'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { user_id, previous_verification_id } = req.body;
+    const source: VerificationSource = req.body.source || 'api';
+
+    req.body.user_id = user_id;
+    await new Promise((resolve, reject) => {
+      authenticateUser(req as any, res as any, (err: any) => {
+        if (err) reject(err);
+        else resolve(true);
+      });
+    });
+
+    const isSandbox = req.isSandbox || false;
+    const developerId = (req as any).developer.id;
+
+    // Load and validate the parent verification
+    const { data: parentVerification, error: parentError } = await supabase
+      .from('verification_requests')
+      .select('id, user_id, developer_id, status, issuing_country, verification_mode')
+      .eq('id', previous_verification_id)
+      .single();
+
+    if (parentError || !parentVerification) {
+      throw new ValidationError('Previous verification not found', 'previous_verification_id', previous_verification_id);
+    }
+    if (parentVerification.developer_id !== developerId) {
+      throw new ValidationError('Previous verification belongs to a different developer', 'previous_verification_id', previous_verification_id);
+    }
+    if (parentVerification.user_id !== user_id) {
+      throw new ValidationError('Previous verification belongs to a different user', 'previous_verification_id', previous_verification_id);
+    }
+    if (parentVerification.status !== 'verified') {
+      throw new ValidationError('Previous verification must have status "verified" to re-verify', 'previous_verification_id', parentVerification.status);
+    }
+    if (parentVerification.verification_mode && parentVerification.verification_mode !== 'full') {
+      throw new ValidationError('Cannot re-verify from another re-verification - use the original verification', 'previous_verification_id', previous_verification_id);
+    }
+
+    // Load parent session to get face embedding for matching
+    const parentState = await loadSessionState(previous_verification_id);
+    if (!parentState?.front_extraction) {
+      throw new ValidationError('Previous verification has no front extraction data - cannot re-verify', 'previous_verification_id', previous_verification_id);
+    }
+
+    // Check if face embedding is still available (GDPR stripping nullifies it on terminal states).
+    // If missing, the session starts at AWAITING_FRONT so the user must re-upload their ID photo.
+    const hasFaceEmbedding = parentState.front_extraction.face_embedding
+      && parentState.front_extraction.face_embedding.length > 0;
+    const startStep = hasFaceEmbedding
+      ? VerificationStatus.AWAITING_LIVE
+      : VerificationStatus.AWAITING_FRONT;
+    const mode = hasFaceEmbedding ? 'liveness_only' : 'document_refresh';
+
+    // Create new verification record linked to parent
+    const verificationRecord = await verificationService.createVerificationRequest({
+      user_id,
+      developer_id: developerId,
+      is_sandbox: isSandbox,
+      source,
+    });
+
+    // Set parent link and verification mode
+    await supabase.from('verification_requests').update({
+      parent_verification_id: previous_verification_id,
+      verification_mode: mode,
+      session_started_at: new Date().toISOString(),
+      issuing_country: parentVerification.issuing_country,
+      client_ip: req.ip || req.socket?.remoteAddress || null,
+      step_timestamps: { init: new Date().toISOString() },
+    }).eq('id', verificationRecord.id);
+
+    // Create session - either at AWAITING_LIVE (with face embedding) or AWAITING_FRONT (refresh)
+    const hydration: SessionHydration = {
+      session_id: verificationRecord.id,
+      current_step: startStep,
+      issuing_country: parentVerification.issuing_country,
+    };
+    if (hasFaceEmbedding) {
+      hydration.front_extraction = parentState.front_extraction;
+    }
+    const session = createSession(isSandbox, hydration);
+    await saveSessionState(verificationRecord.id, session.getState());
+
+    logVerificationEvent('re_verification_initialized', verificationRecord.id, {
+      userId: user_id,
+      previousVerificationId: previous_verification_id,
+      developerId,
+      sandbox: isSandbox,
+      mode,
+    });
+
+    const mapped = mapStatusForResponse(session.getState());
+
+    res.status(201).json({
+      success: true,
+      verification_id: verificationRecord.id,
+      parent_verification_id: previous_verification_id,
+      verification_mode: mode,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      message: hasFaceEmbedding
+        ? 'Re-verification initialized - ready to upload live capture (liveness-only mode)'
+        : 'Re-verification initialized - face embedding expired, please re-upload front document first',
+    });
+
+    // Fire webhook
+    fireWebhookEvent(
+      'verification.started',
+      verificationRecord.id, developerId, user_id,
+      session.getState(), isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+router.post('/:verification_id/front-document',
+  authenticateAPIKeyOrHandoff,
+  idempotencyMiddleware,
+  verificationRateLimit,
+  upload.single('document'),
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+    body('document_type').optional().isIn(['passport', 'drivers_license', 'national_id', 'other', 'auto']).withMessage('Invalid document type'),
+    body('issuing_country').optional().isLength({ min: 2, max: 2 }).isAlpha().withMessage('Issuing country must be a 2-letter ISO code'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new FileUploadError('Document file is required');
+    }
+
+    const frontFileTypeCheck = await validateFileType(req.file.buffer);
+    if (!frontFileTypeCheck.valid) {
+      throw new FileUploadError(frontFileTypeCheck.reason || 'Invalid file type');
+    }
+
+    const { verification_id } = req.params;
+    const { document_type = 'national_id', issuing_country = 'UG' } = req.body;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+    const source: VerificationSource = (verification as any).source || 'api';
+
+    // Idempotent guard: if a previous POST already accepted the front document
+    // and advanced the session beyond AWAITING_FRONT, return the cached result
+    // instead of re-processing. Without this, a client retry triggered by a
+    // read timeout shorter than our OCR latency (Android okhttp's ~10s default
+    // vs typical 15-30s extraction) would re-run the full storage upload +
+    // engine OCR pipeline, then throw SessionFlowError -> 409 because state has
+    // already transitioned. The cached return costs nothing extra, lets the
+    // client recover its UI, and stops the retry storm from filling Sentry
+    // with VE_FLOW captures (see NODE-EXPRESS-7).
+    //
+    // Excluded states:
+    //   - AWAITING_FRONT (the normal case - proceed with processing)
+    //   - FRONT_PROCESSING (an in-flight first request is mid-OCR; the second
+    //     request still needs to wait/retry rather than return stale data)
+    //   - HARD_REJECTED (handled below - produces a structured 409 explaining
+    //     why the session is dead, which is more useful than a cached state)
+    const earlyState = await loadSessionState(verification_id);
+    if (earlyState &&
+        earlyState.current_step !== VerificationStatus.AWAITING_FRONT &&
+        earlyState.current_step !== VerificationStatus.FRONT_PROCESSING &&
+        earlyState.current_step !== VerificationStatus.HARD_REJECTED) {
+      const { data: vrEarly } = await supabase
+        .from('verification_requests')
+        .select('verification_mode, addons')
+        .eq('id', verification_id)
+        .single();
+      const earlyMode = (vrEarly?.verification_mode as VerificationMode) || 'full';
+      const earlyFlow = FLOW_PRESETS[earlyMode] ?? INLINE_FLOW_FALLBACKS[earlyMode] ?? FLOW_PRESETS.full;
+      const cached = buildVerificationResponse({
+        verificationId: verification_id,
+        state: earlyState,
+        verification: {
+          status: (verification as any).status,
+          verification_mode: earlyMode,
+          is_sandbox: isSandbox,
+          addons: vrEarly?.addons,
+        },
+        riskScore: null,
+        flow: earlyFlow,
+      });
+      logger.info('Front document idempotent retry - returning cached result', {
+        verification_id,
+        current_step: earlyState.current_step,
+      });
+      return res.status(200).json({ ...cached, idempotent_retry: true });
+    }
+
+    // Store document in the source-appropriate bucket
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString().replace(/[:.]/g, '-');
+    const versionedName = `front_id_v${timestamp}_${isoDate}_processed_${req.file.originalname || 'front_document.jpg'}`;
+
+    const documentPath = await storageService.storeDocument(
+      req.file.buffer,
+      versionedName,
+      req.file.mimetype,
+      verification_id,
+      source
+    );
+
+    const document = await verificationService.createDocument({
+      verification_request_id: verification_id,
+      file_path: documentPath,
+      file_name: req.file.originalname || 'front_document.jpg',
+      file_size: req.file.size,
+      mime_type: req.file.mimetype,
+      document_type,
+      is_back_of_id: false,
+    });
+
+    await verificationService.updateVerificationRequest(verification_id, {
+      document_id: document.id,
+    } as any);
+
+    // Resolve issuing_country: per-request override > session state
+    const resolvedCountry = issuing_country?.toUpperCase() || undefined;
+
+    // Look up developer's LLM config for enhanced OCR extraction
+    const developerId = (req as any).developer.id;
+    const llmConfig = await getDeveloperLLMConfig(developerId);
+
+    // Run front extraction - engine worker if available, local fallback otherwise
+    const frontResult = engineClient.isEnabled()
+      ? await engineClient.extractFront(req.file.buffer, {
+          documentId: document.id,
+          documentType: document_type,
+          issuingCountry: resolvedCountry,
+          verificationId: verification_id,
+          llmConfig,
+        })
+      : await extractFrontDocument(documentPath, document.id, document_type, resolvedCountry, verification_id, llmConfig, req.file.buffer);
+
+    // Update document record with resolved document type if auto-classified
+    const resolvedDocType = frontResult.ocr?.detected_document_type;
+    if (document_type === 'auto' && resolvedDocType) {
+      verificationService.updateDocument(document.id, { document_type: resolvedDocType } as any).catch(() => {});
+    }
+
+    // Ephemeral cleanup: demo files are deleted immediately after extraction
+    if (source === 'demo') {
+      storageService.deleteFile(documentPath).catch(err =>
+        logger.warn('Ephemeral cleanup failed (front)', { documentPath, error: err })
+      );
+      verificationService.updateDocument(document.id, { file_path: null } as any).catch(() => {});
+    }
+
+    // Check verification mode and resolve flow
+    const { data: vrRow } = await supabase
+      .from('verification_requests')
+      .select('verification_mode, age_threshold, addons')
+      .eq('id', verification_id)
+      .single();
+    const vrMode = (vrRow?.verification_mode as VerificationMode) || 'full';
+    const flow = FLOW_PRESETS[vrMode] ?? INLINE_FLOW_FALLBACKS[vrMode] ?? FLOW_PRESETS.full;
+    const isAgeOnly = vrMode === 'age_only';
+    const ageThreshold = vrRow?.age_threshold ?? 18;
+    const complianceForceReview = (vrRow?.addons as any)?.compliance_force_manual_review === true;
+
+    // Hydrate session and run Gate 1 via session
+    const session = await hydrateSession(verification_id, isSandbox);
+
+    // Guard: if session was already rejected in a previous step, return early
+    const preState = session.getState();
+    if (preState.current_step === VerificationStatus.HARD_REJECTED) {
+      const mapped = mapStatusForResponse(preState, flow);
+      return res.status(409).json({
+        success: false,
+        verification_id,
+        status: mapped.status,
+        current_step: mapped.current_step,
+        final_result: mapped.final_result,
+        rejection_reason: preState.rejection_reason,
+        rejection_detail: preState.rejection_detail,
+        message: 'Verification was already rejected in a previous step. Please start a new verification.',
+      });
+    }
+
+    // Override the extractFront dep to return our pre-computed result
+    (session as any).deps.extractFront = async () => frontResult;
+
+    let stepResult;
+    let ageVerification: AgeVerificationResult | undefined;
+
+    if (isAgeOnly) {
+      // Age-only mode: run Gate 1 + age check, then auto-complete
+      const ageResult = await session.submitFrontAgeOnly(req.file.buffer, ageThreshold);
+      stepResult = ageResult;
+      ageVerification = ageResult.age_verification;
+    } else {
+      stepResult = await session.submitFront(req.file.buffer);
+    }
+
+    await saveSessionState(verification_id, session.getState());
+    recordStepTimestamp(verification_id, 'front'); // fire-and-forget
+
+    // ─── Duplicate Detection (front document + face) ─────────
+    let dedupFlags: DuplicateFlag[] = [];
+    let dedupBlocked = false;
+    let dedupAction: string | null = null;
+    if (stepResult.passed && !isSandbox) {
+      try {
+        const dedupSettings = await getDedupSettings(developerId);
+        dedupAction = dedupSettings.action;
+        if (dedupSettings.enabled) {
+          // Document perceptual hash
+          const docHash = await computeDocumentPHash(req.file.buffer);
+          const docFlags = await runDedupCheck(developerId, verification_id, 'document_phash', docHash);
+          dedupFlags.push(...docFlags);
+
+          // Face LSH (if face embedding available)
+          const faceEmbedding = session.getState().front_extraction?.face_embedding;
+          if (faceEmbedding && Array.isArray(faceEmbedding) && faceEmbedding.length === 128) {
+            const faceHash = computeFaceLSH(faceEmbedding);
+            const faceFlags = await runDedupCheck(developerId, verification_id, 'face_lsh', faceHash);
+            dedupFlags.push(...faceFlags);
+          }
+
+          // Apply action if duplicates found
+          if (dedupFlags.length > 0 && dedupSettings.action === 'block') {
+            dedupBlocked = true;
+          }
+        }
+      } catch (err) {
+        logger.warn('Duplicate detection failed (non-blocking)', {
+          verification_id, error: err instanceof Error ? err.message : 'Unknown',
+        });
+      }
+    }
+
+    // Update main DB record
+    const state = session.getState();
+    let dbStatus: string;
+    if (dedupBlocked) {
+      dbStatus = 'failed';
+    } else if (isAgeOnly) {
+      const ageResult = state.current_step === VerificationStatus.COMPLETE ? 'verified' : 'failed';
+      dbStatus = (ageResult === 'verified' && (complianceForceReview || (dedupFlags.length > 0 && !dedupBlocked)))
+        ? 'manual_review' : ageResult;
+    } else if (state.current_step === VerificationStatus.COMPLETE) {
+      // Single-sided document-only flows complete on the front upload. Do not
+      // leave the database row in "processing" after screening has finished.
+      dbStatus = (complianceForceReview || (dedupFlags.length > 0 && !dedupBlocked))
+        ? 'manual_review'
+        : 'verified';
+    } else {
+      dbStatus = stepResult.passed ? 'processing' : 'failed';
+    }
+    await verificationService.updateVerificationRequest(verification_id, {
+      status: dbStatus,
+      ...(dedupBlocked && {
+        failure_reason: 'Duplicate document or face detected',
+      }),
+      ...(state.current_step === VerificationStatus.COMPLETE && {
+        processing_completed_at: new Date().toISOString(),
+      }),
+      // Persist the extracted identity onto the request row so the staff
+      // dashboard (subjects/overview) can show real names + document data
+      // instead of "Unknown subject" for every demo/hosted verification.
+      ...(state.front_extraction?.ocr && {
+        ocr_data: {
+          full_name: state.front_extraction.ocr.full_name || state.front_extraction.ocr.name || null,
+          name: state.front_extraction.ocr.full_name || state.front_extraction.ocr.name || null,
+          date_of_birth: state.front_extraction.ocr.date_of_birth || null,
+          nationality: state.front_extraction.ocr.nationality || null,
+          issuing_country: state.front_extraction.ocr.issuing_country || null,
+          id_number: state.front_extraction.ocr.id_number || state.front_extraction.ocr.document_number || null,
+          detected_document_type: state.front_extraction.ocr.detected_document_type || null,
+        },
+      }),
+    } as any);
+
+    // If dedup action is 'review' and duplicates found, set manual_review_reason
+    if (dedupFlags.length > 0 && !dedupBlocked && dedupAction === 'review') {
+      await supabase.from('verification_requests').update({
+        manual_review_reason: `Duplicate detected: ${dedupFlags.length} match(es) found`,
+      }).eq('id', verification_id);
+    }
+
+    logVerificationEvent('front_document_processed', verification_id, {
+      documentId: document.id,
+      documentPath,
+      status: state.current_step,
+      verification_mode: vrMode,
+      duplicatesDetected: dedupFlags.length,
+    });
+
+    const mapped = mapStatusForResponse(state, flow);
+
+    const ocrResult = state.front_extraction?.ocr;
+
+    // Build next-step message per flow
+    const nextStepMessage = dedupBlocked
+      ? 'Verification blocked: duplicate document or face detected'
+      : !stepResult.passed
+        ? stepResult.user_message || 'Front document processing failed'
+        : isAgeOnly
+          ? (state.current_step === VerificationStatus.COMPLETE ? 'Age verification passed' : stepResult.user_message || 'Age verification failed')
+          : state.current_step === VerificationStatus.AWAITING_LIVE
+            ? 'Front document processed successfully - ready for live capture'
+            : state.current_step === VerificationStatus.COMPLETE
+              ? 'Verification complete'
+              : 'Front document processed successfully - ready to upload back document';
+
+    res.json({
+      success: true,
+      verification_id,
+      verification_mode: vrMode,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      document_id: document.id,
+      ocr_data: isAgeOnly ? undefined : (ocrResult ?? null),
+      detected_document_type: ocrResult?.detected_document_type || (document_type !== 'auto' ? document_type : undefined),
+      classification_confidence: ocrResult?.classification_confidence ?? (document_type !== 'auto' ? 1.0 : undefined),
+      rejection_reason: state.rejection_reason,
+      rejection_detail: state.rejection_detail,
+      ...(ageVerification && { age_verification: ageVerification }),
+      aml_screening: state.aml_screening ?? null,
+      unified_screening: state.unified_screening ?? null,
+      ...(mapped.final_result && { final_result: mapped.final_result }),
+      ...(dedupBlocked && { final_result: 'failed' }),
+      ...(dedupFlags.length > 0 && { duplicate_flags: dedupFlags }),
+      requires_back: session.getFlow().requiresBack,
+      message: nextStepMessage,
+    });
+
+    // Broadcast status change via Supabase Realtime (after response is sent)
+    broadcastStatusChange(
+      verification_id, mapped.status, mapped.current_step,
+      mapped.final_result, state.rejection_reason,
+    ).catch(() => {});
+
+    // Fire age check webhook for age_only mode (after response is sent)
+    if (isAgeOnly && ageVerification) {
+      fireWebhookEvent(
+        'verification.age_check',
+        verification_id, (req as any).developer.id, verification.user_id,
+        state, isSandbox, (req as any).apiKey?.id
+      );
+    }
+
+    // Fire verification.document_processed webhook (after response is sent)
+    fireWebhookEvent(
+      'verification.document_processed',
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, isSandbox, (req as any).apiKey?.id
+    );
+
+    // Auto-vault (fire-and-forget, after response)
+    autoVaultIfEnabled(verification_id, (req as any).developer.id, state, mapped.final_result);
+
+    // Fire webhooks if terminal (Gate 1 rejection or age_only completion)
+    fireWebhooksIfTerminal(
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, mapped, isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+router.post('/:verification_id/back-document',
+  authenticateAPIKeyOrHandoff,
+  idempotencyMiddleware,
+  verificationRateLimit,
+  upload.single('document'),
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+    body('document_type').optional().isIn(['passport', 'drivers_license', 'national_id', 'other', 'auto']).withMessage('Invalid document type'),
+    body('issuing_country').optional().isLength({ min: 2, max: 2 }).isAlpha().withMessage('Issuing country must be a 2-letter ISO code'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new FileUploadError('Document file is required');
+    }
+
+    const backFileTypeCheck = await validateFileType(req.file.buffer);
+    if (!backFileTypeCheck.valid) {
+      throw new FileUploadError(backFileTypeCheck.reason || 'Invalid file type');
+    }
+
+    const { verification_id } = req.params;
+    const { document_type = 'other' } = req.body;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+    const source: VerificationSource = (verification as any).source || 'api';
+
+    // Guard: check flow allows back document
+    const { data: vrRow } = await supabase
+      .from('verification_requests')
+      .select('verification_mode, addons')
+      .eq('id', verification_id)
+      .single();
+    const vrMode = (vrRow?.verification_mode as VerificationMode) || 'full';
+    let flow = FLOW_PRESETS[vrMode] ?? INLINE_FLOW_FALLBACKS[vrMode] ?? FLOW_PRESETS.full;
+    const complianceForceReview = (vrRow?.addons as any)?.compliance_force_manual_review === true;
+
+    // Passports are single-sided - check if front OCR already detected a passport
+    if (flow.requiresBack) {
+      const savedState = await loadSessionState(verification_id);
+      flow = applyPassportOverride(flow, savedState?.front_extraction?.ocr?.detected_document_type as string | undefined);
+    }
+
+    if (!flow.requiresBack) {
+      const presetRequiresBack = (FLOW_PRESETS[vrMode] ?? FLOW_PRESETS.full).requiresBack;
+      const skippedDueToPassport = presetRequiresBack && !flow.requiresBack;
+      const reason = skippedDueToPassport
+        ? 'A passport was detected - passports are single-sided and do not require a back document.'
+        : `Back document is not required for "${vrMode}" verification mode.`;
+      return res.status(400).json({
+        success: false,
+        verification_id,
+        verification_mode: vrMode,
+        message: `${reason} ${flow.requiresLiveness ? 'Proceed to live capture.' : 'Verification is complete.'}`,
+      });
+    }
+
+    // Idempotent guard: if a previous POST already accepted the back document
+    // and advanced the session beyond AWAITING_BACK (to AWAITING_LIVE, or to
+    // COMPLETE for document_only flows), return the cached result instead of
+    // re-processing. Without this, a client retry triggered by a read timeout
+    // shorter than our extraction latency would re-run the full storage upload
+    // + engine OCR pipeline, then throw SessionFlowError -> 409 (VE_FLOW)
+    // because state has already transitioned - the same retry storm that was
+    // fixed for front-document in NODE-EXPRESS-7.
+    //
+    // Excluded states:
+    //   - AWAITING_BACK    (the normal case - proceed with processing)
+    //   - BACK_PROCESSING  (an in-flight first request is mid-OCR; the second
+    //     request still needs to wait/retry rather than return stale data)
+    //   - HARD_REJECTED    (handled below - produces a structured 409 explaining
+    //     why the session is dead, which is more useful than a cached state)
+    const earlyBackState = await loadSessionState(verification_id);
+    if (earlyBackState &&
+        earlyBackState.current_step !== VerificationStatus.AWAITING_BACK &&
+        earlyBackState.current_step !== VerificationStatus.BACK_PROCESSING &&
+        earlyBackState.current_step !== VerificationStatus.HARD_REJECTED) {
+      const cachedBack = buildVerificationResponse({
+        verificationId: verification_id,
+        state: earlyBackState,
+        verification: {
+          status: (verification as any).status,
+          verification_mode: vrMode,
+          is_sandbox: isSandbox,
+          addons: vrRow?.addons,
+        },
+        riskScore: null,
+        flow,
+      });
+      logger.info('Back document idempotent retry - returning cached result', {
+        verification_id,
+        current_step: earlyBackState.current_step,
+      });
+      return res.status(200).json({ ...cachedBack, idempotent_retry: true });
+    }
+
+    // Store document in the source-appropriate bucket
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString().replace(/[:.]/g, '-');
+    const versionedName = `back_id_v${timestamp}_${isoDate}_processed_${req.file.originalname || 'back_document.jpg'}`;
+
+    const documentPath = await storageService.storeDocument(
+      req.file.buffer,
+      versionedName,
+      req.file.mimetype,
+      verification_id,
+      source
+    );
+
+    const document = await verificationService.createDocument({
+      verification_request_id: verification_id,
+      file_path: documentPath,
+      file_name: req.file.originalname || 'back_document.jpg',
+      file_size: req.file.size,
+      mime_type: req.file.mimetype,
+      document_type,
+      is_back_of_id: true,
+    });
+
+    // Run back extraction (country context flows to Gate 2 via session state)
+    const savedState = await loadSessionState(verification_id);
+    const issuingCountry = savedState?.issuing_country || 'UG';
+    const backResult = engineClient.isEnabled()
+      ? await engineClient.extractBack(req.file.buffer, { issuingCountry })
+      : await extractBackDocument(documentPath, document.id, issuingCountry);
+
+    // Ephemeral cleanup: demo files are deleted immediately after extraction
+    if (source === 'demo') {
+      storageService.deleteFile(documentPath).catch(err =>
+        logger.warn('Ephemeral cleanup failed (back)', { documentPath, error: err })
+      );
+      verificationService.updateDocument(document.id, { file_path: null } as any).catch(() => {});
+    }
+
+    // Hydrate session and run Gate 2 + auto cross-validation via session
+    const session = await hydrateSession(verification_id, isSandbox);
+
+    // Guard: if session was already rejected in a previous step, return early
+    const preState = session.getState();
+    if (preState.current_step === VerificationStatus.HARD_REJECTED) {
+      const mapped = mapStatusForResponse(preState, flow);
+      return res.status(409).json({
+        success: false,
+        verification_id,
+        status: mapped.status,
+        current_step: mapped.current_step,
+        final_result: mapped.final_result,
+        rejection_reason: preState.rejection_reason,
+        rejection_detail: preState.rejection_detail,
+        message: 'Verification was already rejected in a previous step. Please start a new verification.',
+      });
+    }
+
+    (session as any).deps.extractBack = async () => backResult;
+    let stepResult: StepResult;
+    try {
+      stepResult = await session.submitBack(req.file.buffer);
+    } catch (err) {
+      // Concurrent-retry race: a first request may have completed between our
+      // early guard and this point. Rather than surfacing a 409 VE_FLOW to a
+      // client that has already moved on (or is retrying after a read
+      // timeout), re-read the persisted state and return it as an idempotent
+      // success. A genuinely dead (HARD_REJECTED) session is rethrown so the
+      // existing structured 409 path still explains why it can't continue.
+      if (err instanceof SessionFlowError) {
+        const latestState = await loadSessionState(verification_id);
+        if (latestState && latestState.current_step !== VerificationStatus.HARD_REJECTED) {
+          const cachedBack = buildVerificationResponse({
+            verificationId: verification_id,
+            state: latestState,
+            verification: {
+              status: (verification as any).status,
+              verification_mode: vrMode,
+              is_sandbox: isSandbox,
+              addons: vrRow?.addons,
+            },
+            riskScore: null,
+            flow,
+          });
+          logger.info('Back document idempotent retry (extraction race) - returning cached result', {
+            verification_id,
+            current_step: latestState.current_step,
+          });
+          return res.status(200).json({ ...cachedBack, idempotent_retry: true });
+        }
+      }
+      throw err;
+    }
+    await saveSessionState(verification_id, session.getState());
+    recordStepTimestamp(verification_id, 'back'); // fire-and-forget
+
+    // Update main DB record
+    const state = session.getState();
+    let dbStatus: string;
+    if (flow.preset === 'document_only' && state.current_step === VerificationStatus.COMPLETE) {
+      // document_only: crossval passed -> determine final status
+      const crossValVerdict = state.cross_validation?.verdict;
+      const docOnlyResult = crossValVerdict === 'REVIEW' ? 'manual_review'
+        : crossValVerdict === 'REJECT' ? 'failed'
+        : 'verified';
+      dbStatus = (docOnlyResult === 'verified' && complianceForceReview) ? 'manual_review' : docOnlyResult;
+      await verificationService.updateVerificationRequest(verification_id, {
+        status: dbStatus,
+        cross_validation_score: state.cross_validation?.overall_score ?? null,
+        processing_completed_at: new Date().toISOString(),
+      } as any);
+    } else {
+      dbStatus = stepResult.passed ? 'processing' : 'failed';
+      await verificationService.updateVerificationRequest(verification_id, {
+        status: dbStatus,
+      } as any);
+    }
+
+    logVerificationEvent('back_document_processed', verification_id, {
+      documentId: document.id,
+      documentPath,
+      status: state.current_step,
+      verification_mode: vrMode,
+    });
+
+    const mapped = mapStatusForResponse(state, flow);
+
+    const nextMsg = !stepResult.passed
+      ? stepResult.user_message || 'Back document processing failed'
+      : flow.afterCrossVal === 'COMPLETE'
+        ? 'Document verification complete'
+        : 'Back document processed and cross-validation passed - ready for live capture';
+
+    res.json({
+      success: true,
+      verification_id,
+      verification_mode: vrMode,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      document_id: document.id,
+      barcode_data: state.back_extraction?.qr_payload ?? null,
+      barcode_extraction_failed: !state.back_extraction?.qr_payload,
+      documents_match: state.cross_validation ? !state.cross_validation.has_critical_failure : null,
+      cross_validation_results: state.cross_validation ?? null,
+      aml_screening: state.aml_screening ?? null,
+      unified_screening: state.unified_screening ?? null,
+      rejection_reason: state.rejection_reason,
+      rejection_detail: state.rejection_detail,
+      failure_reason: state.rejection_detail,
+      ...(mapped.final_result && { final_result: mapped.final_result }),
+      message: nextMsg,
+    });
+
+    // Broadcast status change via Supabase Realtime
+    broadcastStatusChange(
+      verification_id, mapped.status, mapped.current_step,
+      mapped.final_result, state.rejection_reason,
+    ).catch(() => {});
+
+    // Fire verification.document_processed webhook (after response is sent)
+    fireWebhookEvent(
+      'verification.document_processed',
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, isSandbox, (req as any).apiKey?.id
+    );
+
+    // Auto-vault (fire-and-forget, after response)
+    autoVaultIfEnabled(verification_id, (req as any).developer.id, state, mapped.final_result);
+
+    // Fire webhooks if cross-validation hard-rejected (after response is sent)
+    fireWebhooksIfTerminal(
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, mapped, isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+// Cross-validation is now auto-triggered - this endpoint returns cached result
+router.post('/:verification_id/cross-validation',
+  authenticateAPIKeyOrHandoff,
+  verificationRateLimit,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+
+    // Return cached cross-validation result (auto-triggered after back-document)
+    const session = await hydrateSession(verification_id, isSandbox);
+    const state = session.getState();
+    const mapped = mapStatusForResponse(state);
+
+    res.json({
+      success: true,
+      verification_id,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      documents_match: state.cross_validation ? !state.cross_validation.has_critical_failure : null,
+      cross_validation_results: state.cross_validation ?? null,
+      rejection_reason: state.rejection_reason,
+      rejection_detail: state.rejection_detail,
+      failure_reason: state.rejection_detail,
+      manual_review_reason: state.cross_validation?.verdict === 'REVIEW' ? 'Cross-validation score requires review' : state.face_match?.skipped_reason ? `Face match skipped: ${state.face_match.skipped_reason}` : null,
+      message: state.cross_validation
+        ? 'Cross-validation results retrieved (auto-triggered after back document)'
+        : 'Cross-validation has not been performed yet',
+    });
+  })
+);
+
+router.post('/:verification_id/live-capture',
+  authenticateAPIKeyOrHandoff,
+  idempotencyMiddleware,
+  verificationRateLimit,
+  upload.single('selfie'),
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    if (!req.file) {
+      throw new FileUploadError('Document file is required');
+    }
+
+    const liveFileTypeCheck = await validateFileType(req.file.buffer);
+    if (!liveFileTypeCheck.valid) {
+      throw new FileUploadError(liveFileTypeCheck.reason || 'Invalid file type');
+    }
+
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+    const source: VerificationSource = (verification as any).source || 'api';
+
+    // Guard: check flow allows live capture
+    const { data: vrRow } = await supabase
+      .from('verification_requests')
+      .select('verification_mode, addons')
+      .eq('id', verification_id)
+      .single();
+    const vrMode = (vrRow?.verification_mode as VerificationMode) || 'full';
+    const flow = FLOW_PRESETS[vrMode] ?? INLINE_FLOW_FALLBACKS[vrMode] ?? FLOW_PRESETS.full;
+    const complianceForceReview = (vrRow?.addons as any)?.compliance_force_manual_review === true;
+
+    if (!flow.requiresLiveness) {
+      return res.status(400).json({
+        success: false,
+        verification_id,
+        verification_mode: vrMode,
+        message: `Live capture is not required for "${vrMode}" verification mode.`,
+      });
+    }
+
+    // Idempotent guard: if a previous POST already accepted the live capture
+    // and advanced the session to AWAITING_VOICE or COMPLETE, return the cached
+    // result instead of re-processing. Same retry pattern as front/back
+    // document (see NODE-EXPRESS-7) - a client retry after a read timeout must
+    // not re-run extraction and then fail with SessionFlowError -> 409.
+    const earlyLiveState = await loadSessionState(verification_id);
+    if (earlyLiveState &&
+        earlyLiveState.current_step !== VerificationStatus.AWAITING_LIVE &&
+        earlyLiveState.current_step !== VerificationStatus.LIVE_PROCESSING &&
+        earlyLiveState.current_step !== VerificationStatus.FACE_MATCHING &&
+        earlyLiveState.current_step !== VerificationStatus.HARD_REJECTED) {
+      const cachedLive = buildVerificationResponse({
+        verificationId: verification_id,
+        state: earlyLiveState,
+        verification: {
+          status: (verification as any).status,
+          verification_mode: vrMode,
+          is_sandbox: isSandbox,
+          addons: vrRow?.addons,
+        },
+        riskScore: null,
+        flow,
+      });
+      logger.info('Live capture idempotent retry - returning cached result', {
+        verification_id,
+        current_step: earlyLiveState.current_step,
+      });
+      return res.status(200).json({ ...cachedLive, idempotent_retry: true });
+    }
+
+    // Store selfie in the source-appropriate bucket
+    const timestamp = Date.now();
+    const isoDate = new Date(timestamp).toISOString().replace(/[:.]/g, '-');
+    const versionedName = `live_selfie_v${timestamp}_${isoDate}_processed_${req.file.originalname || 'selfie.jpg'}`;
+
+    const selfiePath = await storageService.storeSelfie(
+      req.file.buffer,
+      versionedName,
+      req.file.mimetype,
+      verification_id,
+      source
+    );
+
+    const selfie = await verificationService.createSelfie({
+      verification_request_id: verification_id,
+      file_path: selfiePath,
+      file_name: req.file.originalname || 'selfie.jpg',
+      file_size: req.file.size,
+    });
+
+    await verificationService.updateVerificationRequest(verification_id, {
+      selfie_id: selfie.id,
+    } as any);
+
+    // Parse optional liveness metadata from client
+    let headTurnMetadata: HeadTurnLivenessMetadata | undefined;
+    if (req.body?.liveness_metadata) {
+      try {
+        const raw = typeof req.body.liveness_metadata === 'string'
+          ? JSON.parse(req.body.liveness_metadata)
+          : req.body.liveness_metadata;
+        headTurnMetadata = HeadTurnLivenessMetadataSchema.parse(raw);
+        logger.info('Head-turn liveness metadata received', {
+          challenge: headTurnMetadata.challenge_direction,
+          frames: headTurnMetadata.frames.length,
+        });
+      } catch (err) {
+        throw new ValidationError(
+          'Invalid liveness_metadata: expected head_turn challenge format with frames array',
+          'liveness_metadata',
+          req.body.liveness_metadata,
+        );
+      }
+    }
+
+    // Run live capture extraction with real liveness detection
+    const liveResult = engineClient.isEnabled()
+      ? await engineClient.extractLive(req.file.buffer, { isSandbox, headTurnMetadata })
+      : await extractLiveCapture(selfiePath, null, req.file.buffer, isSandbox, headTurnMetadata);
+
+    // Ephemeral cleanup: demo selfie files are deleted immediately after extraction
+    if (source === 'demo') {
+      storageService.deleteFile(selfiePath).catch(err =>
+        logger.warn('Ephemeral cleanup failed (selfie)', { selfiePath, error: err })
+      );
+      supabase.from('selfies').update({ file_path: null }).eq('id', selfie.id).then(() => {});
+    }
+
+    // Hydrate session and run Gate 4 + auto face match via session
+    const session = await hydrateSession(verification_id, isSandbox);
+
+    // Guard: if the session was already rejected (e.g. Gate 3 cross-validation
+    // failed on the back document), return a clear error instead of crashing.
+    const preState = session.getState();
+    if (preState.current_step === VerificationStatus.HARD_REJECTED) {
+      const mapped = mapStatusForResponse(preState, flow);
+      return res.status(409).json({
+        success: false,
+        verification_id,
+        status: mapped.status,
+        current_step: mapped.current_step,
+        final_result: mapped.final_result,
+        rejection_reason: preState.rejection_reason,
+        rejection_detail: preState.rejection_detail,
+        message: 'Verification was already rejected in a previous step. Please start a new verification.',
+      });
+    }
+
+    (session as any).deps.processLiveCapture = async () => liveResult;
+    let stepResult: StepResult;
+    try {
+      stepResult = await session.submitLiveCapture(req.file.buffer);
+    } catch (err) {
+      // Concurrent-retry race: a first request may have completed between our
+      // early guard and this point. Return the persisted state as idempotent
+      // success instead of surfacing a 409 VE_FLOW; HARD_REJECTED is rethrown
+      // so the existing structured 409 explains why the session is dead.
+      if (err instanceof SessionFlowError) {
+        const latestState = await loadSessionState(verification_id);
+        if (latestState && latestState.current_step !== VerificationStatus.HARD_REJECTED) {
+          const cachedLive = buildVerificationResponse({
+            verificationId: verification_id,
+            state: latestState,
+            verification: {
+              status: (verification as any).status,
+              verification_mode: vrMode,
+              is_sandbox: isSandbox,
+              addons: vrRow?.addons,
+            },
+            riskScore: null,
+            flow,
+          });
+          logger.info('Live capture idempotent retry (extraction race) - returning cached result', {
+            verification_id,
+            current_step: latestState.current_step,
+          });
+          return res.status(200).json({ ...cachedLive, idempotent_retry: true });
+        }
+      }
+      throw err;
+    }
+
+    // ─── Velocity + Geo Analysis (non-sandbox only) ───────────
+    if (stepResult.passed && !isSandbox) {
+      try {
+        const { data: vrRow } = await supabase.from('verification_requests')
+          .select('client_ip, user_id, step_timestamps')
+          .eq('id', verification_id).single();
+
+        // Record live step timestamp before analysis
+        const liveTs = new Date().toISOString();
+        const stepTs = { ...(vrRow?.step_timestamps || {}), live: liveTs };
+        await supabase.from('verification_requests')
+          .update({ step_timestamps: stepTs }).eq('id', verification_id);
+
+        const velocityResult = await analyzeVelocity(
+          (req as any).developer.id, vrRow?.user_id, vrRow?.client_ip || null, verification_id, stepTs,
+        );
+        session.setVelocityAnalysis(velocityResult);
+
+        // Geo analysis (reuses vrRow.client_ip - no extra DB query)
+        const documentCountry = session.getState().front_extraction?.ocr?.issuing_country ?? null;
+        const geoResult = await analyzeGeoRisk(vrRow?.client_ip ?? null, documentCountry);
+        session.setGeoAnalysis(geoResult);
+
+        // Consolidate review reasons so later writes don't overwrite earlier ones
+        const reviewReasons: string[] = [];
+        if (velocityResult.flags.length > 0) reviewReasons.push(`Velocity flags: ${velocityResult.flags.join(', ')}`);
+        if (geoResult.flags.length > 0) reviewReasons.push(`Geo flags: ${geoResult.flags.join(', ')}`);
+        if (reviewReasons.length > 0) {
+          await supabase.from('verification_requests').update({
+            manual_review_reason: reviewReasons.join('; '),
+          }).eq('id', verification_id);
+        }
+      } catch (err) {
+        logger.warn('Velocity/geo analysis failed (non-blocking):', err);
+      }
+    }
+
+    await saveSessionState(verification_id, session.getState());
+
+    // ─── Duplicate Detection (live capture face) ─────────────
+    // Only run dedup if the step passed - don't store fingerprints for failed verifications
+    let liveDedupFlags: DuplicateFlag[] = [];
+    let liveDedupBlocked = false;
+    if (stepResult.passed && !isSandbox) {
+      try {
+        const liveDeveloperId = (req as any).developer.id;
+        const dedupSettings = await getDedupSettings(liveDeveloperId);
+        if (dedupSettings.enabled && liveResult.face_embedding && Array.isArray(liveResult.face_embedding) && liveResult.face_embedding.length === 128) {
+          const faceHash = computeFaceLSH(liveResult.face_embedding);
+          liveDedupFlags = await runDedupCheck(liveDeveloperId, verification_id, 'face_lsh', faceHash);
+
+          if (liveDedupFlags.length > 0 && dedupSettings.action === 'block') {
+            liveDedupBlocked = true;
+          } else if (liveDedupFlags.length > 0 && dedupSettings.action === 'review') {
+            await supabase.from('verification_requests').update({
+              manual_review_reason: `Duplicate face detected: ${liveDedupFlags.length} match(es) found`,
+            }).eq('id', verification_id);
+          }
+        }
+      } catch (err) {
+        logger.warn('Live capture duplicate detection failed (non-blocking)', {
+          verification_id, error: err instanceof Error ? err.message : 'Unknown',
+        });
+      }
+    }
+
+    // Update main DB record
+    const state = session.getState();
+    let dbStatus: string;
+    const hasVelocityFlags = (state.velocity_analysis?.flags?.length ?? 0) > 0;
+    const hasGeoFlags = (state.geo_analysis?.flags?.length ?? 0) > 0;
+    const needsManualReview = state.cross_validation?.verdict === 'REVIEW'
+      || !!state.face_match?.skipped_reason
+      || complianceForceReview
+      || hasVelocityFlags
+      || hasGeoFlags
+      || (liveDedupFlags.length > 0 && !liveDedupBlocked);
+    if (liveDedupBlocked) {
+      dbStatus = 'failed';
+    } else if (state.current_step === VerificationStatus.COMPLETE) {
+      dbStatus = needsManualReview ? 'manual_review' : 'verified';
+    } else if (state.current_step === VerificationStatus.HARD_REJECTED) {
+      dbStatus = 'failed';
+    } else {
+      dbStatus = 'processing';
+    }
+    await verificationService.updateVerificationRequest(verification_id, {
+      status: dbStatus,
+      face_match_score: state.face_match?.similarity_score ?? null,
+      liveness_score: state.liveness?.score ?? null,
+      cross_validation_score: state.cross_validation?.overall_score ?? null,
+      live_capture_completed: !!(state.face_match),
+      ...(liveDedupBlocked && { failure_reason: 'Duplicate face detected in live capture' }),
+    } as any);
+
+    // Compute and persist risk score on terminal states
+    if (state.current_step === VerificationStatus.COMPLETE || state.current_step === VerificationStatus.HARD_REJECTED) {
+      try {
+        const riskScore = computeRiskScore(state);
+        await supabase.from('verification_risk_scores').upsert({
+          verification_request_id: verification_id,
+          overall_score: riskScore.overall_score,
+          risk_level: riskScore.risk_level,
+          risk_factors: riskScore.risk_factors,
+          computed_at: new Date().toISOString(),
+        }, { onConflict: 'verification_request_id' });
+
+        await supabase.from('verification_requests').update({
+          processing_completed_at: new Date().toISOString(),
+        }).eq('id', verification_id);
+      } catch (err) {
+        logger.warn('Failed to compute/store risk score (non-blocking):', err);
+      }
+    }
+
+    // Legacy compact-provider runs are mirrored into the public AML table.
+    // A unified run already wrote the canonical aml.screening_requests row and
+    // exact subject link; inserting here would fire the legacy mirror trigger
+    // and create a second screening record for the same verification.
+    if (state.aml_screening && !state.unified_screening) {
+      const amlPayload = {
+        verification_request_id: verification_id,
+        full_name: state.aml_screening.screened_name,
+        date_of_birth: state.aml_screening.screened_dob || null,
+        risk_level: state.aml_screening.risk_level,
+        match_found: state.aml_screening.match_found,
+        matches: state.aml_screening.matches,
+        lists_checked: state.aml_screening.lists_checked,
+        screened_at: state.aml_screening.screened_at,
+      };
+      supabase.from('aml_screenings').insert(amlPayload).select('id').single()
+        .then(({ data, error }: { data: { id?: string } | null; error: any }) => {
+          if (error) logger.warn('Failed to persist AML screening (non-blocking):', error);
+          void import('@/compliance/dualWrite.js').then((m) => m.mirrorKabilaScreening({
+            id: data?.id,
+            ...amlPayload,
+          })).catch((err) => logger.warn('Phase 4 dual-write skipped', { err }));
+        });
+    }
+
+    logVerificationEvent('live_capture_processed', verification_id, {
+      selfieId: selfie.id,
+      selfiePath,
+      status: state.current_step,
+      faceMatchPassed: state.face_match?.passed ?? null,
+    });
+
+    const mapped = mapStatusForResponse(state, flow);
+
+    res.json({
+      success: true,
+      verification_id,
+      verification_mode: vrMode,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      selfie_id: selfie.id,
+      face_match_results: state.face_match ?? null,
+      liveness_results: {
+        liveness_passed: liveResult.liveness_passed,
+        liveness_score: liveResult.liveness_score,
+        liveness_threshold: (liveResult as any).liveness_threshold,
+        liveness_provider: (liveResult as any).liveness_provider,
+        liveness_mode: (liveResult as any).liveness_mode || (headTurnMetadata ? 'head_turn' : 'passive'),
+        liveness_signals: (liveResult as any).liveness_signals ?? null,
+        liveness_checks: (liveResult as any).liveness_checks ?? null,
+      },
+      deepfake_check: liveResult.deepfake_check ?? null,
+      age_estimation: state.age_estimation ?? null,
+      velocity_analysis: state.velocity_analysis ?? null,
+      geo_analysis: state.geo_analysis ?? null,
+      aml_screening: state.aml_screening ?? null,
+      unified_screening: state.unified_screening ?? null,
+      final_result: mapped.final_result,
+      rejection_reason: state.rejection_reason,
+      rejection_detail: state.rejection_detail,
+      failure_reason: state.rejection_detail,
+      manual_review_reason: state.cross_validation?.verdict === 'REVIEW'
+        ? 'Cross-validation requires review'
+        : state.face_match?.skipped_reason
+          ? `Face match skipped: ${state.face_match.skipped_reason}`
+          : hasVelocityFlags
+            ? `Velocity flags: ${state.velocity_analysis!.flags.join(', ')}`
+            : hasGeoFlags
+              ? `Geo flags: ${state.geo_analysis!.flags.join(', ')}`
+              : null,
+      ...(liveDedupBlocked && { final_result: 'failed' }),
+      ...(liveDedupFlags.length > 0 && { duplicate_flags: liveDedupFlags }),
+      message: liveDedupBlocked
+        ? 'Verification blocked: duplicate face detected'
+        : state.current_step === VerificationStatus.COMPLETE
+          ? 'Verification completed successfully'
+          : state.current_step === VerificationStatus.HARD_REJECTED
+            ? stepResult.user_message || 'Verification failed'
+            : 'Live capture processed',
+    });
+
+    // Broadcast status change via Supabase Realtime
+    broadcastStatusChange(
+      verification_id, mapped.status, mapped.current_step,
+      mapped.final_result, state.rejection_reason,
+    ).catch(() => {});
+
+    // Auto-vault (fire-and-forget, after response)
+    autoVaultIfEnabled(verification_id, (req as any).developer.id, state, mapped.final_result);
+
+    // Fire webhooks on COMPLETE or HARD_REJECTED (after response is sent)
+    fireWebhooksIfTerminal(
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, mapped, isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+// ─── Voice Challenge ──────────────────────────────────────────────
+router.post('/:verification_id/voice-challenge',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+
+    // Must be in AWAITING_VOICE state
+    const state = await loadSessionState(verification_id);
+    if (!state || state.current_step !== VerificationStatus.AWAITING_VOICE) {
+      return res.status(409).json({
+        success: false,
+        error: 'Voice challenge can only be requested in AWAITING_VOICE state',
+        current_step: state?.current_step ?? null,
+      });
+    }
+
+    const challengeDigits = generateVoiceChallenge(6);
+
+    // Store challenge + timestamp in DB
+    await supabase
+      .from('verification_requests')
+      .update({
+        voice_challenge: challengeDigits,
+        voice_challenge_created_at: new Date().toISOString(),
+      })
+      .eq('id', verification_id);
+
+    logVerificationEvent(verification_id, 'voice_challenge_generated', {
+      digit_count: 6,
+    });
+
+    res.json({
+      success: true,
+      verification_id,
+      challenge_digits: challengeDigits,
+      expires_in_seconds: 120,
+      message: 'Please speak these digits clearly into the microphone',
+    });
+  })
+);
+
+// ─── Voice Capture ────────────────────────────────────────────────
+router.post('/:verification_id/voice-capture',
+  authenticateAPIKeyOrHandoff,
+  upload.single('file'),
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+
+    if (!req.file) throw new FileUploadError('Voice audio file is required');
+
+    // Load state - must be AWAITING_VOICE
+    const session = await hydrateSession(verification_id, isSandbox);
+    const stateBefore = session.getState();
+    if (stateBefore.current_step !== VerificationStatus.AWAITING_VOICE) {
+      return res.status(409).json({
+        success: false,
+        error: 'Voice capture can only be submitted in AWAITING_VOICE state',
+        current_step: stateBefore.current_step,
+      });
+    }
+
+    // Validate challenge exists and hasn't expired (120s)
+    const { data: vReq } = await supabase
+      .from('verification_requests')
+      .select('voice_challenge, voice_challenge_created_at')
+      .eq('id', verification_id)
+      .single();
+
+    if (!vReq?.voice_challenge) {
+      return res.status(400).json({
+        success: false,
+        error: 'No voice challenge found - call POST .../voice-challenge first',
+      });
+    }
+
+    const challengeAge = Date.now() - new Date(vReq.voice_challenge_created_at).getTime();
+    if (challengeAge > 120_000) {
+      return res.status(410).json({
+        success: false,
+        error: 'Voice challenge expired (120s limit). Request a new challenge.',
+      });
+    }
+
+    // Send audio to engine for speaker embedding + transcription
+    let voiceResult;
+    try {
+      voiceResult = engineClient.isEnabled()
+        ? await engineClient.extractVoiceVerify(req.file.buffer)
+        : null;
+    } catch (err) {
+      logger.error('Voice engine extraction failed', {
+        error: (err as Error).message,
+        verification_id,
+      });
+      // Session stays in AWAITING_VOICE - user can retry with new recording
+      return res.status(503).json({
+        success: false,
+        error: 'Voice processing failed. Please try recording again.',
+        retryable: true,
+        current_step: 'AWAITING_VOICE',
+      });
+    }
+
+    if (!voiceResult) {
+      return res.status(503).json({
+        success: false,
+        error: 'Voice verification engine is not available',
+      });
+    }
+
+    // Verify challenge transcription
+    const challengeVerified = verifyChallengeTranscription(
+      voiceResult.transcription,
+      vReq.voice_challenge,
+    );
+
+    logVerificationEvent(verification_id, 'voice_transcription_debug', {
+      raw_transcription: voiceResult.transcription,
+      expected_challenge: vReq.voice_challenge,
+      challenge_verified: challengeVerified,
+      transcription_length: voiceResult.transcription?.length ?? 0,
+      embedding_dimension: voiceResult.embedding_dimension,
+    });
+
+    // Check for enrollment embedding from a previous verification
+    const { data: enrollmentRow } = await supabase
+      .from('selfies')
+      .select('enrollment_audio_path')
+      .eq('verification_request_id', verification_id)
+      .single();
+
+    // For v1: first verification has no enrollment - voice match is skipped,
+    // only challenge verification matters. Store embedding for future use.
+    const hasEnrollment = false; // TODO v1.1: look up prior enrollment embedding
+    const threshold = isSandbox ? 0.50 : 0.55;
+
+    let voiceMatch;
+    if (!hasEnrollment) {
+      // First verification: skip similarity, only verify challenge
+      voiceMatch = computeVoiceMatch(
+        voiceResult.speaker_embedding,  // enrollment = self (no comparison)
+        voiceResult.speaker_embedding,  // verification = self
+        threshold,
+        challengeVerified,
+        vReq.voice_challenge,
+      );
+      // Override: mark as first enrollment with skipped_reason
+      if (!challengeVerified) {
+        voiceMatch.passed = false;
+      } else {
+        voiceMatch.passed = true;
+        voiceMatch.skipped_reason = 'first_enrollment';
+      }
+    } else {
+      // Future: compare against enrollment embedding
+      voiceMatch = computeVoiceMatch(
+        [], // enrollmentEmbedding from DB
+        voiceResult.speaker_embedding,
+        threshold,
+        challengeVerified,
+        vReq.voice_challenge,
+      );
+    }
+
+    // Store voice match score
+    await supabase
+      .from('verification_requests')
+      .update({ voice_match_score: voiceMatch.similarity_score })
+      .eq('id', verification_id);
+
+    // Run through session state machine (Gate 7)
+    const stepResult = await session.submitVoiceCapture(voiceMatch);
+    const state = session.getState();
+
+    // Persist state + risk score
+    await saveSessionState(verification_id, state);
+    if (state.current_step === VerificationStatus.COMPLETE
+      || state.current_step === VerificationStatus.HARD_REJECTED) {
+      const riskScore = computeRiskScore(state);
+      await supabase
+        .from('verification_risk_scores')
+        .upsert({
+          verification_request_id: verification_id,
+          overall_score: riskScore.overall_score,
+          risk_level: riskScore.risk_level,
+          risk_factors: riskScore.risk_factors,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'verification_request_id' });
+
+      // Update verification status - must inherit prior manual_review signals
+      const priorReview = (state.cross_validation?.verdict === 'REVIEW')
+        || !!state.face_match?.skipped_reason;
+      const finalResult = state.current_step === VerificationStatus.HARD_REJECTED
+        ? 'failed'
+        : (voiceMatch.skipped_reason || priorReview ? 'manual_review' : 'verified');
+      const manualReviewReason = voiceMatch.skipped_reason
+        ? `Voice match skipped: ${voiceMatch.skipped_reason}`
+        : priorReview
+          ? `Prior review signal: ${state.cross_validation?.verdict === 'REVIEW' ? 'cross-validation REVIEW' : 'face match skipped'}`
+          : null;
+      await supabase
+        .from('verification_requests')
+        .update({
+          status: finalResult,
+          manual_review_reason: manualReviewReason,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', verification_id);
+    }
+
+    const vrMode = (verification as any).verification_mode || 'full';
+    const flow = FLOW_PRESETS[vrMode as VerificationMode] ?? FLOW_PRESETS.full;
+    const mapped = mapStatusForResponse(state, flow);
+
+    logVerificationEvent(verification_id, 'voice_capture_processed', {
+      challenge_verified: challengeVerified,
+      similarity_score: voiceMatch.similarity_score,
+      passed: voiceMatch.passed,
+      skipped_reason: voiceMatch.skipped_reason,
+    });
+
+    res.json({
+      success: true,
+      verification_id,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      total_steps: mapped.total_steps,
+      voice_match_results: voiceMatch,
+      aml_screening: state.aml_screening ?? null,
+      unified_screening: state.unified_screening ?? null,
+      final_result: mapped.final_result,
+      message: state.current_step === VerificationStatus.COMPLETE
+        ? 'Voice verification completed'
+        : state.current_step === VerificationStatus.HARD_REJECTED
+          ? stepResult.user_message || 'Voice verification failed'
+          : 'Voice capture processed',
+    });
+
+    // Broadcast status change
+    broadcastStatusChange(
+      verification_id, mapped.status, mapped.current_step,
+      mapped.final_result, state.rejection_reason,
+    ).catch(() => {});
+
+    // Fire webhooks if terminal
+    fireWebhooksIfTerminal(
+      verification_id, (req as any).developer.id, verification.user_id,
+      state, mapped, isSandbox, (req as any).apiKey?.id
+    );
+  })
+);
+
+// /finalize endpoint removed - final decision auto-triggers after live capture.
+// Return 410 Gone for backward compat awareness.
+router.post('/:verification_id/finalize',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+
+    // Return current state - finalize is no longer needed
+    const session = await hydrateSession(verification_id, isSandbox);
+    const state = session.getState();
+    const mapped = mapStatusForResponse(state);
+
+    res.json({
+      success: true,
+      verification_id,
+      status: mapped.status,
+      current_step: mapped.current_step,
+      final_result: mapped.final_result,
+      rejection_reason: state.rejection_reason,
+      rejection_detail: state.rejection_detail,
+      message: 'The /finalize endpoint is deprecated - final decision auto-triggers after live capture.',
+    });
+  })
+);
+
+// ─── Restart a failed verification (retry flow) ──────────────────────────
+router.post('/:verification_id/restart',
+  authenticateAPIKeyOrHandoff,
+  verificationRateLimit,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+
+    // Only failed verifications can be restarted
+    const isSandbox = (verification as any).is_sandbox || false;
+    const session = await hydrateSession(verification_id, isSandbox);
+    const state = session.getState();
+    const mapped = mapStatusForResponse(state);
+
+    if (mapped.final_result !== 'failed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only failed verifications can be restarted',
+      });
+    }
+
+    // Enforce max 3 retries
+    const currentRetryCount = (verification as any).retry_count ?? 0;
+    if (currentRetryCount >= 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum retry attempts reached (3)',
+        retry_count: currentRetryCount,
+      });
+    }
+
+    // Reset verification_requests row with optimistic lock on retry_count
+    const { data: updated } = await supabase.from('verification_requests').update({
+      status: 'pending',
+      face_match_score: null,
+      liveness_score: null,
+      cross_validation_score: null,
+      failure_reason: null,
+      processing_completed_at: null,
+      document_id: null,
+      selfie_id: null,
+      retry_count: currentRetryCount + 1,
+      duplicate_flags: null,
+      voice_match_score: null,
+      voice_challenge: null,
+      voice_challenge_created_at: null,
+      completed_at: null,
+    }).eq('id', verification_id)
+      .eq('retry_count', currentRetryCount)
+      .select('id');
+
+    if (!updated?.length) {
+      return res.status(409).json({
+        success: false,
+        message: 'Verification was modified concurrently. Please try again.',
+      });
+    }
+
+    // Delete related records - documents, selfies, risk scores, session context, and dedup fingerprints
+    await Promise.all([
+      supabase.from('documents').delete().eq('verification_request_id', verification_id),
+      supabase.from('selfies').delete().eq('verification_request_id', verification_id),
+      supabase.from('verification_risk_scores').delete().eq('verification_request_id', verification_id),
+      supabase.from('verification_contexts').delete().eq('verification_id', verification_id),
+      supabase.from('dedup_fingerprints').delete().eq('verification_request_id', verification_id),
+    ]);
+
+    logVerificationEvent('verification_restarted', verification_id, {
+      developerId: (req as any).developer.id,
+      retryCount: currentRetryCount + 1,
+    });
+
+    // If authenticated via handoff token, reset the session to 'pending' so the
+    // next attempt can complete the handoff lifecycle (PATCH /complete requires
+    // status = 'pending' for its atomic guard).
+    const handoffToken = req.headers['x-handoff-token'] as string;
+    if (handoffToken) {
+      const tokenHash = hashHandoffToken(handoffToken);
+      await supabase.from('mobile_handoff_sessions')
+        .update({ status: 'pending', result: null })
+        .eq('token', tokenHash)
+        .eq('status', 'failed');
+    }
+
+    res.json({
+      success: true,
+      verification_id,
+      retry_count: currentRetryCount + 1,
+      message: 'Verification restarted - ready to upload front document',
+    });
+
+    // Broadcast restart to Realtime subscribers
+    broadcastStatusChange(
+      verification_id, 'AWAITING_FRONT', 1, null, null
+    ).catch(() => {});
+  })
+);
+
+router.get('/:verification_id/status',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const verification = await requireOwnedVerification(req, verification_id);
+    const isSandbox = (verification as any).is_sandbox || false;
+
+    // Resolve verification mode and flow
+    const { data: vrMeta } = await supabase
+      .from('verification_requests')
+      .select('verification_mode, age_threshold, addons')
+      .eq('id', verification_id)
+      .single();
+    const vrMode = (vrMeta?.verification_mode as VerificationMode) || 'full';
+    const flow = FLOW_PRESETS[vrMode] ?? INLINE_FLOW_FALLBACKS[vrMode] ?? FLOW_PRESETS.full;
+
+    const session = await hydrateSession(verification_id, isSandbox);
+    const state = session.getState();
+
+    // Backfill the unified result for sessions completed before it was stored in
+    // verification_contexts. The exact verification->screen link avoids unsafe
+    // name-only matching and keeps the client result page self-contained.
+    const verificationIsTerminal = state.current_step === VerificationStatus.COMPLETE
+      || state.current_step === VerificationStatus.HARD_REJECTED
+      || ['verified', 'failed', 'manual_review'].includes(String((verification as any).status));
+    if (!state.unified_screening && verificationIsTerminal) {
+      const { findUnifiedScreening } = await import('@/services/unifiedScreening.js');
+      const linkedScreen = await findUnifiedScreening(verification_id);
+      if (linkedScreen) {
+        (state as any).unified_screening = linkedScreen;
+        await saveSessionState(verification_id, state);
+      }
+    }
+
+    // Fetch risk score from DB (computed after live capture)
+    const { data: riskRow } = await supabase
+      .from('verification_risk_scores')
+      .select('overall_score, risk_level, risk_factors')
+      .eq('verification_request_id', verification_id)
+      .single();
+    const riskScore = riskRow ? {
+      overall_score: riskRow.overall_score,
+      risk_level: riskRow.risk_level,
+      risk_factors: riskRow.risk_factors ?? [],
+    } : null;
+
+    const response = buildVerificationResponse({
+      verificationId: verification_id,
+      state,
+      verification: {
+        status: (verification as any).status,
+        verification_mode: vrMode,
+        is_sandbox: isSandbox,
+        duplicate_flags: (verification as any).duplicate_flags,
+        addons: vrMeta?.addons,
+        retry_count: (verification as any).retry_count,
+        manual_review_reason: (verification as any).manual_review_reason,
+      },
+      riskScore,
+      flow,
+    });
+    res.json(response);
+  })
+);
+
+// ─── ID Face photo retrieval (developer-scoped) ─────────────────────────────
+// Helper shared by /id-face
+async function loadIdFaceForRequest(req: Request, verification_id: string) {
+  if (req.sessionVerificationId && req.sessionVerificationId !== verification_id) {
+    const err: any = new Error('Verification request not found');
+    err.statusCode = 404;
+    throw err;
+  }
+  const verification = await requireOwnedVerification(req, verification_id);
+  const isSandbox = (verification as any).is_sandbox || false;
+  const session = await hydrateSession(verification_id, isSandbox);
+  return { verification, state: session.getState() };
+}
+
+/**
+ * GET /api/v2/verify/:id/id-face
+ * Returns the tight-but-padded headshot crop (ears/hair/chin preserved).
+ * Kept for backward compatibility with existing integrations.
+ */
+router.get('/:verification_id/id-face',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const { state } = await loadIdFaceForRequest(req, verification_id);
+
+    const idFaceBase64 = state.front_extraction?.id_face_base64 ?? null;
+    if (!idFaceBase64) {
+      return res.status(404).json({
+        success: false,
+        verification_id,
+        id_face_base64: null,
+        message: 'Cropped ID face image not available for this verification',
+      });
+    }
+
+    res.json({
+      success: true,
+      verification_id,
+      id_face_base64: idFaceBase64,
+      face_confidence: state.front_extraction?.face_confidence ?? null,
+    });
+  })
+);
+
+// ─── Live-capture selfie retrieval (developer-scoped) ───────────────────────
+/**
+ * Returns a short-lived signed URL for a verification's live-capture selfie so a
+ * developer can run a downstream face match on their own side. Ownership-scoped
+ * to the authenticated developer: unknown ids, ids owned by a different developer,
+ * and handoff tokens bound to a different verification all return 404 (never 403)
+ * to prevent enumeration of other developers' verification ids. Returns only the
+ * selfie URL - no OCR, PII, or other documents.
+ */
+router.get('/:verification_id/selfie',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+
+    // Handoff session tokens are bound to a single verification - block cross-id reads.
+    if (req.sessionVerificationId && req.sessionVerificationId !== verification_id) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    const developerId = (req as any).developer.id;
+
+    // Ownership-scoped lookup with the same selfie join the admin detail route uses.
+    const { data: verification, error } = await supabase
+      .from('verification_requests')
+      .select('id, selfie:selfies!verification_requests_selfie_id_fkey(file_path)')
+      .eq('id', verification_id)
+      .eq('developer_id', developerId)
+      .single();
+
+    if (error) {
+      // PGRST116 = no row: unknown id, or owned by a different developer -> 404 (not 403).
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Verification request not found' });
+      }
+      logger.error('Failed to look up verification for selfie retrieval', { verification_id, error: error.message });
+      throw new Error('Failed to retrieve selfie');
+    }
+
+    const filePath = (verification as any).selfie?.file_path;
+    if (!filePath) {
+      // Owned, but no live-capture selfie on file yet (or a mode without live capture).
+      return res.status(404).json({ selfie_url: null });
+    }
+
+    // Short-lived signed URL: long enough to fetch once, short enough to not be durable.
+    const selfieUrl = await storageService.getFileUrl(filePath, 300);
+    res.json({
+      verification_id,
+      selfie_url: selfieUrl,
+      expires_in: 300,
+    });
+  })
+);
+
+// ─── Front / back document retrieval (developer-scoped) ─────────────────────
+/**
+ * GET /api/v2/verify/:id/document/:side  (side = front | back)
+ *
+ * Returns a short-lived signed URL for the actual ID document image (not the
+ * cropped portrait) so a reviewer can see the front and back of the card that
+ * was uploaded. Ownership-scoped the same way as /selfie - unknown ids and ids
+ * owned by a different developer return 404 (never 403). Configs without a
+ * stored file (e.g. ephemeral demo sources) return 404.
+ */
+router.get('/:verification_id/document/:side',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+    param('side').isIn(['front', 'back']).withMessage('side must be front or back'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id, side } = req.params;
+
+    // Handoff session tokens are bound to a single verification - block cross-id reads.
+    if (req.sessionVerificationId && req.sessionVerificationId !== verification_id) {
+      return res.status(404).json({ error: 'Verification request not found' });
+    }
+
+    const developerId = (req as any).developer.id;
+    const isBack = side === 'back';
+
+    const { data: verification, error } = await supabase
+      .from('verification_requests')
+      .select('id, developer_id')
+      .eq('id', verification_id)
+      .eq('developer_id', developerId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return res.status(404).json({ error: 'Verification request not found' });
+      }
+      logger.error('Failed to look up verification for document retrieval', { verification_id, error: error.message });
+      throw new Error('Failed to retrieve document');
+    }
+
+    const { data: docs, error: docsError } = await supabase
+      .from('documents')
+      .select('file_path, is_back_of_id')
+      .eq('verification_request_id', verification_id);
+
+    if (docsError) {
+      logger.error('Failed to load documents for retrieval', { verification_id, error: docsError.message });
+      throw new Error('Failed to retrieve document');
+    }
+
+    const doc = (docs || []).find((d: any) => Boolean(d.is_back_of_id) === isBack);
+    const filePath = doc?.file_path;
+    if (!filePath) {
+      return res.status(404).json({ document_url: null });
+    }
+
+    const documentUrl = await storageService.getFileUrl(filePath, 300);
+    res.json({
+      verification_id,
+      side,
+      document_url: documentUrl,
+      expires_in: 300,
+    });
+  })
+);
+
+// ─── Phone OTP (optional verification step) ─────────────────────────────────
+
+/**
+ * Fetch the developer's SMS config for a verification request.
+ * Returns null if SMS is not configured (self-hosted mode).
+ */
+async function getSMSConfigForVerification(verificationRequestId: string) {
+  const { data: vr, error: vrError } = await supabase
+    .from('verification_requests')
+    .select('developer_id')
+    .eq('id', verificationRequestId)
+    .single();
+
+  if (vrError || !vr?.developer_id) {
+    if (vrError) logger.warn('Failed to fetch developer_id for SMS config', { verificationRequestId, error: vrError.message });
+    return null;
+  }
+
+  const { data: dev, error: devError } = await supabase
+    .from('developers')
+    .select('sms_provider, sms_api_key_encrypted, sms_api_secret_encrypted, sms_phone_number')
+    .eq('id', vr.developer_id)
+    .single();
+
+  if (devError || !dev) {
+    if (devError) logger.warn('Failed to fetch SMS config for developer', { developerId: vr.developer_id, error: devError.message });
+    return null;
+  }
+
+  return decryptSMSConfig(dev);
+}
+
+router.post('/:verification_id/phone-otp/send',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+    body('phone_number').matches(/^\+[1-9]\d{6,14}$/).withMessage('Phone number must be in E.164 format (e.g. +15551234567)'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const { phone_number } = req.body;
+
+    await requireOwnedVerification(req, verification_id);
+
+    const smsConfig = await getSMSConfigForVerification(verification_id);
+    const result = await createAndSendPhoneOtp(verification_id, phone_number, smsConfig);
+
+    if (!result.success) {
+      return res.status(429).json({ success: false, message: result.reason });
+    }
+
+    const response: any = {
+      success: true,
+      message: smsConfig
+        ? 'Verification code sent via SMS.'
+        : 'SMS provider not configured. Code returned in response (self-hosted mode).',
+    };
+
+    // Self-hosted: return plaintext code when no SMS provider is configured
+    if (result.code) {
+      response.code = result.code;
+      response.self_hosted = true;
+    }
+
+    res.json(response);
+  })
+);
+
+router.post('/:verification_id/phone-otp/verify',
+  authenticateAPIKeyOrHandoff,
+  [
+    param('verification_id').isUUID().withMessage('Invalid verification ID'),
+    body('code').matches(/^\d{6}$/).withMessage('Code must be a 6-digit number'),
+  ],
+  validate,
+  catchAsync(async (req: Request, res: Response) => {
+    const { verification_id } = req.params;
+    const { code } = req.body;
+
+    await requireOwnedVerification(req, verification_id);
+
+    const result = await verifyPhoneOtp(verification_id, code);
+
+    if (!result.valid) {
+      return res.status(400).json({
+        success: false,
+        message: result.reason,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Phone number verified successfully.',
+      phone_verified: true,
+    });
+  })
+);
+
+export default router;

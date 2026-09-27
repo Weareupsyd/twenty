@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunguza - Official Screening Report · SCR-2026-0807-8842-AF91</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#0b0b0d;--paper-2:#0e0e11;--panel:#111114;--panel-2:#16161a;--panel-3:#1c1c21;
+  --ink:#f2f1ec;--mid:#8a8a90;--soft:#5a5a60;--rule:#1e1e22;--rule-strong:#2a2a30;--rule-ghost:#16161a;
+  --accent:#00F0FF;--accent-ink:#66f7ff;--accent-soft:rgba(0,240,255,.10);--accent-fg:#03171b;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'Geist','Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:13.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* Screen container */
+.screen-wrapper{max-width:960px;margin:0 auto;padding:24px 20px 80px}
+
+/* Print Toolbar (Hidden during print) */
+.print-toolbar{
+  position:sticky;
+  top:12px;
+  background:var(--panel-2);
+  border:1px solid var(--rule-strong);
+  border-radius:8px;
+  padding:12px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:24px;
+  z-index:90;
+  box-shadow:0 8px 30px rgba(0,0,0,0.6);
+}
+.print-toolbar-info{font-family:var(--mono);font-size:12px;color:var(--mid);display:flex;align-items:center;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;background:transparent !important;border:1px solid var(--rule-strong);color:var(--ink);transition:all .15s}
+.btn.solid{background:transparent !important;color:var(--accent);border:1px solid var(--accent)}
+.btn.solid:hover{background:transparent !important;color:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule-strong)}
+.btn.ghost:hover{background:transparent !important;border-color:var(--accent);color:var(--accent)}
+
+/* The Official Printable Report Document - Completely Monochrome & No Containers */
+.report-document{
+  background:#ffffff;
+  color:#000000;
+  border-radius:0;
+  padding:48px 56px;
+  border:1px solid #000000;
+  box-shadow:none;
+  position:relative;
+  overflow:hidden;
+}
+
+/* Watermark */
+.watermark{
+  position:absolute;
+  top:45%;
+  left:50%;
+  transform:translate(-50%, -50%) rotate(-35deg);
+  font-family:var(--mono);
+  font-size:72px;
+  font-weight:800;
+  letter-spacing:.15em;
+  color:rgba(0, 0, 0, 0.04);
+  pointer-events:none;
+  text-transform:uppercase;
+  white-space:nowrap;
+  z-index:0;
+}
+
+/* Header */
+.doc-header{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:20px;
+  padding-bottom:20px;
+  border-bottom:2px solid #000000;
+  margin-bottom:24px;
+  position:relative;
+  z-index:1;
+}
+.doc-brand{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-weight:700;font-size:18px;letter-spacing:-.01em;color:#000000}
+.doc-brand-mark{width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.doc-brand-mark span{background:#000000}
+
+.doc-meta-block{text-align:right;font-family:var(--mono);font-size:11px;color:#333333;line-height:1.4}
+.doc-ref{font-size:13px;font-weight:700;color:#000000}
+.doc-classification{display:inline-block;font-weight:700;font-size:10px;margin-bottom:4px;color:#000000;background:none;border:none;padding:0}
+
+/* Title & Executive Banner (no container box, no color) */
+.doc-title-row{margin-bottom:20px;position:relative;z-index:1}
+.doc-title{font-size:22px;font-weight:700;color:#000000;letter-spacing:-.01em;margin-bottom:4px}
+.doc-subtitle{font-size:12.5px;color:#333333}
+
+.verdict-banner{
+  background:none;
+  border:none;
+  border-bottom:1px solid #000000;
+  padding:0 0 16px 0;
+  margin-bottom:24px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:16px;
+  align-items:flex-start;
+  position:relative;
+  z-index:1;
+}
+.verdict-main{font-size:15px;font-weight:700;color:#000000;margin-bottom:3px}
+.verdict-sub{font-size:12px;color:#333333}
+.verdict-badge{
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:700;
+  background:none;
+  color:#000000;
+  padding:0;
+  border:none;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
+/* Sections */
+.doc-sec{margin-bottom:24px;position:relative;z-index:1}
+.doc-sec-h{
+  font-family:var(--mono);
+  font-size:11.5px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:#000000;
+  border-bottom:1px solid #000000;
+  padding-bottom:6px;
+  margin-bottom:12px;
+  display:flex;
+  justify-content:space-between;
+}
+
+/* Key Value Table - Clean minimalist monochrome lines, no containers or shaded backgrounds */
+.doc-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:14px}
+.doc-table th{background:transparent;color:#000000;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:7px 10px;border:1px solid #000000;text-align:left}
+.doc-table td{padding:7px 10px;border:1px solid #000000;vertical-align:middle;color:#000000;background:transparent}
+.doc-table .k{font-family:var(--mono);font-size:11px;color:#000000;width:28%;background:transparent;font-weight:700}
+.doc-table .v{font-weight:500;color:#000000}
+
+/* Score meters as plain percentage text */
+.match-score-pill{font-family:var(--mono);font-size:12px;font-weight:700;color:#000000;background:none;padding:0;border:none}
+
+/* Footer & Chain of Custody */
+.doc-footer{
+  margin-top:24px;
+  padding-top:14px;
+  border-top:1px solid #000000;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-family:var(--mono);
+  font-size:10px;
+  color:#333333;
+  position:relative;
+  z-index:1;
+}
+
+/* ═══ PRINT STYLES ═══ */
+@media print{
+  @page{
+    size:A4 portrait;
+    margin:12mm 15mm;
+  }
+  body{
+    background:#ffffff !important;
+    color:#000000 !important;
+  }
+  .print-toolbar, .side, .top, .app aside, .app header{
+    display:none !important;
+  }
+  .screen-wrapper{
+    max-width:100% !important;
+    padding:0 !important;
+    margin:0 !important;
+  }
+  .report-document{
+    box-shadow:none !important;
+    padding:0 !important;
+    border:none !important;
+    border-radius:0 !important;
+  }
+  .watermark{
+    color:rgba(0, 0, 0, 0.04) !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="screen-wrapper">
+  
+  <!-- Interactive Print & Export Toolbar -->
+  <div class="print-toolbar no-print">
+    <div class="print-toolbar-info">
+      <span style="color:var(--ink)"> Official Regulatory Report</span>
+      <span>· REF: SCR-2026-0807-8842-AF91</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" onclick="toggleWatermark()">Toggle Watermark</button>
+      <button class="btn ghost" onclick="location.href='04-screening-detail.html'">Screening View</button>
+      <button class="btn ghost" onclick="location.href='13-analyst-workspace.html'">Analyst Cockpit</button>
+      <button class="btn solid" onclick="window.print()"> Print / Save PDF</button>
+    </div>
+  </div>
+
+  <!-- The Official Printable Report -->
+  <div class="report-document" id="printableReport">
+    
+    <!-- Watermark text -->
+    <div class="watermark" id="docWatermark">STRICTLY CONFIDENTIAL</div>
+
+    <!-- Header -->
+    <header class="doc-header">
+      <div>
+        <div class="doc-brand">
+          <div class="doc-brand-mark"><span></span><span></span><span></span><span></span></div>
+          CHUNGUZA AML INTELLIGENCE
+        </div>
+        <div style="font-size:11.5px;color:#333333;margin-top:4px">
+          Global AML &amp; Sanctions Compliance Department
+        </div>
+      </div>
+
+      <div class="doc-meta-block">
+        <div class="doc-classification">CONFIDENTIAL // REGULATORY REPORT</div>
+        <div class="doc-ref">REF: SCR-2026-0807-8842-AF91</div>
+        <div>Screened: 2026-08-07 09:41:22 UTC</div>
+        <div>VPC Host: api-screening-vpc-01</div>
+      </div>
+    </header>
+
+    <!-- Title & Executive Banner -->
+    <div class="doc-title-row">
+      <h1 class="doc-title">AML / Sanctions Screening &amp; Due Diligence Report</h1>
+      <div class="doc-subtitle">Immutable compliance determination under FATF Recommendation 16 (Wire Transfer Rule) and Central Bank Sanctions Mandates.</div>
+    </div>
+
+    <div class="verdict-banner">
+      <div>
+        <div class="verdict-main">CONFIRMED MATCH: HIGH RISK SANCTIONS HIT</div>
+        <div class="verdict-sub">Subject matches OFAC Specially Designated Nationals (SDN) and UN Security Council 751 Sanctions List.</div>
+      </div>
+      <div class="verdict-badge">EDD MANDATORY</div>
+    </div>
+
+    <!-- Section 1: Details of the Client Screened -->
+    <div class="doc-sec">
+      <div class="doc-sec-h">
+        <span>§ 1. Screened Remittance Candidate Profile (Client Screened)</span>
+        <span>Remittance ID: CHG-NBI-20260807-0941</span>
+      </div>
+
+      <table class="doc-table">
+        <tr>
+          <td class="k">Primary Candidate Name</td>
+          <td class="v" style="font-size:13px;font-weight:700">Mohamed Abdullahi Hassan</td>
+          <td class="k">Entity Type</td>
+          <td class="v">Person (Remittance Sender)</td>
+        </tr>
+        <tr>
+          <td class="k">Date of Birth (DOB)</td>
+          <td class="v">1974-06-15</td>
+          <td class="k">Nationality &amp; ID</td>
+          <td class="v">Somalia (SO) · Passport P01984201</td>
+        </tr>
+        <tr>
+          <td class="k">Remittance Corridor</td>
+          <td class="v">Nairobi (Eastleigh, KE) -> Mogadishu (Bakara, SO)</td>
+          <td class="k">Transfer Amount</td>
+          <td class="v" style="font-weight:700">$4,500.00 USD (Cash Settlement)</td>
+        </tr>
+        <tr>
+          <td class="k">Designated Beneficiary</td>
+          <td class="v">Khadija Mohamed Ali (Mogadishu, SO)</td>
+          <td class="k">Originating Branch</td>
+          <td class="v">Eastleigh 1st Avenue Branch, Nairobi</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Section 2: Details of the Hits -->
+    <div class="doc-sec">
+      <div class="doc-sec-h">
+        <span>§ 2. Sanctions Watchlist Findings &amp; Transliteration Breakdown (Hits)</span>
+        <span>Score: 94.22% (Threshold 82.00%)</span>
+      </div>
+
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Watchlist Authority</th>
+            <th>Designated Target Name</th>
+            <th>Program / Legal Authority</th>
+            <th>Match Score (%)</th>
+            <th>Match Classification</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>OFAC (USA)</b></td>
+            <td>Maxamed Cabdullaahi Xasan</td>
+            <td>SOMALIA-EO13536 / ID #11942</td>
+            <td><span class="match-score-pill">94.22%</span></td>
+            <td><b style="font-weight:700">Direct Identity Match</b></td>
+          </tr>
+          <tr>
+            <td><b>UN Security Council</b></td>
+            <td>Mohamed Abdullahi Hassan "Dahir"</td>
+            <td>UNSCR 751 (1992) / 1844 (2008)</td>
+            <td><span class="match-score-pill">92.80%</span></td>
+            <td><b style="font-weight:700">Direct Identity Match</b></td>
+          </tr>
+          <tr>
+            <td><b>EU Consolidated</b></td>
+            <td>محمد عبد الله حسن</td>
+            <td>EU Council Regulation 356/2010</td>
+            <td><span class="match-score-pill">91.50%</span></td>
+            <td><b style="font-weight:700">Arabic Script Alias</b></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Property Comparison Matrix -->
+      <table class="doc-table" style="margin-top:8px">
+        <tr>
+          <td class="k">Somali Latin Script</td>
+          <td class="v">Maxamed Cabdullaahi Xasan (Standard Somali Orthography)</td>
+          <td class="k">Arabic Script</td>
+          <td class="v" dir="rtl" style="font-family:sans-serif;font-size:13px">محمد عبد الله حسن</td>
+        </tr>
+        <tr>
+          <td class="k">Patronymic Clan Lineage</td>
+          <td class="v">Darod / Marehan (High Confidence Regional Correlation)</td>
+          <td class="k">DOB Verification</td>
+          <td class="v" style="font-weight:700">1974-06-15 (100% Exact Date Match)</td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Section 3: Details of the Hits (Associated Entities / PEP Linkages) -->
+    <div class="doc-sec">
+      <div class="doc-sec-h">
+        <span>§ 3. Associated Entities &amp; Watchlist Network Linkages (Hits)</span>
+        <span>OpenSanctions Graph Linkage</span>
+      </div>
+
+      <table class="doc-table">
+        <thead>
+          <tr><th>Relationship</th><th>Associated Entity</th><th>Risk Category</th><th>Jurisdiction</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Director / UBO (&gt;25%)</b></td>
+            <td>Al-Barakaat Marine Logistics Ltd</td>
+            <td><span style="font-weight:700">Sanctioned Commercial Entity</span></td>
+            <td>Somalia (SO) / UAE (AE)</td>
+          </tr>
+          <tr>
+            <td><b>Close Associate</b></td>
+            <td>Hassan Sheikh Mohamud Trading</td>
+            <td><span style="font-weight:700">PEP Tier-1 Linkage</span></td>
+            <td>United Arab Emirates (AE)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer -->
+    <footer class="doc-footer">
+      <div>CHUNGUZA COMPLIANCE ARCHIVE · IMMUTABLE REGULATORY RECORD · FATF REC. 16</div>
+      <div>SHA-256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</div>
+    </footer>
+
+  </div>
+</div>
+
+<script>
+function toggleWatermark() {
+  const wm = document.getElementById('docWatermark');
+  if (wm.textContent === 'STRICTLY CONFIDENTIAL') {
+    wm.textContent = 'REGULATORY FILING COPY';
+    wm.style.color = 'rgba(0, 0, 0, 0.04)';
+  } else if (wm.textContent === 'REGULATORY FILING COPY') {
+    wm.textContent = 'OFFICIAL RECORD';
+    wm.style.color = 'rgba(0, 0, 0, 0.04)';
+  } else {
+    wm.textContent = 'STRICTLY CONFIDENTIAL';
+    wm.style.color = 'rgba(0, 0, 0, 0.04)';
+  }
+}
+</script>
+</body>
+</html>

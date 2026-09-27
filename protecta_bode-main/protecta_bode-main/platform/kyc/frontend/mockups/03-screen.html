@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chunguza - New Screening</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#0b0b0d;--paper-2:#0e0e11;--panel:#111114;--panel-2:#16161a;--panel-3:#1c1c21;--ink:#f2f1ec;--mid:#8a8a90;--soft:#5a5a60;--rule:#1e1e22;--rule-strong:#2a2a30;--rule-ghost:#16161a;--accent:#00F0FF;--accent-ink:#66f7ff;--accent-soft:rgba(0,240,255,.10);--accent-fg:#03171b;--green:#34d399;--amber:#fbbf24;--red:#f87171;--mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--sans:'Geist','Inter',-apple-system,BlinkMacSystemFont,sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh}
+.app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;max-width:1320px;margin:0 auto}
+.side{border-right:1px solid var(--rule-ghost);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:var(--paper)}
+.brand{display:flex;align-items:center;gap:10px;padding:18px;border-bottom:1px solid var(--rule-ghost);font-family:var(--mono);font-weight:600;font-size:13px}
+.brand-mark{width:18px;height:18px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.brand-mark span:nth-child(1),.brand-mark span:nth-child(4){background:var(--ink)}
+.brand-mark span:nth-child(2),.brand-mark span:nth-child(3){background:var(--accent)}
+.side-group{padding:14px 8px 4px}
+.side-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);padding:0 12px 6px}
+.side-link{display:flex;align-items:center;gap:10px;padding:7px 12px;font-family:var(--mono);font-size:12.5px;color:var(--mid);border-left:2px solid transparent;background:transparent;border:none;width:100%;text-align:left;cursor:pointer}
+.side-link:hover{color:var(--ink)}
+.side-link.on{color:var(--ink);background:var(--panel);border-left-color:var(--accent)}
+.ic{width:5px;height:5px;background:var(--mid);flex-shrink:0}
+.side-link.on .ic{background:var(--accent)}
+.side-foot{margin-top:auto;padding:14px 18px;border-top:1px solid var(--rule-ghost);font-family:var(--mono);font-size:11px;color:var(--mid)}
+.side-foot .row{display:flex;justify-content:space-between;padding:3px 0}
+.side-foot .ok{color:var(--accent)}
+.side-foot .signout{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border:1px solid var(--rule-strong);border-radius:5px;color:var(--mid);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:border-color .15s,color .15s}
+.side-foot .signout:hover{border-color:var(--ink);color:var(--ink)}
+.side-foot .signout .glyph{width:5px;height:5px;flex:0 0 auto;background:var(--mid)}
+.side-foot .signout:hover .glyph{background:var(--ink)}
+.top{border-bottom:1px solid var(--rule-ghost);display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--paper);position:sticky;top:0;z-index:30}
+.crumbs{font-family:var(--mono);font-size:12px;color:var(--mid);display:flex;gap:6px;align-items:center}
+.crumbs .sep{color:var(--soft)}
+.crumbs .here{color:var(--ink)}
+.top-spacer{flex:1}
+.page{padding:28px 32px 80px;max-width:1280px;margin:0 auto}
+.page-head{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;padding-bottom:22px;margin-bottom:18px;border-bottom:1px solid var(--rule-ghost)}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid)}
+.page-h1{font-size:30px;letter-spacing:-.025em;font-weight:500;margin:8px 0 6px;line-height:1.05}
+.page-sub{color:var(--mid);max-width:64ch}
+.two-col{display:grid;grid-template-columns:1.35fr .85fr;gap:20px;align-items:start}
+.card{background:var(--panel);padding:20px 22px;margin-bottom:16px}
+.card-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--rule-ghost);display:flex;justify-content:space-between;align-items:center}
+.lbl{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mid);margin:14px 0 6px}
+.lbl:first-child{margin-top:0}
+.inp, .sel{width:100%;background:var(--paper-2);border:1px solid var(--rule);color:var(--ink);font-family:var(--sans);font-size:13px;padding:10px 12px;border-radius:6px;outline:none}
+.inp:focus,.sel:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--soft)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:11px;padding:6px 10px;border:1px solid var(--rule-ghost);background:var(--panel-2);color:var(--mid);cursor:pointer;border-radius:4px}
+.tab.on{color:var(--ink);background:var(--panel-3);border-color:var(--accent);box-shadow:0 0 0 1px rgba(0,240,255,.12) inset}
+.tab small{color:var(--soft)}
+.range{width:100%;accent-color:var(--accent)}
+.code{font-family:var(--mono);font-size:11.5px;background:var(--paper-2);border:1px solid var(--rule-ghost);padding:12px 14px;white-space:pre-wrap;word-break:break-word;overflow:auto;line-height:1.6;color:#cbd5e1}
+.pill{font-family:var(--mono);font-size:10px;padding:2px 6px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;border:1px solid transparent;display:inline-block}
+.p-san{color:var(--red);background:rgba(248,113,113,.10);border-color:rgba(248,113,113,.22)}
+.p-pep{color:var(--amber);background:rgba(251,191,36,.10);border-color:rgba(251,191,36,.18)}
+.p-cri{color:#f2f1ec;background:rgba(248,113,113,.14);border-color:rgba(248,113,113,.22)}
+.p-deb{color:var(--accent);background:rgba(0,240,255,.10);border-color:rgba(0,240,255,.18)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;font-family:var(--mono);font-size:12px;font-weight:600;cursor:pointer;border-radius:6px;background:transparent !important;border:1px solid var(--rule-strong);color:var(--ink);transition:all .15s}
+.btn.primary{background:transparent !important;color:var(--accent);border:1px solid var(--accent)}
+.btn.primary:hover{background:transparent !important;color:var(--accent-ink);border-color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--rule-ghost)}
+.btn.ghost:hover{background:transparent !important;border-color:var(--accent);color:var(--accent)}
+.hint{font-family:var(--mono);font-size:11px;color:var(--soft);margin-top:6px}
+.check{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:12px;color:var(--mid);margin:8px 0}
+.check input{accent-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+  <div class="brand"><div class="brand-mark"><span></span><span></span><span></span><span></span></div>chunguza</div>
+  <div class="side-group" style="padding-top:14px">
+    <div class="side-label">Overview</div>
+    <button class="side-link" onclick="location.href='index.html'"><span class="ic"></span>Mockup Index</button>
+    <button class="side-link" onclick="location.href='01-login.html'"><span class="ic"></span>Login Screen</button>
+    <button class="side-link" onclick="location.href='02-dashboard.html'"><span class="ic"></span>Dashboard</button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Screening &amp; Ops</div>
+    <button class="side-link on"><span class="ic"></span>Single Screen</button>
+    <button class="side-link" onclick="location.href='04-screening-detail.html'"><span class="ic"></span>Screen Detail</button>
+    <button class="side-link" onclick="location.href='05-bulk-screen.html'"><span class="ic"></span>Bulk Screen</button>
+    <button class="side-link" onclick="location.href='06-entity-search.html'"><span class="ic"></span>Entity Search</button>
+    <button class="side-link" onclick="location.href='13-analyst-workspace.html'"><span class="ic"></span>Analyst Workspace <span class="tag">cockpit</span></button>
+    <button class="side-link" onclick="location.href='07-cases.html'"><span class="ic"></span>Cases</button>
+    <button class="side-link" onclick="location.href='08-datasets.html'"><span class="ic"></span>Datasets &amp; Sync</button>
+    <button class="side-link" onclick="location.href='09-reports.html'"><span class="ic"></span>Reports Index</button>
+    <button class="side-link" onclick="location.href='14-printable-report.html'"><span class="ic"></span>Printable Report <span class="tag">pdf</span></button>
+  </div>
+  <div class="side-group">
+    <div class="side-label">Admin &amp; Security</div>
+    <button class="side-link" onclick="location.href='10-settings.html'"><span class="ic"></span>Settings &amp; Policies</button>
+    <button class="side-link" onclick="location.href='11-api-keys.html'"><span class="ic"></span>API Key Vault</button>
+    <button class="side-link" onclick="location.href='12-user-profiles.html'"><span class="ic"></span>User Profiles &amp; RBAC</button>
+  </div>
+  <div class="side-foot">
+    <div class="row"><span>active user</span><span class="ok">Abdirahman Farah</span></div>
+    <div class="row"><span>role</span><span class="ok">AML Analyst</span></div>
+    <div class="row"><span>endpoint</span><span style="color:var(--ink)">POST /v1/screen</span></div>
+    <a class="signout" href="01-login.html"><span class="glyph"></span><span>Sign out</span></a>
+  </div>
+</aside>
+
+<main style="background:var(--paper);min-width:0">
+  <header class="top">
+    <div class="crumbs"><span>console</span><span class="sep">/</span><span>screening</span><span class="sep">/</span><span class="here">new screening</span></div>
+    <div class="top-spacer"></div>
+    <div class="user-badge" onclick="location.href='12-user-profiles.html'" style="display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--rule-strong);padding:4px 10px;border-radius:20px;font-family:var(--mono);font-size:11.5px;cursor:pointer">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+      <span>Abdirahman Farah</span>
+      <span style="color:var(--accent-ink);font-weight:600">[AML Analyst]</span>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">// screening · universal entity</div>
+        <h1 class="page-h1">New Screening</h1>
+        <p class="page-sub">One endpoint for every entity type. Use <span style="font-family:var(--mono);background:var(--panel);padding:2px 6px;border:1px solid var(--rule-ghost)">auto</span> to let yente detect schema - or lock to Person / Company / Organization / Vessel / Aircraft.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost" onclick="location.href='05-bulk-screen.html'"> Bulk (CSV)</button>
+        <button class="btn ghost" onclick="location.href='06-entity-search.html'">⌕ Entity Search</button>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- LEFT: form -->
+      <div>
+        <div class="card">
+          <div class="card-h">Query <span style="font-family:var(--mono);font-size:11px;color:var(--soft);text-transform:none;letter-spacing:0">POST /v1/screen</span></div>
+
+          <label class="lbl">Entity type</label>
+          <div class="tabs">
+            <button class="tab on">auto <small>· detect</small></button>
+            <button class="tab">person</button>
+            <button class="tab">company</button>
+            <button class="tab">organization</button>
+            <button class="tab">vessel</button>
+            <button class="tab">aircraft</button>
+          </div>
+          <div class="hint" style="margin:-6px 0 14px">auto searches Person, Company, Organization, LegalEntity, Vessel, Airplane (see <span style="color:var(--mid)">schemas_for_entity_type</span>)</div>
+
+          <label class="lbl">Full legal name *</label>
+          <input class="inp" placeholder="Hassan Ali Mohamud" value="Hassan Ali Mohamud">
+          <label class="lbl">Aliases <span style="text-transform:none;letter-spacing:0;color:var(--soft)">optional · comma separated</span></label>
+          <input class="inp" placeholder="Hassan Mohamud, Xasan Cali Maxamud">
+
+          <div class="grid2">
+            <div>
+              <label class="lbl">Country</label>
+              <select class="sel"><option>Somalia</option><option>Kenya</option><option>UAE</option><option>United Kingdom</option></select>
+            </div>
+            <div>
+              <label class="lbl">Address</label>
+              <input class="inp" placeholder="Mogadishu / Dubai / Nairobi">
+            </div>
+          </div>
+
+          <div style="margin-top:16px;padding:12px;background:var(--panel-2);border:1px solid var(--rule-ghost)">
+            <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:10px">Person-specific</div>
+            <div class="grid2">
+              <div><label class="lbl">Date of birth</label><input class="inp" placeholder="1982-04-11"></div>
+              <div><label class="lbl">Nationality</label><select class="sel"><option>Somalia</option><option>Kenya</option></select></div>
+            </div>
+            <div class="grid2" style="margin-top:10px">
+              <div><label class="lbl">Gender</label><select class="sel"><option>-</option><option>male</option><option>female</option></select></div>
+              <div><label class="lbl">ID / National ID</label><input class="inp" placeholder="optional"></div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;padding:12px;background:var(--panel-2);border:1px solid var(--rule-ghost)">
+            <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:10px">Company / Organization</div>
+            <div class="grid2">
+              <div><label class="lbl">Registration #</label><input class="inp" placeholder="80020001234567"></div>
+              <div><label class="lbl">Tax #</label><input class="inp" placeholder="optional"></div>
+            </div>
+            <div class="grid2" style="margin-top:10px">
+              <div><label class="lbl">Incorporation date</label><input class="inp" placeholder="YYYY-MM-DD"></div>
+              <div><label class="lbl">Jurisdiction</label><select class="sel"><option>-</option><option>Somalia</option><option>UAE</option><option>Kenya</option></select></div>
+            </div>
+          </div>
+
+          <div style="margin-top:16px;padding:12px;background:var(--panel);border:1px solid var(--rule-ghost)">
+            <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mid);margin-bottom:10px">Matching controls</div>
+            <label class="lbl">Threshold <span style="color:var(--accent)">0.82</span> <span style="text-transform:none;letter-spacing:0;color:var(--soft)">0.50 - 1.00</span></label>
+            <input type="range" class="range" min="50" max="100" value="82">
+            <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--soft)"><span>0.50 permissive</span><span>0.82 default</span><span>1.00 strict</span></div>
+            <label class="check"><input type="checkbox" checked> include_relationships (collect_relationships)</label>
+            <label class="check"><input type="checkbox" checked> include_source_documents (source_links)</label>
+            <label class="lbl">Requested by <span style="text-transform:none;letter-spacing:0;color:var(--soft)">for audit</span></label>
+            <input class="inp" placeholder="analyst@chunguza.app" value="a.johnson@chunguza.app">
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button class="btn primary" onclick="location.href='04-screening-detail.html'" style="flex:1;justify-content:center">▸ Screen -></button>
+            <button class="btn ghost">Clear</button>
+          </div>
+          <p class="hint">Calls yente -> risk classification -> stores immutable ScreeningRequest (reference SCR-…).</p>
+        </div>
+      </div>
+
+      <!-- RIGHT: preview + help -->
+      <div>
+        <div class="card">
+          <div class="card-h">Live JSON Preview <span style="color:var(--accent);border:1px solid rgba(0,240,255,.18);padding:2px 6px;background:rgba(0,240,255,.08)">auto -> Person</span></div>
+          <div class="code">{
+  "entity_type": "auto",
+  "name": "Hassan Ali Mohamud",
+  "country": "Somalia",
+  "address": null,
+  "aliases": [],
+  "date_of_birth": "1982-04-11",
+  "nationality": "Somalia",
+  "threshold": 0.82,
+  "include_relationships": true,
+  "include_source_documents": true,
+  "requested_by": "a.johnson@chunguza.app"
+}</div>
+          <p class="hint" style="margin-top:10px">Mapped via <span style="color:var(--mid)">build_entity_properties</span> -> yente search/{dataset}? q + properties.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-h">Risk categories</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <span class="pill p-san">sanction</span>
+            <span class="pill p-pep">pep</span>
+            <span class="pill p-san">debarment</span>
+            <span class="pill p-pep">crime</span>
+            <span class="pill p-cri">wanted</span>
+            <span class="pill p-deb">state-owned</span>
+          </div>
+          <p style="font-size:12.5px;color:var(--mid)">Each yente match has <span style="font-family:var(--mono)">topics</span> -> <span style="color:var(--ink)">risk_categories_from_topics()</span>. Risk level: <b style="color:var(--ink)">Critical</b> if sanction · <b style="color:var(--ink)">High</b> if pep & high score · else tiered by score.</p>
+          <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--panel-2);padding:10px;text-align:center;border:1px solid var(--rule-ghost)"><div style="font-family:var(--mono);font-size:10px;color:var(--mid)">CRITICAL</div><div style="color:var(--red);font-weight:600">sanction</div></div>
+            <div style="background:var(--panel-2);padding:10px;text-align:center;border:1px solid var(--rule-ghost)"><div style="font-family:var(--mono);font-size:10px;color:var(--mid)">CLEAR</div><div style="color:var(--green);font-weight:600">no matches</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">What happens on Screen -></div>
+          <ol style="padding-left:18px;font-size:12.5px;color:var(--mid);display:flex;flex-direction:column;gap:6px">
+            <li><b style="color:var(--ink)">call_yente()</b> -> matches[] with score, topics, datasets</li>
+            <li><b style="color:var(--ink)">risk_level_for_matches()</b> + <b style="color:var(--ink)">summary_from_matches()</b></li>
+            <li> collect_relationships() + get_data_freshness()</li>
+            <li> Insert <b style="color:var(--ink)">screening_requests</b> -> <span style="font-family:var(--mono)">SCR-2026-04871</span></li>
+            <li> Return <b style="color:var(--ink)">ScreenResponse</b> + analyst_note</li>
+          </ol>
+        </div>
+
+        <div class="card" style="border:1px solid rgba(0,240,255,.18)">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:6px">Self-hosted guarantee</div>
+          <p style="font-size:12.5px;color:var(--mid);word-break:break-word">No internet for this call. FastAPI -> yente -> Elasticsearch only. Dataset stays under <span style="font-family:var(--mono);word-break:break-all">/data/opensanctions/current</span> on your VPC.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+</body>
+</html>

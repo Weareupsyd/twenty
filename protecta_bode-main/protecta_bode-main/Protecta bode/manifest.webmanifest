@@ -1,0 +1,20 @@
+{
+  "name": "Protecta Bode - Cover Your Ride, Cover Your Life",
+  "short_name": "Protecta Bode",
+  "description": "Car body, third-party and driver cover for 1.5% of your car's value. Underwritten by Liberty General Insurance Uganda.",
+  "id": "protecta-bode",
+  "start_url": "./protectabode-landing.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B1C48",
+  "categories": ["finance", "insurance", "automotive"],
+  "lang": "en",
+  "icons": [
+    { "src": "assets/icon-192.png",          "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png",          "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

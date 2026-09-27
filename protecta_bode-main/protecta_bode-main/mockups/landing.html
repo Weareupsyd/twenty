@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Protecta Bode — Landing (mockup)</title>
+<link rel="stylesheet" href="assets/hugeicons.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/mockup.css" />
+<style>
+  /* Landing mockup specifics */
+  .mockup-tag {
+    position: fixed; left: 14px; bottom: 14px; z-index: 70;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px; background: rgba(11,28,72,.92);
+    color: #dbe4f7; font-family: var(--mono); font-size: 9.5px;
+    box-shadow: 0 10px 26px rgba(11,28,72,.35);
+  }
+  .mockup-tag a { color: #f2a36b; font-weight: 700; }
+  .mockup-tag .hgi-stroke { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<main class="stage">
+  <!-- Key visual -->
+  <section class="kv" aria-label="Protecta Bode campaign">
+    <picture>
+      <source type="image/webp" srcset="assets/key-visual-720.webp 720w, assets/key-visual-1080.webp 1080w, assets/key-visual-1600.webp 1600w" />
+      <img src="assets/key-visual-1080.jpg" alt="Protecta Bode by Liberty — cover your ride, cover your life" />
+    </picture>
+  </section>
+
+  <!-- Calculator panel: NO white card container; whole calculator fits one viewport -->
+  <section class="panel" aria-label="Premium calculator">
+    <div class="panel-inner">
+
+      <header class="toolbar">
+        <img src="assets/protecta-bode-logo-trim.png" alt="Protecta Bode by Liberty General Insurance" />
+        <!-- Portal sign in = outline button (no fill) -->
+        <a class="btn outline-navy" href="login.html">Portal sign in <i class="hgi-stroke hgi-arrow-right-01" aria-hidden="true"></i></a>
+      </header>
+
+      <div class="calc">
+        <span class="eyebrow"><i class="hgi-stroke hgi-shield-check" aria-hidden="true"></i> Premium calculator</span>
+        <h1>Calculate your premium</h1>
+        <p class="lede">For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident.</p>
+
+        <label class="field-label" for="car-value">Your car’s value</label>
+        <div class="money">
+          <span aria-hidden="true">UGX</span>
+          <input id="car-value" type="text" inputmode="numeric" value="30,000,000" />
+        </div>
+
+        <div class="range-wrap">
+          <input class="range" type="range" min="5000000" max="300000000" step="500000" value="30000000" style="--p: 8.4%" aria-label="Car value slider" />
+        </div>
+        <div class="range-scale" aria-hidden="true"><span>5M</span><span>300M+</span></div>
+
+        <div class="result" aria-live="polite">
+          <span class="r-label">Your annual premium</span>
+          <span class="r-rate">1.5%</span>
+          <div class="r-amount"><span class="cur">UGX</span>450,000<small>/ year</small></div>
+          <span class="r-meta">1.5% of UGX 30,000,000</span>
+        </div>
+
+        <ul class="covers" aria-label="What you are covered for">
+          <li><i class="hgi-stroke hgi-shield-01" aria-hidden="true"></i>Car body</li>
+          <li><i class="hgi-stroke hgi-accident o" aria-hidden="true"></i>Third party</li>
+          <li><i class="hgi-stroke hgi-user-check-01" aria-hidden="true"></i>Driver cover</li>
+        </ul>
+
+        <button class="cta" type="button">
+          Proceed with this cover
+          <i class="hgi-stroke hgi-arrow-right-01" aria-hidden="true"></i>
+        </button>
+
+        <div class="after">
+          <span>Terms and Conditions apply</span>
+          <a href="tel:+256312246500"><i class="hgi-stroke hgi-call" aria-hidden="true" style="font-size:12px;vertical-align:-2px"></i> Call 0312 246500</a>
+        </div>
+      </div>
+
+      <p class="underwriting">Protecta Bode is underwritten by Liberty General Insurance Uganda and regulated by the Insurance Regulatory Authority of Uganda.</p>
+    </div>
+  </section>
+</main>
+
+<div class="mockup-tag">
+  <i class="hgi-stroke hgi-eye"></i> Mockup — <a href="index.html">← all screens</a>
+</div>
+
+</body>
+</html>

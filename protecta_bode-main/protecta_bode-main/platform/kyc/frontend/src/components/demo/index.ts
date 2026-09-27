@@ -1,0 +1,13 @@
+export { ProgressIndicator } from './ProgressIndicator';
+export { DemoInitStep } from './DemoInitStep';
+export { FrontDocumentStep } from './FrontDocumentStep';
+export { ProcessingStep } from './ProcessingStep';
+export { BackUploadStep } from './BackUploadStep';
+export { CheckingStep } from './CheckingStep';
+export { LiveCaptureStep } from './LiveCaptureStep';
+export { VoiceCaptureStep } from './VoiceCaptureStep';
+export { ResultsStep } from './ResultsStep';
+export { AddressStep } from './AddressStep';
+export { CredentialStep } from './CredentialStep';
+export type { VerificationRequest, LiveCaptureSession, CaptureResult, DemoDocument } from './types';
+export { getErrorMessage } from './types';

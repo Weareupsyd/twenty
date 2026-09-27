@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Protecta Bode — Profile settings (mockup)</title>
+<link rel="stylesheet" href="assets/hugeicons.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/mockup.css" />
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <a class="side-logo" href="portal.html" aria-label="Protecta Bode home">
+      <img src="assets/protecta-bode-logo-white.png" alt="Protecta Bode by Liberty General Insurance" />
+    </a>
+    <nav class="side-nav" aria-label="Portal navigation">
+      <span class="side-label">Workspace</span>
+      <a class="nav-item" href="portal.html"><i class="hgi-stroke hgi-home-01" aria-hidden="true"></i><span>My cover</span></a>
+      <a class="nav-item" href="records.html"><i class="hgi-stroke hgi-wallet-01" aria-hidden="true"></i><span>Payments</span></a>
+      <a class="nav-item" href="records.html"><i class="hgi-stroke hgi-accident" aria-hidden="true"></i><span>Claims</span><span class="count">2</span></a>
+      <a class="nav-item" href="records.html"><i class="hgi-stroke hgi-user-id-verification" aria-hidden="true"></i><span>Verify identity</span></a>
+      <a class="nav-item" href="records.html"><i class="hgi-stroke hgi-customer-support" aria-hidden="true"></i><span>Support</span></a>
+      <a class="nav-item" href="quote.html"><i class="hgi-stroke hgi-shield-check" aria-hidden="true"></i><span>New quote</span></a>
+      <span class="side-label">Account</span>
+      <a class="nav-item active" href="settings.html" aria-current="page"><i class="hgi-stroke hgi-account-setting-01" aria-hidden="true"></i><span>Settings</span></a>
+    </nav>
+    <div class="side-foot">
+      <div class="side-user">
+        <span class="avatar" aria-hidden="true">S</span>
+        <span class="user-copy"><b>Sarah Namutebi</b><small>customer</small></span>
+      </div>
+      <p>Protecta Bode is underwritten by Liberty General Insurance Uganda.</p>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="top">
+      <div class="crumbs">
+        <span>Protecta Bode</span><span class="sep">/</span><span>customer portal</span><span class="sep">/</span><span class="here">settings</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" data-notif-open aria-label="Notifications, 3 unread">
+          <i class="hgi-stroke hgi-bell" aria-hidden="true"></i>
+          <span class="ping" data-notif-badge>3</span>
+        </button>
+        <div class="profile-wrap">
+          <button class="profile-chip" data-profile-btn>
+            <span class="avatar" aria-hidden="true">S</span>
+            Sarah N.
+            <i class="hgi-stroke hgi-arrow-down-02" aria-hidden="true"></i>
+          </button>
+          <div class="profile-menu" data-profile-menu>
+            <div class="head"><b>Sarah Namutebi</b><small>sarah.namutebi@example.com</small></div>
+            <a href="settings.html"><i class="hgi-stroke hgi-user-circle" aria-hidden="true"></i> Profile settings</a>
+            <a href="#security"><i class="hgi-stroke hgi-lock-password" aria-hidden="true"></i> Change password</a>
+            <a href="#notifications"><i class="hgi-stroke hgi-bell" aria-hidden="true"></i> Notification prefs</a>
+            <div class="divider"></div>
+            <a class="danger" href="login.html"><i class="hgi-stroke hgi-logout-01" aria-hidden="true"></i> Sign out</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1>Settings</h1>
+          <span class="sub">PROFILE · SECURITY · NOTIFICATIONS</span>
+        </div>
+      </div>
+
+      <div class="settings-layout">
+
+        <!-- Left settings nav (reference screenshot pattern) -->
+        <nav class="settings-nav" aria-label="Settings sections">
+          <span class="group-label">My account</span>
+          <a class="active" href="#profile"><i class="hgi-stroke hgi-user-circle" aria-hidden="true"></i> Profile</a>
+          <a href="#security"><i class="hgi-stroke hgi-lock-password" aria-hidden="true"></i> Security</a>
+          <a href="#notifications"><i class="hgi-stroke hgi-bell" aria-hidden="true"></i> Notifications</a>
+          <span class="group-label">Support</span>
+          <a href="records.html"><i class="hgi-stroke hgi-customer-support" aria-hidden="true"></i> Help centre</a>
+        </nav>
+
+        <div class="settings-content">
+
+          <!-- ── Profile ── -->
+          <section class="s-card" id="profile" aria-labelledby="profile-title">
+            <div class="s-card-head">
+              <div>
+                <h2 id="profile-title">Profile details</h2>
+                <p>How we address you and where your documents are sent.</p>
+              </div>
+            </div>
+
+            <div class="profile-hero">
+              <span class="avatar" aria-hidden="true">S</span>
+              <div class="who">
+                <b>Sarah Namutebi</b>
+                <span>Customer since March 2026 · KYC approved</span>
+              </div>
+              <span class="badge ok"><span class="dot"></span>Verified</span>
+            </div>
+
+            <form onsubmit="event.preventDefault(); toast('Profile details saved')">
+              <div class="field-row">
+                <div class="field">
+                  <label for="pf-name">Full name</label>
+                  <input id="pf-name" value="Sarah Namutebi" required />
+                </div>
+                <div class="field">
+                  <label for="pf-phone">Phone number</label>
+                  <input id="pf-phone" inputmode="tel" value="+256 772 123 456" required />
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="pf-email">Email address</label>
+                  <input id="pf-email" type="email" value="sarah.namutebi@example.com" required />
+                  <span class="hint">Used for policy documents and one-time codes.</span>
+                </div>
+                <div class="field">
+                  <label for="pf-city">Town / district</label>
+                  <input id="pf-city" value="Kampala" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="pf-address">Postal address</label>
+                <input id="pf-address" value="Plot 14, Yusuf Lule Road, Kampala" />
+              </div>
+              <div class="actions" style="display:flex;gap:9px;flex-wrap:wrap">
+                <button class="btn navy" type="submit"><i class="hgi-stroke hgi-check"></i> Save changes</button>
+                <button class="btn ghost" type="reset"><i class="hgi-stroke hgi-reload"></i> Discard</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- ── Security ── -->
+          <section class="s-card" id="security" aria-labelledby="security-title">
+            <div class="s-card-head">
+              <div>
+                <h2 id="security-title">Password &amp; security</h2>
+                <p>Change your password now, or reset it with a one-time code.</p>
+              </div>
+              <span class="badge ok"><i class="hgi-stroke hgi-shield-check" style="font-size:11px"></i> 2-step SMS</span>
+            </div>
+
+            <form onsubmit="event.preventDefault(); toast('Password updated')" style="max-width:560px">
+              <div class="field">
+                <label for="cur-pass">Current password</label>
+                <input id="cur-pass" type="password" autocomplete="current-password" placeholder="••••••••••••" />
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="new-pass">New password</label>
+                  <input id="new-pass" type="password" autocomplete="new-password" placeholder="At least 12 characters" />
+                </div>
+                <div class="field">
+                  <label for="conf-pass">Confirm new password</label>
+                  <input id="conf-pass" type="password" autocomplete="new-password" placeholder="Repeat it" />
+                </div>
+              </div>
+              <div style="display:flex;gap:9px;flex-wrap:wrap">
+                <button class="btn navy" type="submit"><i class="hgi-stroke hgi-lock-password"></i> Update password</button>
+                <!-- Solid orange: sends the verification code -->
+                <button class="btn orange" type="button" data-modal-open>
+                  <i class="hgi-stroke hgi-mail-01"></i> Reset with verification code
+                </button>
+              </div>
+            </form>
+
+            <div class="d-note" style="margin-top:16px;max-width:560px">
+              <b>Forgot your password?</b> We’ll email a six-digit code to <b>sarah.namutebi@example.com</b>. Enter it below to set a new password — the same flow as account setup on the login page.
+            </div>
+
+            <div class="pref-row" style="margin-top:6px;max-width:560px">
+              <span class="pref-ico"><i class="hgi-stroke hgi-key-01"></i></span>
+              <div class="pref-copy">
+                <b>Sign out of all other devices</b>
+                <span>Ends every session except this browser.</span>
+              </div>
+              <button class="btn ghost sm" type="button" onclick="toast('Signed out of 2 other sessions')"><i class="hgi-stroke hgi-logout-01"></i> Sign out others</button>
+            </div>
+          </section>
+
+          <!-- ── Notifications ── -->
+          <section class="s-card" id="notifications" aria-labelledby="notif-title">
+            <div class="s-card-head">
+              <div>
+                <h2 id="notif-title">Notification preferences</h2>
+                <p>Choose how Protecta Bode keeps you updated.</p>
+              </div>
+            </div>
+
+            <div class="pref-row">
+              <span class="pref-ico"><i class="hgi-stroke hgi-whatsapp"></i></span>
+              <div class="pref-copy"><b>WhatsApp updates</b><span>Claim status, renewal reminders and payment receipts.</span></div>
+              <button class="switch" role="switch" aria-checked="true" data-label="WhatsApp updates" aria-label="WhatsApp updates"><i class="hgi-stroke hgi-toggle-on"></i></button>
+            </div>
+            <div class="pref-row">
+              <span class="pref-ico"><i class="hgi-stroke hgi-mail-01"></i></span>
+              <div class="pref-copy"><b>Email documents</b><span>Policy PDFs, receipts and one-time codes.</span></div>
+              <button class="switch" role="switch" aria-checked="true" data-label="Email documents" aria-label="Email documents"><i class="hgi-stroke hgi-toggle-on"></i></button>
+            </div>
+            <div class="pref-row">
+              <span class="pref-ico"><i class="hgi-stroke hgi-smart-phone-01"></i></span>
+              <div class="pref-copy"><b>SMS alerts</b><span>Security codes and urgent claim updates.</span></div>
+              <button class="switch" role="switch" aria-checked="true" data-label="SMS alerts" aria-label="SMS alerts"><i class="hgi-stroke hgi-toggle-on"></i></button>
+            </div>
+            <div class="pref-row">
+              <span class="pref-ico"><i class="hgi-stroke hgi-bell"></i></span>
+              <div class="pref-copy"><b>Marketing &amp; offers</b><span>Product news and premium offers. Default off.</span></div>
+              <button class="switch" role="switch" aria-checked="false" data-label="Marketing" aria-label="Marketing and offers"><i class="hgi-stroke hgi-toggle-off"></i></button>
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ── Reset-password OTP modal (reference screenshot 2 pattern) ── -->
+<div class="modal-wrap" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+  <div class="modal">
+    <div class="modal-head">
+      <div style="flex:1">
+        <h2 id="reset-title">Reset your password</h2>
+        <p>We’ll email a six-digit code to <b>sarah.namutebi@example.com</b>. Enter it below, then choose your new password.</p>
+      </div>
+      <button class="drawer-close" data-modal-close aria-label="Close"><i class="hgi-stroke hgi-cancel-01"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px">
+        <span class="step-chip">Step 1 · Get the code</span>
+        <button class="btn orange block" type="button" onclick="toast('Verification code sent to your email')">
+          <i class="hgi-stroke hgi-mail-01"></i> Send verification code
+        </button>
+      </div>
+      <div>
+        <span class="step-chip">Step 2 · Enter the code</span>
+        <div class="otp-slots" role="group" aria-label="Six-digit verification code">
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 1" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 2" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 3" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 4" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 5" />
+          <input inputmode="numeric" maxlength="6" aria-label="Digit 6" />
+        </div>
+        <div class="otp-note">Sandbox code: <b>418 203</b></div>
+        <div class="field" style="margin-top:12px">
+          <label for="reset-pass">New password</label>
+          <input id="reset-pass" type="password" placeholder="At least 12 characters" />
+        </div>
+        <div class="field">
+          <label for="reset-conf">Confirm new password</label>
+          <input id="reset-conf" type="password" placeholder="Repeat it" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" data-modal-close type="button">Cancel</button>
+      <button class="btn navy" type="button" data-modal-close onclick="toast('Password reset — sign in with your new password')">
+        <i class="hgi-stroke hgi-check"></i> Confirm new password
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications slide-over -->
+<aside class="notif-panel" aria-label="Notifications">
+  <div class="notif-head">
+    <h2>Notifications</h2>
+    <button class="drawer-close" data-notif-close aria-label="Close notifications" style="margin-left:auto"><i class="hgi-stroke hgi-cancel-01"></i></button>
+  </div>
+  <div class="notif-tools">
+    <button class="btn ghost sm"><i class="hgi-stroke hgi-filter"></i> Filters</button>
+    <button class="btn sm" data-mark-all style="margin-left:auto"><i class="hgi-stroke hgi-check-check"></i> Mark all as read</button>
+  </div>
+  <div class="notif-list">
+    <div class="notif-date">Today · 26 September 2026</div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-accident"></i></span>
+      <div class="notif-txt"><p><b>Claim update</b> — your claim PB-CL-00431 has been <b>assessed</b> and is queued for approval.</p><time>11:20 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-mail-01"></i></span>
+      <div class="notif-txt"><p><b>Policy document</b> — your policy PDF for PB-2026-000184 is ready to download.</p><time>09:12 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-bell"></i></span>
+      <div class="notif-txt"><p><b>Renewal reminder</b> — policy PB-2025-000912 expires in 30 days.</p><time>08:00 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+  </div>
+  <div class="notif-foot"><a class="btn ghost sm" href="#notifications"><i class="hgi-stroke hgi-settings-01"></i> Notification settings</a></div>
+</aside>
+
+<script src="assets/mockup.js"></script>
+<script>
+  initProfileMenu()
+  initSwitches()
+  initModal()
+  initNotifications()
+  /* Highlight the settings nav as you scroll/click */
+  document.querySelectorAll('.settings-nav a[href^="#"]').forEach(a => {
+    a.addEventListener('click', () => {
+      document.querySelectorAll('.settings-nav a').forEach(x => x.classList.remove('active'))
+      a.classList.add('active')
+    })
+  })
+  /* In-page anchors should also sync the nav highlight */
+  if (location.hash) {
+    const link = document.querySelector(`.settings-nav a[href="${location.hash}"]`)
+    if (link) {
+      document.querySelectorAll('.settings-nav a').forEach(x => x.classList.remove('active'))
+      link.classList.add('active')
+    }
+  }
+</script>
+</body>
+</html>

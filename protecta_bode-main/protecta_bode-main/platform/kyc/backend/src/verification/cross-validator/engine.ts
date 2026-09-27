@@ -1,0 +1,268 @@
+/**
+ * Cross-Validator Engine
+ *
+ * Pure, synchronous, stateless. No I/O. No side effects.
+ * Takes front + back extraction results and produces a CrossValidationResult
+ * with per-field breakdown and overall weighted score.
+ */
+
+import type { FrontExtractionResult, BackExtractionResult, CrossValidationResult } from '@kabila/shared';
+import { FIELD_WEIGHTS, THRESHOLD_PASS, THRESHOLD_REVIEW } from './config.js';
+import { compareIdNumber, compareName, compareDate, compareNationality, compareAddress } from './comparators.js';
+import { normalizeDate } from './normalizers.js';
+import { validateDlNumber } from './dlNumberValidator.js';
+import type { DlValidationResult } from './dlNumberValidator.js';
+
+/** Map field names to their comparator functions */
+const COMPARATORS: Record<string, (front: string, back: string) => number> = {
+  id_number: compareIdNumber,
+  full_name: compareName,
+  date_of_birth: compareDate,
+  expiry_date: compareDate,
+  nationality: compareNationality,
+};
+
+/**
+ * Extract a field value from OCR data, trying multiple possible key names.
+ */
+function extractFrontField(ocr: Record<string, unknown>, field: string): string {
+  if (field === 'full_name') {
+    // Try full_name, then construct from first + last
+    const full = ocr.full_name || ocr.name;
+    if (full) return String(full);
+    const first = ocr.first_name || ocr.firstName || ocr.given_name;
+    const last = ocr.last_name || ocr.lastName || ocr.family_name || ocr.surname;
+    return [first, last].filter(Boolean).map(String).join(' ');
+  }
+  const value = ocr[field];
+  return value != null ? String(value) : '';
+}
+
+/**
+ * Extract a field value from barcode/QR payload, trying multiple possible key names.
+ */
+function extractBackField(payload: Record<string, unknown>, field: string): string {
+  if (field === 'full_name') {
+    // Try full_name, then construct from first + last
+    const full = payload.full_name || payload.name;
+    if (full) return String(full);
+    const first = payload.first_name || payload.firstName;
+    const last = payload.last_name || payload.lastName;
+    return [first, last].filter(Boolean).map(String).join(' ');
+  }
+  const value = payload[field];
+  return value != null ? String(value) : '';
+}
+
+/**
+ * Check if a document expiry date is in the past.
+ */
+function isExpired(frontExpiry: string, backExpiry: string): boolean {
+  // Try to parse from either source
+  const normalized = normalizeDate(frontExpiry) || normalizeDate(backExpiry);
+  if (!normalized) return false; // Can't determine, don't flag
+
+  const expiry = new Date(normalized);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return expiry < today;
+}
+
+/**
+ * Cross-validate front and back extraction results.
+ * Returns a CrossValidationResult with per-field scores, overall weighted score, and verdict.
+ */
+export function crossValidate(
+  front: FrontExtractionResult,
+  back: BackExtractionResult,
+): CrossValidationResult {
+  const frontOcr = front.ocr as Record<string, unknown>;
+  const backPayload = (back.qr_payload || {}) as Record<string, unknown>;
+  const issuingCountry = String(frontOcr.issuing_country || '').toUpperCase();
+
+  // Uganda National IDs intentionally have different fields on each side. Do
+  // not compare the front identity fields with the back address/biometrics.
+  // Expiry is still evaluated by the normal session gates.
+  if (issuingCountry === 'UG') {
+    return {
+      overall_score: 1,
+      field_scores: {},
+      has_critical_failure: false,
+      document_expired: false,
+      verdict: 'PASS',
+    };
+  }
+
+  // Ugandan National ID (or Uganda issuing country): front and back collect complementary,
+  // non-overlapping details (front: name, DOB, NIN, sex; back: place of birth, district, address).
+  // Do not compare front vs back details for mismatch failure - evaluate document expiry and pass.
+  const isUganda =
+    (frontOcr.issuing_country as string)?.toUpperCase() === 'UG' ||
+    (backPayload.issuing_country as string)?.toUpperCase() === 'UG' ||
+    /ugand/i.test(String(frontOcr.nationality || ''));
+
+  if (isUganda) {
+    const frontExpiry = extractFrontField(frontOcr, 'expiry_date');
+    const backExpiry = extractBackField(backPayload, 'expiry_date');
+    const documentExpired = isExpired(frontExpiry, backExpiry);
+
+    console.log(' ── Cross-Validation: Ugandan National ID detected - Complementary Front/Back Details ──');
+
+    const ugFieldScores: Record<string, { score: number; passed: boolean; weight: number }> = {};
+    for (const [field, config] of Object.entries(FIELD_WEIGHTS)) {
+      ugFieldScores[field] = { score: 1.0, passed: true, weight: config.weight };
+    }
+
+    return {
+      overall_score: 1.0,
+      field_scores: ugFieldScores,
+      has_critical_failure: false,
+      document_expired: documentExpired,
+      verdict: documentExpired ? 'REJECT' : 'PASS',
+    };
+  }
+
+  // If barcode returned all-empty fields, we can't cross-validate.
+  // Flag for REVIEW so a human inspects - unreadable barcode should NOT auto-pass.
+  // The session still proceeds to live capture (REVIEW unlocks it), but the
+  // verification will be flagged for manual review before final approval.
+  const backHasData = Object.values(backPayload).some(
+    v => typeof v === 'string' && v.trim().length > 0
+  );
+  if (!backHasData) {
+    const emptyFieldScores: Record<string, { score: number; passed: boolean; weight: number }> = {};
+    for (const [field, config] of Object.entries(FIELD_WEIGHTS)) {
+      emptyFieldScores[field] = { score: 0, passed: false, weight: config.weight };
+    }
+
+    // Check document expiry from front OCR only
+    const frontExpiry = extractFrontField(frontOcr, 'expiry_date');
+    const documentExpired = frontExpiry ? isExpired(frontExpiry, '') : false;
+
+    console.log(' ── Cross-Validation: back data empty - REVIEW (barcode unreadable) ──');
+
+    return {
+      overall_score: 0.80,  // Between REVIEW (0.75) and PASS (0.92) - flags for manual review
+      field_scores: emptyFieldScores,
+      has_critical_failure: false,
+      document_expired: documentExpired,
+      verdict: documentExpired ? 'REJECT' : 'REVIEW',
+    };
+  }
+
+  const fieldScores: Record<string, { score: number; passed: boolean; weight: number }> = {};
+  let hasCriticalFailure = false;
+  let matchedWeight = 0;   // sum of weights for fields present on both sides
+  let weightedScore = 0;   // sum of (score * weight) for matched fields
+
+  console.log(' ── Cross-Validation Start ──────────────────────');
+
+  for (const [field, config] of Object.entries(FIELD_WEIGHTS)) {
+    const frontValue = extractFrontField(frontOcr, field);
+    const backValue = extractBackField(backPayload, field);
+
+    const bothPresent = frontValue.trim().length > 0 && backValue.trim().length > 0;
+
+    if (!bothPresent && !config.critical) {
+      // Non-critical field missing on one side - skip, don't penalize
+      fieldScores[field] = { score: 0, passed: false, weight: config.weight };
+      console.log(`⏭  ${field} (w=${config.weight}, critical=false): SKIPPED (missing on ${!frontValue.trim() ? 'front' : 'back'})`);
+      console.log(`     front: "${frontValue}" | back: "${backValue}"`);
+      continue;
+    }
+
+    // Critical fields MUST be present on both sides - missing = failure
+    const comparator = COMPARATORS[field];
+    const score = comparator ? comparator(frontValue, backValue) : 0;
+    const passed = score >= config.passThreshold;
+
+    fieldScores[field] = { score, passed, weight: config.weight };
+    matchedWeight += config.weight;
+    weightedScore += score * config.weight;
+
+    if (config.critical && !passed) {
+      hasCriticalFailure = true;
+    }
+
+    const status = passed ? '' : (config.critical ? ' CRITICAL' : '');
+    console.log(`${status} ${field} (w=${config.weight}, critical=${config.critical}): score=${score.toFixed(3)}, passed=${passed}`);
+    console.log(`     front: "${frontValue}" | back: "${backValue}"`);
+  }
+
+  // ── DL Number Format Validation (weight 0 - supplementary signal) ──
+  const frontIdNumber = extractFrontField(frontOcr, 'id_number');
+  const issuingCountryForDl = (frontOcr.issuing_country as string) || null;
+  // Try to detect issuing state from address or other OCR fields
+  const issuingState = (frontOcr.issuing_state as string) || null;
+  const dlValidation: DlValidationResult = validateDlNumber(frontIdNumber, issuingCountryForDl, issuingState);
+
+  if (dlValidation.verdict !== 'SKIP') {
+    const dlIcon = dlValidation.verdict === 'PASS' ? '' : dlValidation.verdict === 'FAIL' ? '' : '';
+    console.log(`${dlIcon} dl_format_validation (w=0, supplementary): verdict=${dlValidation.verdict}`);
+    console.log(`     id_number: "${frontIdNumber}" | detail: ${dlValidation.detail}`);
+  }
+
+  // ── Address Validation (weight 0 - supplementary signal) ──
+  const frontAddress = extractFrontField(frontOcr, 'address');
+  const backAddress = extractBackField(backPayload, 'address');
+  let addressValidation: CrossValidationResult['address_validation'] = undefined;
+
+  if (frontAddress.trim() && backAddress.trim()) {
+    const addrScore = compareAddress(frontAddress, backAddress);
+    const addrVerdict = addrScore >= 0.70 ? 'PASS' as const
+      : addrScore >= 0.40 ? 'REVIEW' as const
+      : 'FAIL' as const;
+    addressValidation = {
+      score: Math.round(addrScore * 100) / 100,
+      verdict: addrVerdict,
+      front_address: frontAddress,
+      back_address: backAddress,
+    };
+    const addrIcon = addrVerdict === 'PASS' ? '' : addrVerdict === 'REVIEW' ? '' : '';
+    console.log(`${addrIcon} address_validation (w=0, supplementary): score=${addrScore.toFixed(3)}, verdict=${addrVerdict}`);
+    console.log(`     front: "${frontAddress}" | back: "${backAddress}"`);
+  }
+
+  // Normalize score: only count fields that were actually compared
+  const overallScore = matchedWeight > 0
+    ? Math.round((weightedScore / matchedWeight) * 100) / 100
+    : 0;
+
+  // Check document expiry
+  const frontExpiry = extractFrontField(frontOcr, 'expiry_date');
+  const backExpiry = extractBackField(backPayload, 'expiry_date');
+  const documentExpired = isExpired(frontExpiry, backExpiry);
+
+  // Determine verdict
+  let verdict: 'PASS' | 'REVIEW' | 'REJECT';
+  if (hasCriticalFailure || documentExpired || overallScore < THRESHOLD_REVIEW) {
+    verdict = 'REJECT';
+  } else if (overallScore >= THRESHOLD_PASS) {
+    verdict = 'PASS';
+  } else {
+    verdict = 'REVIEW';
+  }
+
+  // DL format nudge: if format validation FAILED and we're borderline PASS, nudge to REVIEW
+  if (dlValidation.verdict === 'FAIL' && verdict === 'PASS' && overallScore < THRESHOLD_PASS + 0.05) {
+    verdict = 'REVIEW';
+    console.log('  DL format validation FAIL nudged verdict from PASS -> REVIEW');
+  }
+
+  console.log(' ── Cross-Validation Result ─────────────────────');
+  console.log(`   Matched weight: ${matchedWeight.toFixed(2)} / 1.00 (${Object.keys(fieldScores).filter(f => fieldScores[f].score > 0 || FIELD_WEIGHTS[f]?.critical).length} fields compared)`);
+  console.log(`   Overall score: ${overallScore} (PASS >= ${THRESHOLD_PASS}, REVIEW >= ${THRESHOLD_REVIEW})`);
+  console.log(`   Critical failure: ${hasCriticalFailure}, Document expired: ${documentExpired}`);
+  console.log(`   Verdict: ${verdict}`);
+  console.log(' ────────────────────────────────────────────────');
+
+  return {
+    overall_score: overallScore,
+    field_scores: fieldScores,
+    has_critical_failure: hasCriticalFailure,
+    document_expired: documentExpired,
+    verdict,
+    dl_format_validation: dlValidation.verdict !== 'SKIP' ? dlValidation : undefined,
+    address_validation: addressValidation,
+  };
+}

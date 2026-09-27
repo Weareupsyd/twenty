@@ -1,0 +1,221 @@
+name: protecta-bode
+
+# Protecta Bode platform - one-command stack
+# Same topology proven in production by our previous app (KYC + bot + email + portal).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: protecta
+      POSTGRES_USER: protecta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-protecta}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    shm_size: "256m"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U protecta"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  email:
+    build: ./email_service
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-Protecta Bode <policies@example.com>}
+      OUTBOX: ${EMAIL_OUTBOX:-stdout}
+      ASSET_BASE_URL: ${EMAIL_ASSET_BASE_URL:-}
+    expose:
+      - "8010"
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    environment:
+      APP_ENV: ${APP_ENV:-sandbox}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-in-production}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-}
+      DATABASE_URL: postgresql+psycopg2://protecta:${POSTGRES_PASSWORD:-protecta}@postgres:5432/protecta
+      REDIS_URL: redis://redis:6379/0
+      EMAIL_SERVICE_URL: http://email:8010
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8000}
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      KYC_SERVICE_URL: http://kyc-api:3001
+      KYC_API_KEY: ${KYC_API_KEY:-}
+      KYC_PUBLIC_URL: ${KYC_PUBLIC_URL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin}
+    expose:
+      - "8000"
+    ports:
+      - "${API_PORT:-18000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      email:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  portal:
+    build: ./frontend
+    ports:
+      - "${PORTAL_PORT:-18080}:8080"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  bot:
+    build: ./bot
+    environment:
+      API_URL: http://api:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-change-me-in-production}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-protecta-verify}
+    expose:
+      - "8011"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Vendored KYC stack (Protecta Bode branded) ─────────────────────────────
+  kyc-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${KABILA_DB_NAME:-kabila}
+      POSTGRES_USER: ${KABILA_DB_USER:-kabila}
+      POSTGRES_PASSWORD: ${KABILA_DB_PASSWORD:-kabila-change-me}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - kycdata:/var/lib/postgresql/data
+    shm_size: "256m"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KABILA_DB_USER:-kabila}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  kyc-engine:
+    build:
+      context: ./kyc
+      dockerfile: engine/Dockerfile
+    image: protecta-kyc-engine:latest
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+    mem_limit: 2g
+    cpus: 2.0
+    expose:
+      - "3002"
+    depends_on:
+      kyc-db:
+        condition: service_healthy
+    # kyc-api waits on `service_healthy`, so the engine MUST define a
+    # healthcheck. The slim image has no curl/wget - probe /health with Node.
+    # start_period covers OCR/face model warm-up on first boot.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  kyc-api:
+    build:
+      context: ./kyc
+      dockerfile: backend/Dockerfile
+    image: protecta-kyc-api:latest
+    environment:
+      DATABASE_URL: postgresql://${KABILA_DB_USER:-kabila}:${KABILA_DB_PASSWORD:-kabila-change-me}@kyc-db:5432/${KABILA_DB_NAME:-kabila}
+      DATABASE_SSL: "false"
+      JWT_SECRET: ${KABILA_JWT_SECRET:-change-me-kabila-jwt}
+      API_KEY_SECRET: ${KABILA_API_KEY_SECRET:-change-me-kabila-apikey}
+      ENCRYPTION_KEY: ${KABILA_ENCRYPTION_KEY:-00000000000000000000000000000000}
+      SERVICE_TOKEN: ${KABILA_SERVICE_TOKEN:-change-me-kabila-service}
+      STORAGE_PROVIDER: local
+      AML_TS_PORT: "false"
+      YENTE_URL: ""
+      RATE_LIMIT_ENABLED: "true"
+      MIGRATIONS_LENIENT: "true"
+      ENGINE_URL: http://kyc-engine:3002
+      # Same /kyc mount pattern as AgriLink (agrilink.weareupsyd.com/kyc)
+      PUBLIC_APP_URL: ${KYC_PUBLIC_URL:-https://protectabode.weareupsyd.com/kyc}
+    volumes:
+      - kycuploads:/app/backend/uploads
+      - ./kyc/compliance-migrations:/app/compliance-migrations:ro
+    expose:
+      - "3001"
+    depends_on:
+      kyc-db:
+        condition: service_healthy
+      kyc-engine:
+        condition: service_healthy
+    restart: unless-stopped
+
+  kyc-web:
+    build:
+      context: ./kyc/frontend
+      dockerfile: Dockerfile.protecta
+    image: protecta-kyc-web:latest
+    depends_on:
+      - kyc-api
+    ports:
+      - "${KYC_PORT:-18081}:8080"
+    restart: unless-stopped
+
+  # Optional HTTPS front door: docker compose --profile https up -d
+  # Do NOT enable on a host where AgriLink's Caddy already holds 80/443 -
+  # point the existing Caddy at platform/caddy/Caddyfile instead.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:-protectabode.weareupsyd.com}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    depends_on:
+      - portal
+      - api
+      - bot
+      - kyc-web
+    restart: unless-stopped
+
+volumes:
+  caddydata:
+  pgdata:
+  redisdata:
+  kycdata:
+  kycuploads:

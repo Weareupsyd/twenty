@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────
+# Root .dockerignore - Docker Image Optimization Skill (§6)
+# ─────────────────────────────────────────────────
+# The API and Engine Dockerfiles use the repo root as build context
+# (see docker-compose.build.yml). This file keeps the build context
+# small and deterministic: only the files those Dockerfiles actually
+# COPY are ever sent to the Docker daemon.
+# (Frontend builds use ./frontend as context and have their own
+#  .dockerignore.)
+
+# VCS / CI / repo metadata
+.git
+.github
+.gitattributes
+.gitignore
+.gitmodules
+
+# Node.js
+node_modules
+**/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs & caches
+**/dist
+**/build
+**/coverage
+**/*.tsbuildinfo
+.cache
+.parcel-cache
+.turbo
+.vercel
+
+# Environment & secrets (never send to the Docker daemon)
+.env
+.env.*
+!.env.example
+.npmrc
+**/.npmrc
+.mcp.json
+
+# Packages / directories not referenced by the API/Engine images
+frontend
+sdks
+docs
+scripts
+sql
+# supabase/migrations IS needed in the API image: the entrypoint auto-migrates
+# from MIGRATIONS_DIR (/app/backend/migrations), and until now that directory
+# only ever existed as a docker-compose bind mount. Any host that ran the image
+# without the mount - Railway being the one in production - skipped
+# auto-migration entirely, which is how a database full of stale webhook
+# ownership FKs survived every redeploy. Excluding the rest of supabase/ keeps
+# the context small (config.toml, functions, seed files are not needed).
+supabase/*
+!supabase/migrations
+!supabase/migrations/**
+caddy
+nginx
+load-tests
+
+# Repo-level files not needed inside images
+*.md
+install.sh
+uninstall.sh
+update.sh
+renovate.json
+LICENSE
+TRADEMARK.md
+
+# Model weights downloaded by engine/download-models.js at build time -
+# never needed in the build context (the image downloads its own copy)
+engine/models
+
+# Logs, temp, uploads, IDE & OS noise
+logs
+**/logs
+**/tmp
+**/temp
+**/uploads
+*.log
+.DS_Store
+.idea
+.vscode
+.claude
+.agents
+.aidesigner

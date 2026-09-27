@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Protecta Bode — Editable records (mockup)</title>
+<link rel="stylesheet" href="assets/hugeicons.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/mockup.css" />
+</head>
+<body>
+
+<div class="shell">
+
+  <aside class="sidebar">
+    <a class="side-logo" href="portal.html" aria-label="Protecta Bode home">
+      <img src="assets/protecta-bode-logo-white.png" alt="Protecta Bode by Liberty General Insurance" />
+    </a>
+    <nav class="side-nav" aria-label="Portal navigation">
+      <span class="side-label">Operations</span>
+      <a class="nav-item" href="portal.html"><i class="hgi-stroke hgi-home-01" aria-hidden="true"></i><span>Dashboard</span></a>
+      <a class="nav-item" href="#policies" data-jump="policies"><i class="hgi-stroke hgi-shield-check" aria-hidden="true"></i><span>Policies</span></a>
+      <a class="nav-item" href="#payments" data-jump="payments"><i class="hgi-stroke hgi-wallet-01" aria-hidden="true"></i><span>Payments</span></a>
+      <a class="nav-item" href="#claims" data-jump="claims"><i class="hgi-stroke hgi-accident" aria-hidden="true"></i><span>Claims</span><span class="count">3</span></a>
+      <a class="nav-item" href="#distribution" data-jump="distribution"><i class="hgi-stroke hgi-user-multiple" aria-hidden="true"></i><span>Distribution</span></a>
+      <a class="nav-item" href="settings.html"><i class="hgi-stroke hgi-customer-support" aria-hidden="true"></i><span>Helpdesk</span></a>
+      <span class="side-label">Account</span>
+      <a class="nav-item" href="settings.html"><i class="hgi-stroke hgi-account-setting-01" aria-hidden="true"></i><span>Settings</span></a>
+    </nav>
+    <div class="side-foot">
+      <div class="side-user">
+        <span class="avatar" aria-hidden="true">A</span>
+        <span class="user-copy"><b>Alex Kiiza</b><small>admin</small></span>
+      </div>
+      <p>Protecta Bode is underwritten by Liberty General Insurance Uganda.</p>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="top">
+      <div class="crumbs">
+        <span>Protecta Bode</span><span class="sep">/</span><span class="here">records</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" data-notif-open aria-label="Notifications, 3 unread">
+          <i class="hgi-stroke hgi-bell" aria-hidden="true"></i>
+          <span class="ping" data-notif-badge>3</span>
+        </button>
+        <div class="profile-wrap">
+          <button class="profile-chip" data-profile-btn>
+            <span class="avatar" aria-hidden="true">A</span>
+            Alex K.
+            <i class="hgi-stroke hgi-arrow-down-02" aria-hidden="true"></i>
+          </button>
+          <div class="profile-menu" data-profile-menu>
+            <div class="head"><b>Alex Kiiza</b><small>alex.kiiza@example.com</small></div>
+            <a href="settings.html"><i class="hgi-stroke hgi-user-circle" aria-hidden="true"></i> Profile settings</a>
+            <a href="settings.html#security"><i class="hgi-stroke hgi-lock-password" aria-hidden="true"></i> Change password</a>
+            <div class="divider"></div>
+            <a class="danger" href="login.html"><i class="hgi-stroke hgi-logout-01" aria-hidden="true"></i> Sign out</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="page-head">
+        <div>
+          <h1>Records</h1>
+          <span class="sub">EVERY ROW OPENS — AND EVERYTHING EDITS</span>
+        </div>
+        <div class="head-actions">
+          <button class="btn" type="button" onclick="toast('Filters coming from the reference pattern')"><i class="hgi-stroke hgi-filter"></i> Filter</button>
+          <button class="btn orange" type="button" onclick="toast('New record — placeholder in the mockup')"><i class="hgi-stroke hgi-add-01"></i> New record</button>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Record types">
+        <button class="tab active" data-tab="policies" role="tab" aria-selected="true"><i class="hgi-stroke hgi-shield-check"></i> Policies <span class="count">4</span></button>
+        <button class="tab" data-tab="claims" role="tab" aria-selected="false"><i class="hgi-stroke hgi-accident"></i> Claims <span class="count">3</span></button>
+        <button class="tab" data-tab="payments" role="tab" aria-selected="false"><i class="hgi-stroke hgi-wallet-01"></i> Payments <span class="count">4</span></button>
+        <button class="tab" data-tab="distribution" role="tab" aria-selected="false"><i class="hgi-stroke hgi-user-multiple"></i> Agents &amp; brokers <span class="count">4</span></button>
+      </div>
+
+      <!-- ── Policies ── -->
+      <section data-panel-tab="policies">
+        <table class="table">
+          <thead><tr><th>Policy</th><th>Customer</th><th>Vehicle</th><th>Status</th><th class="num">Premium</th><th></th></tr></thead>
+          <tbody id="rows-policies"></tbody>
+        </table>
+      </section>
+
+      <!-- ── Claims ── -->
+      <section data-panel-tab="claims" hidden>
+        <table class="table">
+          <thead><tr><th>Reference</th><th>Policy</th><th>Incident</th><th>Status</th><th></th></tr></thead>
+          <tbody id="rows-claims"></tbody>
+        </table>
+      </section>
+
+      <!-- ── Payments ── -->
+      <section data-panel-tab="payments" hidden>
+        <table class="table">
+          <thead><tr><th>Reference</th><th>Quote</th><th>Provider</th><th>Status</th><th class="num">Amount</th><th></th></tr></thead>
+          <tbody id="rows-payments"></tbody>
+        </table>
+      </section>
+
+      <!-- ── Distribution: brokers + agents (both editable) ── -->
+      <section data-panel-tab="distribution" hidden>
+        <table class="table">
+          <thead><tr><th>Name</th><th>Role</th><th>Licence</th><th>Phone</th><th>Network</th><th></th></tr></thead>
+          <tbody id="rows-distribution"></tbody>
+        </table>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ── Slide-over detail drawer (reference screenshots 1/3/4 pattern) ── -->
+<div class="backdrop" hidden></div>
+<aside class="drawer" aria-label="Record details" aria-hidden="true">
+  <div class="drawer-head">
+    <span class="title-ico"><i class="hgi-stroke" id="drawer-icon"></i></span>
+    <div style="min-width:0">
+      <h2 id="drawer-title">Record</h2>
+      <span class="ref" id="drawer-ref"></span>
+    </div>
+    <span class="badge" id="drawer-badge"></span>
+    <span class="edit-flag"><i class="hgi-stroke hgi-edit-01"></i> Editing</span>
+    <button class="drawer-close" data-drawer-close aria-label="Close details"><i class="hgi-stroke hgi-cancel-01"></i></button>
+  </div>
+
+  <div class="drawer-body" id="drawer-body"><!-- filled by JS --></div>
+
+  <div class="drawer-foot">
+    <button class="btn ghost" type="button" data-drawer-close><i class="hgi-stroke hgi-arrow-left-01"></i> Close</button>
+    <div class="foot-view">
+      <button class="btn" type="button" id="drawer-secondary"></button>
+      <button class="btn navy" type="button" id="drawer-edit"><i class="hgi-stroke hgi-edit-01"></i> Edit details</button>
+    </div>
+    <div class="foot-edit">
+      <button class="btn ghost" type="button" id="drawer-cancel"><i class="hgi-stroke hgi-cancel-01"></i> Cancel</button>
+      <button class="btn navy" type="button" id="drawer-save"><i class="hgi-stroke hgi-check"></i> Save changes</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Notifications slide-over -->
+<aside class="notif-panel" aria-label="Notifications">
+  <div class="notif-head">
+    <h2>Notifications</h2>
+    <button class="drawer-close" data-notif-close aria-label="Close notifications" style="margin-left:auto"><i class="hgi-stroke hgi-cancel-01"></i></button>
+  </div>
+  <div class="notif-tools">
+    <button class="btn ghost sm"><i class="hgi-stroke hgi-filter"></i> Filters</button>
+    <button class="btn sm" data-mark-all style="margin-left:auto"><i class="hgi-stroke hgi-check-check"></i> Mark all as read</button>
+  </div>
+  <div class="notif-list">
+    <div class="notif-date">Today · 26 September 2026</div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-accident"></i></span>
+      <div class="notif-txt"><p><b>Claim PB-CL-00431</b> was assessed by Margaret A.</p><time>11:20 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-wallet-01"></i></span>
+      <div class="notif-txt"><p><b>Payment PAY-7741</b> confirmed manually by bank transfer.</p><time>10:02 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+    <div class="notif-row unread">
+      <span class="notif-ico"><i class="hgi-stroke hgi-user-multiple"></i></span>
+      <div class="notif-txt"><p><b>Agent Grace N.</b> onboarded under Lakeview Brokers.</p><time>08:45 AM</time></div>
+      <span class="notif-unread-dot"></span>
+    </div>
+  </div>
+  <div class="notif-foot"><button class="btn ghost sm" data-mark-all><i class="hgi-stroke hgi-check-check"></i> Mark all as read</button></div>
+</aside>
+
+<script src="assets/mockup.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════════════
+   Mock record store. Fields marked editable:true become inputs
+   when Edit is pressed — the fix for "I can't edit anything".
+   ════════════════════════════════════════════════════════════════ */
+const RECORDS = {
+  policies: [
+    {
+      id: 'PB-2026-000184', icon: 'shield-check', badge: ['Active', 'ok'],
+      title: 'Policy PB-2026-000184', ref: 'ISSUED 01 MAR 2026 · CUSTOMER SARAH NAMUTEBI',
+      secondary: 'Policy PDF',
+      sections: [
+        { title: 'Policy details', icon: 'file-01', fields: [
+          { k: 'Policy number', v: 'PB-2026-000184' },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Lapsed', 'Cancelled', 'Pending payment'] },
+          { k: 'Period start', v: '2026-03-01', editable: true, type: 'date' },
+          { k: 'Period end', v: '2027-02-28', editable: true, type: 'date' },
+          { k: 'Annual premium', v: 'UGX 450,000', editable: true },
+          { k: 'Cover', v: 'Car body + third party + driver', editable: true, full: true },
+        ]},
+        { title: 'Customer', icon: 'user-circle', fields: [
+          { k: 'Name', v: 'Sarah Namutebi', editable: true },
+          { k: 'Phone', v: '+256 772 123 456', editable: true },
+          { k: 'Email', v: 'sarah.namutebi@example.com', editable: true, full: true },
+        ]},
+        { title: 'Vehicle', icon: 'car-01', fields: [
+          { k: 'Make / model', v: 'MG ZS 1.5', editable: true },
+          { k: 'Plate', v: 'CL 043 UX', editable: true },
+          { k: 'Year', v: '2021', editable: true },
+          { k: 'Value', v: 'UGX 30,000,000', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Policy issued & PDF emailed', d: 'Password-protected schedule sent.', time: '01 MAR 2026 · 09:07', cls: 'ok', i: 'shield-check' },
+        { t: 'Payment confirmed — UGX 450,000', d: 'MTN MoMo PAY-7708.', time: '01 MAR 2026 · 09:04', cls: 'hot', i: 'wallet-01' },
+        { t: 'Quote accepted', d: 'From /quote/583104729165083.', time: '28 FEB 2026 · 17:41', cls: '', i: 'file-01' },
+      ],
+    },
+    {
+      id: 'PB-2026-000190', icon: 'shield-check', badge: ['Pending payment', 'warn'],
+      title: 'Policy PB-2026-000190', ref: 'QUOTED 21 SEP 2026 · CUSTOMER DAVID OKELLO',
+      secondary: 'Resend quote',
+      sections: [
+        { title: 'Policy details', icon: 'file-01', fields: [
+          { k: 'Policy number', v: 'PB-2026-000190' },
+          { k: 'Status', v: 'Pending payment', editable: true, type: 'select', options: ['Pending payment', 'Active', 'Cancelled'] },
+          { k: 'Annual premium', v: 'UGX 525,000', editable: true },
+          { k: 'Cover', v: 'Car body + third party + driver', editable: true, full: true },
+        ]},
+        { title: 'Customer', icon: 'user-circle', fields: [
+          { k: 'Name', v: 'David Okello', editable: true },
+          { k: 'Phone', v: '+256 701 987 654', editable: true },
+          { k: 'Email', v: 'd.okello@example.com', editable: true, full: true },
+        ]},
+        { title: 'Vehicle', icon: 'car-01', fields: [
+          { k: 'Make / model', v: 'Toyota Axio', editable: true },
+          { k: 'Plate', v: 'UAV 123X', editable: true },
+          { k: 'Value', v: 'UGX 35,000,000', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Quote sent for payment', d: 'Awaiting MoMo / Airtel / bank.', time: '21 SEP 2026 · 14:10', cls: 'hot', i: 'wallet-01' },
+        { t: 'Quote created by agent Grace N.', d: 'Lakeview Brokers.', time: '21 SEP 2026 · 14:02', cls: '', i: 'file-01' },
+      ],
+    },
+    {
+      id: 'PB-2025-000912', icon: 'shield-check', badge: ['Expired', 'muted'],
+      title: 'Policy PB-2025-000912', ref: 'ISSUED 12 JUN 2025 · CUSTOMER SARAH NAMUTEBI',
+      secondary: 'Policy PDF',
+      sections: [
+        { title: 'Policy details', icon: 'file-01', fields: [
+          { k: 'Policy number', v: 'PB-2025-000912' },
+          { k: 'Status', v: 'Expired', editable: true, type: 'select', options: ['Expired', 'Active', 'Lapsed'] },
+          { k: 'Period', v: '2025-06-12 → 2026-06-11', editable: true },
+          { k: 'Annual premium', v: 'UGX 450,000', editable: true },
+        ]},
+        { title: 'Vehicle', icon: 'car-01', fields: [
+          { k: 'Make / model', v: 'Toyota Axio', editable: true },
+          { k: 'Plate', v: 'UAP 772K', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Policy expired', d: 'Renewal reminder sent 30 days prior.', time: '11 JUN 2026 · 00:01', cls: '', i: 'clock-01' },
+      ],
+    },
+    {
+      id: 'PB-2026-000176', icon: 'shield-check', badge: ['Active', 'ok'],
+      title: 'Policy PB-2026-000176', ref: 'ISSUED 03 FEB 2026 · CUSTOMER MARY ACHENG',
+      secondary: 'Policy PDF',
+      sections: [
+        { title: 'Policy details', icon: 'file-01', fields: [
+          { k: 'Policy number', v: 'PB-2026-000176' },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Lapsed', 'Cancelled'] },
+          { k: 'Annual premium', v: 'UGX 375,000', editable: true },
+          { k: 'Period', v: '2026-02-03 → 2027-02-02', editable: true, full: true },
+        ]},
+        { title: 'Vehicle', icon: 'car-01', fields: [
+          { k: 'Make / model', v: 'Suzuki Escudo', editable: true },
+          { k: 'Plate', v: 'UBK 901L', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Mid-term endorsement added driver', d: 'Edited by admin Alex K.', time: '14 AUG 2026 · 10:33', cls: 'ok', i: 'edit-01' },
+      ],
+    },
+  ],
+
+  claims: [
+    {
+      id: 'PB-CL-00431', icon: 'accident', badge: ['Assessed', 'warn'],
+      title: 'Claim PB-CL-00431', ref: 'POLICY PB-2026-000184 · REPORTED 18 SEP 2026',
+      secondary: 'Contact customer',
+      sections: [
+        { title: 'Claim details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PB-CL-00431' },
+          { k: 'Status', v: 'Assessed', editable: true, type: 'select', options: ['Reported', 'Assigned', 'Assessed', 'Approved', 'Rejected', 'Settled'] },
+          { k: 'Incident date', v: '2026-09-16', editable: true, type: 'date' },
+          { k: 'Location', v: 'Kampala–Jinja road, Ntinda', editable: true, full: true },
+          { k: 'Description', v: 'Rear-end collision at the Ntinda junction; rear bumper and boot lid damaged. No third-party injuries.', editable: true, type: 'textarea', full: true },
+          { k: 'Assessor', v: 'Margaret A.', editable: true },
+          { k: 'Reserve', v: 'UGX 2,400,000', editable: true },
+        ]},
+        { title: 'Customer', icon: 'user-circle', fields: [
+          { k: 'Name', v: 'Sarah Namutebi' },
+          { k: 'Phone', v: '+256 772 123 456' },
+        ]},
+      ],
+      timeline: [
+        { t: 'Assessment completed', d: 'Garage estimate UGX 2,150,000 attached.', time: '24 SEP 2026 · 11:20', cls: 'hot', i: 'file-edit' },
+        { t: 'Assigned to assessor Margaret A.', d: 'By claims handler Brian O.', time: '19 SEP 2026 · 08:15', cls: '', i: 'user-check-01' },
+        { t: 'Claim reported', d: 'Through the customer portal.', time: '18 SEP 2026 · 19:44', cls: 'ok', i: 'accident' },
+      ],
+    },
+    {
+      id: 'PB-CL-00428', icon: 'accident', badge: ['Approved', 'ok'],
+      title: 'Claim PB-CL-00428', ref: 'POLICY PB-2026-000176 · REPORTED 02 SEP 2026',
+      secondary: 'Approve payout',
+      sections: [
+        { title: 'Claim details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PB-CL-00428' },
+          { k: 'Status', v: 'Approved', editable: true, type: 'select', options: ['Approved', 'Rejected', 'Settled'] },
+          { k: 'Incident date', v: '2026-08-30', editable: true, type: 'date' },
+          { k: 'Location', v: 'Gulu highway', editable: true, full: true },
+          { k: 'Settlement', v: 'UGX 1,150,000', editable: true },
+          { k: 'Description', v: 'Windscreen and front grille damaged by stone throw.', editable: true, type: 'textarea', full: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Approved for settlement', d: 'By underwriter Ruth N.', time: '22 SEP 2026 · 15:03', cls: 'ok', i: 'check' },
+        { t: 'Assessment completed', d: 'Ugx 1,150,000 approved by garage.', time: '20 SEP 2026 · 10:41', cls: '', i: 'file-edit' },
+      ],
+    },
+    {
+      id: 'PB-CL-00419', icon: 'accident', badge: ['Rejected', 'err'],
+      title: 'Claim PB-CL-00419', ref: 'POLICY PB-2025-000912 · REPORTED 05 AUG 2026',
+      secondary: 'View reasons',
+      sections: [
+        { title: 'Claim details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PB-CL-00419' },
+          { k: 'Status', v: 'Rejected', editable: true, type: 'select', options: ['Rejected', 'Reported', 'Approved'] },
+          { k: 'Incident date', v: '2026-08-04', editable: true, type: 'date' },
+          { k: 'Reason', v: 'Policy lapsed at incident date — premium unpaid after grace period.', editable: true, type: 'textarea', full: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Claim rejected', d: 'Reason recorded; customer notified by SMS.', time: '08 AUG 2026 · 12:30', cls: '', i: 'cancel-01' },
+      ],
+    },
+  ],
+
+  payments: [
+    {
+      id: 'PAY-7741', icon: 'wallet-01', badge: ['Confirmed', 'ok'],
+      title: 'Payment PAY-7741', ref: 'QUOTE QT-9927 · BANK TRANSFER · 26 SEP 2026',
+      secondary: 'Receipt',
+      sections: [
+        { title: 'Payment details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PAY-7741' },
+          { k: 'Status', v: 'Confirmed', editable: true, type: 'select', options: ['Initiated', 'Pending', 'Confirmed', 'Failed'] },
+          { k: 'Amount', v: 'UGX 525,000', editable: true },
+          { k: 'Provider', v: 'Bank transfer (Stanbic)', editable: true, type: 'select', options: ['Bank transfer (Stanbic)', 'MTN MoMo', 'Airtel Money'] },
+          { k: 'Confirmed by', v: 'Alex Kiiza', editable: true },
+          { k: 'Narrative', v: 'Deposit to account 9030012455, ref DT9927.', editable: true, type: 'textarea', full: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Confirmed manually', d: 'Matched against bank statement.', time: '26 SEP 2026 · 10:02', cls: 'ok', i: 'check' },
+        { t: 'Transfer initiated', d: 'Customer uploaded the deposit slip.', time: '25 SEP 2026 · 16:20', cls: '', i: 'bank' },
+      ],
+    },
+    {
+      id: 'PAY-7708', icon: 'wallet-01', badge: ['Confirmed', 'ok'],
+      title: 'Payment PAY-7708', ref: 'POLICY PB-2026-000184 · MTN MOMO · 01 MAR 2026',
+      secondary: 'Receipt',
+      sections: [
+        { title: 'Payment details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PAY-7708' },
+          { k: 'Status', v: 'Confirmed', editable: true, type: 'select', options: ['Confirmed', 'Failed', 'Pending'] },
+          { k: 'Amount', v: 'UGX 450,000', editable: true },
+          { k: 'Provider', v: 'MTN MoMo', editable: true, type: 'select', options: ['MTN MoMo', 'Airtel Money', 'Bank transfer (Stanbic)'] },
+          { k: 'Payer phone', v: '+256 772 123 456', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Webhook confirmed by MTN', d: 'Txn 1892341.', time: '01 MAR 2026 · 09:04', cls: 'ok', i: 'check' },
+        { t: 'Collection initiated', d: 'From the checkout screen.', time: '01 MAR 2026 · 09:02', cls: '', i: 'wallet-01' },
+      ],
+    },
+    {
+      id: 'PAY-7695', icon: 'wallet-01', badge: ['Failed', 'err'],
+      title: 'Payment PAY-7695', ref: 'QUOTE QT-9903 · AIRTEL MONEY · 27 FEB 2026',
+      secondary: 'Retry',
+      sections: [
+        { title: 'Payment details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PAY-7695' },
+          { k: 'Status', v: 'Failed', editable: true, type: 'select', options: ['Failed', 'Pending', 'Confirmed'] },
+          { k: 'Amount', v: 'UGX 450,000', editable: true },
+          { k: 'Failure reason', v: 'Subscriber insufficient balance.', editable: true, type: 'textarea', full: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Collection failed', d: 'Airtel returned code 51.', time: '27 FEB 2026 · 18:22', cls: '', i: 'cancel-01' },
+      ],
+    },
+    {
+      id: 'PAY-7688', icon: 'wallet-01', badge: ['Pending', 'warn'],
+      title: 'Payment PAY-7688', ref: 'QUOTE QT-9891 · BANK TRANSFER · 24 FEB 2026',
+      secondary: 'Confirm',
+      sections: [
+        { title: 'Payment details', icon: 'file-01', fields: [
+          { k: 'Reference', v: 'PAY-7688' },
+          { k: 'Status', v: 'Pending', editable: true, type: 'select', options: ['Pending', 'Confirmed', 'Failed'] },
+          { k: 'Amount', v: 'UGX 600,000', editable: true },
+          { k: 'Provider', v: 'Bank transfer (Stanbic)', editable: true, type: 'select', options: ['Bank transfer (Stanbic)', 'MTN MoMo', 'Airtel Money'] },
+        ]},
+      ],
+      timeline: [
+        { t: 'Awaiting reconciliation', d: 'Confirm once the bank statement shows it.', time: '24 FEB 2026 · 11:15', cls: 'hot', i: 'clock-01' },
+      ],
+    },
+  ],
+
+  distribution: [
+    {
+      id: 'Lakeview Brokers Ltd', icon: 'briefcase-01', badge: ['Broker', 'solid-navy'],
+      title: 'Lakeview Brokers Ltd', ref: 'BROKER · LICENCE UIRB/BR/0412 · 3 AGENTS',
+      secondary: 'Reset password',
+      sections: [
+        { title: 'Broker details', icon: 'user-circle', fields: [
+          { k: 'Full name', v: 'Lakeview Brokers Ltd', editable: true },
+          { k: 'Licence no.', v: 'UIRB/BR/0412', editable: true },
+          { k: 'Phone', v: '+256 414 555 010', editable: true },
+          { k: 'Email', v: 'ops@lakeviewbrokers.co.ug', editable: true },
+          { k: 'Contact person', v: 'Peter Ssemakula', editable: true },
+          { k: 'Address', v: 'Plot 8, Yusuf Lule Road, Kampala', editable: true, full: true },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Suspended', 'Offboarded'] },
+          { k: 'Commission rate', v: '12%', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'License document renewed', d: 'Uploaded by admin Alex K.', time: '02 AUG 2026 · 09:12', cls: 'ok', i: 'file-01' },
+        { t: 'Agent Grace N. attached', d: 'Moved from independent.', time: '11 APR 2026 · 14:40', cls: '', i: 'user-multiple' },
+        { t: 'Broker onboarded', d: 'Provisioned in User access.', time: '03 MAR 2026 · 08:05', cls: '', i: 'briefcase-01' },
+      ],
+    },
+    {
+      id: 'Grace Nanyonga', icon: 'user-circle', badge: ['Agent', 'muted'],
+      title: 'Grace Nanyonga', ref: 'AGENT · LICENCE UIRB/AG/2287 · LAKEVIEW BROKERS',
+      secondary: 'Reset password',
+      sections: [
+        { title: 'Agent details', icon: 'user-circle', fields: [
+          { k: 'Full name', v: 'Grace Nanyonga', editable: true },
+          { k: 'Licence no.', v: 'UIRB/AG/2287', editable: true },
+          { k: 'Phone', v: '+256 772 445 118', editable: true },
+          { k: 'Email', v: 'grace.n@example.com', editable: true },
+          { k: 'Broker network', v: 'Lakeview Brokers Ltd', editable: true, type: 'select', options: ['Lakeview Brokers Ltd', 'Rift Valley Insurance', 'Independent agent'] },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Suspended', 'Offboarded'] },
+          { k: 'Joined', v: '2026-04-11', editable: true, type: 'date' },
+        ]},
+        { title: 'Performance (30 days)', icon: 'chart-line', fields: [
+          { k: 'Quotes', v: '24' },
+          { k: 'Converted', v: '9' },
+          { k: 'Conversion', v: '38%' },
+          { k: 'GWP', v: 'UGX 4,050,000' },
+        ]},
+      ],
+      timeline: [
+        { t: 'Sold policy PB-2026-000190', d: 'David Okello — pending payment.', time: '21 SEP 2026 · 14:02', cls: 'hot', i: 'shield-check' },
+        { t: 'Commission paid', d: 'UGX 240,000 for August.', time: '05 SEP 2026 · 09:00', cls: 'ok', i: 'wallet-01' },
+      ],
+    },
+    {
+      id: 'Brian Okot', icon: 'user-circle', badge: ['Agent', 'muted'],
+      title: 'Brian Okot', ref: 'AGENT · LICENCE UIRB/AG/2301 · INDEPENDENT',
+      secondary: 'Reset password',
+      sections: [
+        { title: 'Agent details', icon: 'user-circle', fields: [
+          { k: 'Full name', v: 'Brian Okot', editable: true },
+          { k: 'Licence no.', v: 'UIRB/AG/2301', editable: true },
+          { k: 'Phone', v: '+256 701 223 887', editable: true },
+          { k: 'Email', v: 'brian.okot@example.com', editable: true },
+          { k: 'Broker network', v: 'Independent agent', editable: true, type: 'select', options: ['Independent agent', 'Lakeview Brokers Ltd', 'Rift Valley Insurance'] },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Suspended', 'Offboarded'] },
+        ]},
+        { title: 'Performance (30 days)', icon: 'chart-line', fields: [
+          { k: 'Quotes', v: '11' },
+          { k: 'Converted', v: '3' },
+          { k: 'Conversion', v: '27%' },
+          { k: 'GWP', v: 'UGX 1,350,000' },
+        ]},
+      ],
+      timeline: [
+        { t: 'Onboarded as independent agent', d: 'Provisioned in User access.', time: '19 MAY 2026 · 11:26', cls: '', i: 'user-circle' },
+      ],
+    },
+    {
+      id: 'Rift Valley Insurance', icon: 'briefcase-01', badge: ['Broker', 'solid-navy'],
+      title: 'Rift Valley Insurance', ref: 'BROKER · LICENCE UIRB/BR/0388 · 1 AGENT',
+      secondary: 'Reset password',
+      sections: [
+        { title: 'Broker details', icon: 'user-circle', fields: [
+          { k: 'Full name', v: 'Rift Valley Insurance', editable: true },
+          { k: 'Licence no.', v: 'UIRB/BR/0388', editable: true },
+          { k: 'Phone', v: '+256 312 300 441', editable: true },
+          { k: 'Email', v: 'hello@riftvalley.co.ug', editable: true },
+          { k: 'Status', v: 'Active', editable: true, type: 'select', options: ['Active', 'Suspended', 'Offboarded'] },
+          { k: 'Commission rate', v: '10%', editable: true },
+        ]},
+      ],
+      timeline: [
+        { t: 'Monthly statement generated', d: 'September commission preview.', time: '25 SEP 2026 · 06:00', cls: 'ok', i: 'file-01' },
+      ],
+    },
+  ],
+}
+
+const TYPE_LABEL = { policies: 'Policy', claims: 'Claim', payments: 'Payment', distribution: 'Person' }
+
+/* ── Render tables ── */
+function badgeHtml([text, cls]) { return `<span class="badge ${cls}">${text}</span>` }
+
+function renderTables() {
+  const g = (id) => document.getElementById(id)
+
+  g('rows-policies').innerHTML = RECORDS.policies.map((r, i) => {
+    const status = r.sections[0].fields.find(f => f.k === 'Status')?.v || ''
+    const premium = r.sections[0].fields.find(f => f.k === 'Annual premium')?.v || ''
+    const cust = r.sections.find(s => s.title === 'Customer')?.fields[0]?.v || '—'
+    const veh = r.sections.find(s => s.title === 'Vehicle')?.fields
+    return `<tr onclick="openDrawer('policies', ${i})">
+      <td><b>${r.id}</b></td><td>${cust}</td>
+      <td>${veh ? veh[0].v + ' · ' + veh[1].v : '—'}</td>
+      <td>${badgeHtml([status, r.badge[1]])}</td>
+      <td class="num">${premium}</td>
+      <td class="row-actions"><i class="hgi-stroke hgi-edit-01" title="Edit"></i><i class="hgi-stroke hgi-arrow-right-01"></i></td>
+    </tr>`
+  }).join('')
+
+  g('rows-claims').innerHTML = RECORDS.claims.map((r, i) => {
+    const f = r.sections[0].fields
+    const get = (k) => f.find(x => x.k === k)?.v || '—'
+    return `<tr onclick="openDrawer('claims', ${i})">
+      <td><b>${r.id}</b></td><td>${r.ref.split(' · ')[0].replace('POLICY ', '')}</td>
+      <td>${get('Incident date')} · ${get('Location')}</td>
+      <td>${badgeHtml([get('Status'), r.badge[1]])}</td>
+      <td class="row-actions"><i class="hgi-stroke hgi-edit-01" title="Edit"></i><i class="hgi-stroke hgi-arrow-right-01"></i></td>
+    </tr>`
+  }).join('')
+
+  g('rows-payments').innerHTML = RECORDS.payments.map((r, i) => {
+    const f = r.sections[0].fields
+    const get = (k) => f.find(x => x.k === k)?.v || '—'
+    return `<tr onclick="openDrawer('payments', ${i})">
+      <td><b>${r.id}</b></td><td>${r.ref.split(' · ')[0]}</td>
+      <td>${get('Provider')}</td>
+      <td>${badgeHtml([get('Status'), r.badge[1]])}</td>
+      <td class="num">${get('Amount')}</td>
+      <td class="row-actions"><i class="hgi-stroke hgi-edit-01" title="Edit"></i><i class="hgi-stroke hgi-arrow-right-01"></i></td>
+    </tr>`
+  }).join('')
+
+  g('rows-distribution').innerHTML = RECORDS.distribution.map((r, i) => {
+    const f = r.sections[0].fields
+    const get = (k) => f.find(x => x.k === k)?.v || '—'
+    const role = r.badge[0]
+    return `<tr onclick="openDrawer('distribution', ${i})">
+      <td><b>${r.title}</b></td><td>${badgeHtml(r.badge)}</td>
+      <td>${get('Licence no.')}</td><td>${get('Phone')}</td>
+      <td>${get('Broker network') || '—'}</td>
+      <td class="row-actions"><i class="hgi-stroke hgi-edit-01" title="Edit"></i><i class="hgi-stroke hgi-arrow-right-01"></i></td>
+    </tr>`
+  }).join('')
+}
+
+/* ── Tabs ── */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => selectTab(tab.dataset.tab))
+})
+function selectTab(name) {
+  document.querySelectorAll('.tab').forEach(t => {
+    const on = t.dataset.tab === name
+    t.classList.toggle('active', on)
+    t.setAttribute('aria-selected', String(on))
+  })
+  document.querySelectorAll('[data-panel-tab]').forEach(p => { p.hidden = p.dataset.panelTab !== name })
+}
+document.querySelectorAll('[data-jump]').forEach(a => {
+  a.addEventListener('click', (e) => { e.preventDefault(); selectTab(a.dataset.jump) })
+})
+
+/* ── Drawer ── */
+const drawer = document.querySelector('.drawer')
+const backdrop = ensureBackdrop(closeDrawer)
+backdrop.hidden = false
+let current = { type: null, index: -1 }
+
+function sectionHtml(sec) {
+  const rows = sec.fields.map(f => {
+    const full = f.full ? ' class="full"' : ''
+    let view = `<dt${full}>${f.k}</dt><dd${full}><span class="view-val">${f.v}</span>`
+    if (f.editable) {
+      if (f.type === 'select') {
+        view += `<select class="edit-input">` +
+          f.options.map(o => `<option${o === f.v ? ' selected' : ''}>${o}</option>`).join('') + `</select>`
+      } else if (f.type === 'textarea') {
+        view += `<textarea class="edit-input" rows="3">${f.v}</textarea>`
+      } else {
+        const t = f.type === 'date' ? 'date' : 'text'
+        view += `<input class="edit-input" type="${t}" value="${f.v.replace(/"/g, '&quot;')}" />`
+      }
+    }
+    return view + '</dd>'
+  }).join('')
+  return `<div class="d-section"><h3><i class="hgi-stroke hgi-${sec.icon}"></i> ${sec.title}</h3><dl class="dl">${rows}</dl></div>`
+}
+
+function openDrawer(type, index) {
+  current = { type, index }
+  const r = RECORDS[type][index]
+  document.getElementById('drawer-icon').className = `hgi-stroke hgi-${r.icon}`
+  document.getElementById('drawer-title').textContent = r.title
+  document.getElementById('drawer-ref').textContent = r.ref
+  const badge = document.getElementById('drawer-badge')
+  badge.className = `badge ${r.badge[1]}`
+  badge.textContent = r.badge[0]
+
+  const timeline = r.timeline?.length ? `
+    <div class="d-section">
+      <h3><i class="hgi-stroke hgi-activity-01"></i> Activity</h3>
+      <div class="timeline">
+        ${r.timeline.map(t => `
+          <div class="tl-item">
+            <span class="tl-dot ${t.cls}"><i class="hgi-stroke hgi-${t.i}"></i></span>
+            <div class="tl-body"><b>${t.t}</b><p>${t.d}</p><time>${t.time}</time></div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''
+
+  document.getElementById('drawer-body').innerHTML =
+    r.sections.map(sectionHtml).join('') + timeline +
+    `<div class="d-section"><div class="d-note">Every field marked in the form can be edited — press <b>Edit details</b> below, change what you need, then <b>Save changes</b>.</div></div>`
+
+  const secondary = document.getElementById('drawer-secondary')
+  secondary.innerHTML = `<i class="hgi-stroke hgi-external-link"></i> ${r.secondary || 'Details'}`
+  secondary.onclick = () => toast(`${r.secondary || 'Action'} — placeholder in the mockup`)
+
+  drawer.classList.remove('editing')
+  drawer.classList.add('show')
+  drawer.setAttribute('aria-hidden', 'false')
+  backdrop.classList.add('show')
+}
+
+function closeDrawer() {
+  drawer.classList.remove('show', 'editing')
+  drawer.setAttribute('aria-hidden', 'true')
+  backdrop.classList.remove('show')
+}
+
+document.querySelectorAll('[data-drawer-close]').forEach(b => b.addEventListener('click', closeDrawer))
+document.getElementById('drawer-edit').addEventListener('click', () => {
+  drawer.classList.add('editing')
+  drawer.querySelector('.edit-input')?.focus()
+})
+document.getElementById('drawer-cancel').addEventListener('click', () => {
+  /* re-render original values */
+  openDrawer(current.type, current.index)
+  toast('Changes discarded')
+})
+document.getElementById('drawer-save').addEventListener('click', () => {
+  const r = RECORDS[current.type][current.index]
+  let s = 0
+  drawer.querySelectorAll('.d-section .dl').forEach((dl) => {
+    const sec = r.sections[s++]
+    if (!sec) return
+    dl.querySelectorAll('.edit-input').forEach((inp) => {
+      const dd = inp.closest('dd')
+      const key = dd && dd.previousElementSibling ? dd.previousElementSibling.textContent : ''
+      const f = sec.fields.find(x => x.k === key)
+      if (f && inp.value !== '') f.v = inp.value
+    })
+  })
+  /* refresh status badge + table */
+  const status = r.sections[0].fields.find(f => f.k === 'Status')
+  if (status) r.badge = [status.v, status.v.match(/active|confirmed|approved|assessed/i) ? 'ok'
+    : status.v.match(/pending|reported|assigned/i) ? 'warn'
+    : status.v.match(/failed|rejected|lapsed|cancelled/i) ? 'err' : 'muted']
+  const badge = document.getElementById('drawer-badge')
+  badge.className = `badge ${r.badge[1]}`
+  badge.textContent = r.badge[0]
+  renderTables()
+  drawer.classList.remove('editing')
+  toast('Changes saved')
+})
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeDrawer(); document.querySelector('.notif-panel')?.classList.remove('show'); backdrop.classList.remove('show') }
+})
+
+/* ── Deep link: #policy / #claims etc ── */
+renderTables()
+const hash = location.hash.replace('#', '')
+if (RECORDS[hash]) selectTab(hash)
+else if (hash === 'policy') selectTab('policies')
+
+initProfileMenu()
+initNotifications()
+</script>
+</body>
+</html>

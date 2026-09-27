@@ -1,0 +1,98 @@
+import { defineObject, FieldType } from 'twenty-sdk/define';
+import {
+  K_BACK_FILE,
+  K_FRONT_FILE,
+  K_ID_NUMBER,
+  K_ID_TYPE,
+  K_PROTECTA_REF,
+  K_REVIEW_NOTES,
+  K_SELFIE_FILE,
+  K_STATUS,
+  KYC_CASE,
+} from 'src/constants/universal-identifiers';
+
+export const KYC_CASE_UNIVERSAL_IDENTIFIER = KYC_CASE;
+
+export default defineObject({
+  universalIdentifier: KYC_CASE_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'kycCase',
+  namePlural: 'kycCases',
+  labelSingular: 'KYC case',
+  labelPlural: 'KYC cases',
+  description: 'Identity verification case (document capture + review)',
+  icon: 'IconUserCheck',
+  labelIdentifierFieldMetadataUniversalIdentifier: K_ID_NUMBER,
+  fields: [
+    {
+      universalIdentifier: K_PROTECTA_REF,
+      name: 'protectaRef',
+      type: FieldType.TEXT,
+      label: 'Protecta ref',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: K_ID_TYPE,
+      name: 'idType',
+      type: FieldType.SELECT,
+      label: 'ID type',
+      icon: 'IconId',
+      defaultValue: "'NIN'",
+      options: [
+        { value: 'NIN', label: 'National ID (NIN)', position: 0, color: 'blue' },
+        { value: 'PASSPORT', label: 'Passport', position: 1, color: 'green' },
+        { value: 'DRIVING_LICENCE', label: 'Driving licence', position: 2, color: 'orange' },
+      ],
+    },
+    {
+      universalIdentifier: K_ID_NUMBER,
+      name: 'idNumber',
+      type: FieldType.TEXT,
+      label: 'ID number',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: K_STATUS,
+      name: 'status',
+      type: FieldType.SELECT,
+      label: 'Status',
+      icon: 'IconProgress',
+      defaultValue: "'PENDING'",
+      options: [
+        { value: 'PENDING', label: 'Pending', position: 0, color: 'yellow' },
+        { value: 'NEEDS_REVIEW', label: 'Needs review', position: 1, color: 'orange' },
+        { value: 'APPROVED', label: 'Approved', position: 2, color: 'green' },
+        { value: 'REJECTED', label: 'Rejected', position: 3, color: 'red' },
+      ],
+    },
+    {
+      universalIdentifier: K_REVIEW_NOTES,
+      name: 'reviewNotes',
+      type: FieldType.TEXT,
+      label: 'Review notes',
+      icon: 'IconNotes',
+    },
+    {
+      universalIdentifier: K_FRONT_FILE,
+      name: 'frontFile',
+      type: FieldType.FILES,
+      label: 'ID front',
+      icon: 'IconFile',
+    },
+    {
+      universalIdentifier: K_BACK_FILE,
+      name: 'backFile',
+      type: FieldType.FILES,
+      label: 'ID back',
+      icon: 'IconFile',
+    },
+    {
+      universalIdentifier: K_SELFIE_FILE,
+      name: 'selfieFile',
+      type: FieldType.FILES,
+      label: 'Selfie',
+      icon: 'IconFile',
+    },
+  ],
+});

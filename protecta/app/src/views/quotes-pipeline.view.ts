@@ -1,0 +1,45 @@
+import { defineView, ViewType } from 'twenty-sdk/define';
+import {
+  INSURANCE_QUOTE,
+  QUOTES_PIPELINE,
+  Q_PLATE,
+  Q_POLICYHOLDER_PHONE,
+  Q_PREMIUM,
+  Q_REFERENCE,
+  Q_STATUS,
+  Q_VEHICLE_VALUE,
+  VG_QPIPE_00,
+  VG_QPIPE_01,
+  VG_QPIPE_02,
+  VG_QPIPE_03,
+  VIEW_QUOTES_PIPELINE_COL0,
+  VIEW_QUOTES_PIPELINE_COL1,
+  VIEW_QUOTES_PIPELINE_COL2,
+  VIEW_QUOTES_PIPELINE_COL3,
+  VIEW_QUOTES_PIPELINE_COL4,
+  VIEW_QUOTES_PIPELINE_COL5,
+} from 'src/constants/universal-identifiers';
+
+export default defineView({
+  universalIdentifier: QUOTES_PIPELINE,
+  name: 'Quotes pipeline',
+  objectUniversalIdentifier: INSURANCE_QUOTE,
+  type: ViewType.KANBAN,
+  icon: 'IconLayoutKanban',
+  position: 1,
+  mainGroupByFieldMetadataUniversalIdentifier: Q_STATUS,
+  groups: [
+    { universalIdentifier: VG_QPIPE_00, fieldValue: 'DRAFT', position: 0, isVisible: true },
+    { universalIdentifier: VG_QPIPE_01, fieldValue: 'QUOTED', position: 1, isVisible: true },
+    { universalIdentifier: VG_QPIPE_02, fieldValue: 'ACCEPTED', position: 2, isVisible: true },
+    { universalIdentifier: VG_QPIPE_03, fieldValue: 'EXPIRED', position: 3, isVisible: true },
+  ],
+  fields: [
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL0, fieldMetadataUniversalIdentifier: Q_REFERENCE, position: 0, isVisible: true, size: 160 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL1, fieldMetadataUniversalIdentifier: Q_POLICYHOLDER_PHONE, position: 1, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL2, fieldMetadataUniversalIdentifier: Q_VEHICLE_VALUE, position: 2, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL3, fieldMetadataUniversalIdentifier: Q_PREMIUM, position: 3, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL4, fieldMetadataUniversalIdentifier: Q_PLATE, position: 4, isVisible: true, size: 140 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL5, fieldMetadataUniversalIdentifier: Q_STATUS, position: 5, isVisible: true, size: 130 },
+  ],
+});

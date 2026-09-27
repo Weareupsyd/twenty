@@ -1,0 +1,96 @@
+import { defineObject, FieldType, NumberDataType } from 'twenty-sdk/define';
+import {
+  INSURANCE_PAYMENT,
+  PM_AMOUNT,
+  PM_PAYER_PHONE,
+  PM_PAYMENT_REF,
+  PM_PROTECTA_REF,
+  PM_PROVIDER,
+  PM_PROVIDER_REF,
+  PM_QUOTE_REF,
+  PM_STATUS,
+} from 'src/constants/universal-identifiers';
+
+export const INSURANCE_PAYMENT_UNIVERSAL_IDENTIFIER = INSURANCE_PAYMENT;
+
+export default defineObject({
+  universalIdentifier: INSURANCE_PAYMENT_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'insurancePayment',
+  namePlural: 'insurancePayments',
+  labelSingular: 'Insurance payment',
+  labelPlural: 'Insurance payments',
+  description: 'MoMo, Airtel or bank payment for a quote',
+  icon: 'IconCash',
+  labelIdentifierFieldMetadataUniversalIdentifier: PM_PAYMENT_REF,
+  fields: [
+    {
+      universalIdentifier: PM_PROTECTA_REF,
+      name: 'protectaRef',
+      type: FieldType.TEXT,
+      label: 'Protecta ref',
+      description: 'Payment reference',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: PM_PAYMENT_REF,
+      name: 'paymentRef',
+      type: FieldType.TEXT,
+      label: 'Payment ref',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: PM_QUOTE_REF,
+      name: 'quoteRef',
+      type: FieldType.TEXT,
+      label: 'Quote ref',
+      icon: 'IconHash',
+    },
+    {
+      universalIdentifier: PM_PROVIDER,
+      name: 'provider',
+      type: FieldType.TEXT,
+      label: 'Provider',
+      description: 'mtn_momo, airtel_money or bank',
+      icon: 'IconWallet',
+    },
+    {
+      universalIdentifier: PM_PROVIDER_REF,
+      name: 'providerRef',
+      type: FieldType.TEXT,
+      label: 'Provider ref',
+      icon: 'IconHash',
+    },
+    {
+      universalIdentifier: PM_PAYER_PHONE,
+      name: 'payerPhone',
+      type: FieldType.TEXT,
+      label: 'Payer phone',
+      icon: 'IconPhone',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: PM_AMOUNT,
+      name: 'amountUgx',
+      type: FieldType.NUMBER,
+      label: 'Amount (UGX)',
+      icon: 'IconCash',
+      universalSettings: { dataType: NumberDataType.BIGINT },
+    },
+    {
+      universalIdentifier: PM_STATUS,
+      name: 'status',
+      type: FieldType.SELECT,
+      label: 'Status',
+      icon: 'IconProgress',
+      defaultValue: "'PENDING'",
+      options: [
+        { value: 'INITIATED', label: 'Initiated', position: 0, color: 'gray' },
+        { value: 'PENDING', label: 'Pending', position: 1, color: 'yellow' },
+        { value: 'CONFIRMED', label: 'Confirmed', position: 2, color: 'green' },
+        { value: 'FAILED', label: 'Failed', position: 3, color: 'red' },
+      ],
+    },
+  ],
+});

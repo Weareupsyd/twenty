@@ -1,0 +1,102 @@
+import { defineObject, FieldType } from 'twenty-sdk/define';
+import {
+  SUPPORT_TICKET,
+  T_CHANNEL,
+  T_DESCRIPTION,
+  T_PRIORITY,
+  T_PROTECTA_REF,
+  T_REQUESTER_PHONE,
+  T_STATUS,
+  T_SUBJECT,
+  T_TICKET_REF,
+} from 'src/constants/universal-identifiers';
+
+export const SUPPORT_TICKET_UNIVERSAL_IDENTIFIER = SUPPORT_TICKET;
+
+export default defineObject({
+  universalIdentifier: SUPPORT_TICKET_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'supportTicket',
+  namePlural: 'supportTickets',
+  labelSingular: 'Support ticket',
+  labelPlural: 'Support tickets',
+  description: 'Customer and agent support request',
+  icon: 'IconMessage',
+  labelIdentifierFieldMetadataUniversalIdentifier: T_TICKET_REF,
+  fields: [
+    {
+      universalIdentifier: T_PROTECTA_REF,
+      name: 'protectaRef',
+      type: FieldType.TEXT,
+      label: 'Protecta ref',
+      description: 'Ticket reference',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: T_TICKET_REF,
+      name: 'ticketRef',
+      type: FieldType.TEXT,
+      label: 'Ticket ref',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: T_SUBJECT,
+      name: 'subject',
+      type: FieldType.TEXT,
+      label: 'Subject',
+      icon: 'IconNotes',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: T_DESCRIPTION,
+      name: 'description',
+      type: FieldType.TEXT,
+      label: 'Description',
+      icon: 'IconNotes',
+    },
+    {
+      universalIdentifier: T_CHANNEL,
+      name: 'channel',
+      type: FieldType.TEXT,
+      label: 'Channel',
+      description: 'portal, whatsapp, partner_api or phone',
+      icon: 'IconChannel',
+    },
+    {
+      universalIdentifier: T_STATUS,
+      name: 'status',
+      type: FieldType.SELECT,
+      label: 'Status',
+      icon: 'IconProgress',
+      defaultValue: "'OPEN'",
+      options: [
+        { value: 'OPEN', label: 'Open', position: 0, color: 'yellow' },
+        { value: 'PENDING', label: 'Pending', position: 1, color: 'blue' },
+        { value: 'RESOLVED', label: 'Resolved', position: 2, color: 'green' },
+      ],
+    },
+    {
+      universalIdentifier: T_PRIORITY,
+      name: 'priority',
+      type: FieldType.SELECT,
+      label: 'Priority',
+      icon: 'IconFlag',
+      defaultValue: "'NORMAL'",
+      options: [
+        { value: 'LOW', label: 'Low', position: 0, color: 'gray' },
+        { value: 'NORMAL', label: 'Normal', position: 1, color: 'blue' },
+        { value: 'HIGH', label: 'High', position: 2, color: 'orange' },
+        { value: 'URGENT', label: 'Urgent', position: 3, color: 'red' },
+      ],
+    },
+    {
+      universalIdentifier: T_REQUESTER_PHONE,
+      name: 'requesterPhone',
+      type: FieldType.TEXT,
+      label: 'Requester phone',
+      icon: 'IconPhone',
+      isSearchable: true,
+    },
+  ],
+});

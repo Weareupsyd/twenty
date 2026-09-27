@@ -204,7 +204,8 @@ export const RESEND_API_KEY = '41437707-8b4e-4bd9-9dbd-f31c9bee0615';
 export const SESSION_JWT_SECRET = '45eacd5f-9f23-48dd-9552-30374bba3fd7';
 export const SETTINGS_STATUS = '764b2bd3-41c8-477a-9ead-8ee1eab98a50';
 export const STAFF_CLAIM_STATUS = 'ee484271-f031-4448-b956-da7b130afe7a';
-export const STAFF_COMMISSION_STATEMENT = '9a59ef01-dc59-419b-879a-d7d67cc8c52c';
+export const STAFF_COMMISSION_STATEMENT =
+  '9a59ef01-dc59-419b-879a-d7d67cc8c52c';
 export const STAFF_KYC_DECISION = 'fd1bb5a9-482b-4834-bdb8-c324673175cb';
 export const STAFF_PAYMENT_CONFIRM = 'ea0ee4d7-b51e-4445-9d7f-af2864c5fabf';
 export const STAFF_POLICY_STATUS = '2e29bf7e-622d-47f7-aee2-6e3b55ba1f67';
@@ -238,13 +239,20 @@ export const VIEW_CLAIMS_QUEUE_COL3 = '1d810f63-cb10-413b-a5af-8035f15e0c85';
 export const VIEW_CLAIMS_QUEUE_COL4 = 'd053a29c-1972-4c20-ac5a-8bf79fde02d4';
 export const VIEW_CLAIMS_QUEUE_COL5 = '68ce04d6-12dc-47db-9486-e6aa9ffeb553';
 export const VIEW_CLAIMS_QUEUE_COL6 = '0b800dc6-3463-4542-8f07-c24f12722ec5';
-export const VIEW_COMMISSIONS_MONTH_COL0 = '466933ac-6e26-45ba-90d3-87c73146e916';
-export const VIEW_COMMISSIONS_MONTH_COL1 = 'a00c252b-4631-4e9f-84f3-9fcd05f0d5db';
-export const VIEW_COMMISSIONS_MONTH_COL2 = 'b6ffffab-37c2-4f9c-b03f-64ba8917e10c';
-export const VIEW_COMMISSIONS_MONTH_COL3 = '7665e3c0-86ce-4a64-a8eb-90f619d5c4f9';
-export const VIEW_COMMISSIONS_MONTH_COL4 = '36ffde4c-d4b0-4216-83fe-763f4861a9c7';
-export const VIEW_COMMISSIONS_MONTH_COL5 = '9973e749-5ea8-457e-9a08-4cc5238ac89f';
-export const VIEW_COMMISSIONS_MONTH_COL6 = 'fcbfa0e6-7c87-45cf-b1d4-f798db79dfff';
+export const VIEW_COMMISSIONS_MONTH_COL0 =
+  '466933ac-6e26-45ba-90d3-87c73146e916';
+export const VIEW_COMMISSIONS_MONTH_COL1 =
+  'a00c252b-4631-4e9f-84f3-9fcd05f0d5db';
+export const VIEW_COMMISSIONS_MONTH_COL2 =
+  'b6ffffab-37c2-4f9c-b03f-64ba8917e10c';
+export const VIEW_COMMISSIONS_MONTH_COL3 =
+  '7665e3c0-86ce-4a64-a8eb-90f619d5c4f9';
+export const VIEW_COMMISSIONS_MONTH_COL4 =
+  '36ffde4c-d4b0-4216-83fe-763f4861a9c7';
+export const VIEW_COMMISSIONS_MONTH_COL5 =
+  '9973e749-5ea8-457e-9a08-4cc5238ac89f';
+export const VIEW_COMMISSIONS_MONTH_COL6 =
+  'fcbfa0e6-7c87-45cf-b1d4-f798db79dfff';
 export const VIEW_KYC_QUEUE_COL0 = '454a2d2d-8895-4e8c-b45c-e6aead248c21';
 export const VIEW_KYC_QUEUE_COL1 = 'f55aaf67-d56d-49cb-9595-ffe119ffbdff';
 export const VIEW_KYC_QUEUE_COL2 = '2a825488-55ef-49e6-8f06-2feb5622c5f3';
@@ -258,13 +266,20 @@ export const VIEW_PARTNERS_ALL_COL2 = '369d801b-ac7a-40fd-b6ef-e098de7d9db8';
 export const VIEW_PARTNERS_ALL_COL3 = '0f718667-fccf-420e-a050-46b6ab248b9c';
 export const VIEW_PARTNERS_ALL_COL4 = '1f6de8f6-64ef-430e-8e95-6e9638430cb8';
 export const VIEW_PARTNERS_ALL_COL5 = 'fc488a58-b5a2-4367-af17-27a0b7841458';
-export const VIEW_PAYMENTS_PENDING_COL0 = '83a6b8e5-48c1-4f76-b0d9-6d60950b51f7';
-export const VIEW_PAYMENTS_PENDING_COL1 = '76929dcc-1402-4763-9959-9d19b7bd31b7';
-export const VIEW_PAYMENTS_PENDING_COL2 = '23b7ddab-5281-45d4-8b3f-ae92f5f54478';
-export const VIEW_PAYMENTS_PENDING_COL3 = 'b395bd2a-74a1-446d-b6ba-2e27a5607176';
-export const VIEW_PAYMENTS_PENDING_COL4 = '1215d2c7-a468-44b4-9e9c-0b8f101d239f';
-export const VIEW_PAYMENTS_PENDING_COL5 = 'e6f212bc-4cf9-44c8-95b8-5c3f20c83b24';
-export const VIEW_PAYMENTS_PENDING_COL6 = 'cb954ff5-b96c-4b62-8ba2-d8c18f17895e';
+export const VIEW_PAYMENTS_PENDING_COL0 =
+  '83a6b8e5-48c1-4f76-b0d9-6d60950b51f7';
+export const VIEW_PAYMENTS_PENDING_COL1 =
+  '76929dcc-1402-4763-9959-9d19b7bd31b7';
+export const VIEW_PAYMENTS_PENDING_COL2 =
+  '23b7ddab-5281-45d4-8b3f-ae92f5f54478';
+export const VIEW_PAYMENTS_PENDING_COL3 =
+  'b395bd2a-74a1-446d-b6ba-2e27a5607176';
+export const VIEW_PAYMENTS_PENDING_COL4 =
+  '1215d2c7-a468-44b4-9e9c-0b8f101d239f';
+export const VIEW_PAYMENTS_PENDING_COL5 =
+  'e6f212bc-4cf9-44c8-95b8-5c3f20c83b24';
+export const VIEW_PAYMENTS_PENDING_COL6 =
+  'cb954ff5-b96c-4b62-8ba2-d8c18f17895e';
 export const VIEW_POLICIES_ALL_COL0 = '44b76e1b-0290-4505-a7bc-c7ba96008c33';
 export const VIEW_POLICIES_ALL_COL1 = '7e61f74e-949c-45ce-8d37-ac9398643a7a';
 export const VIEW_POLICIES_ALL_COL2 = 'd69c4195-8624-44a6-ab0e-ff7e4b40d6c5';
@@ -273,13 +288,20 @@ export const VIEW_POLICIES_ALL_COL4 = '49f573cd-4e9e-4afa-b5ad-3152e6ca1555';
 export const VIEW_POLICIES_ALL_COL5 = '9854fc1e-ef9f-4903-acb6-a2e4343b986d';
 export const VIEW_POLICIES_ALL_COL6 = '1fff73a7-5c45-4394-a8de-d547f724454a';
 export const VIEW_POLICIES_ALL_COL7 = '5e7c0311-aa3e-4758-9f5b-3a835a249cc7';
-export const VIEW_POLICIES_EXPIRING_COL0 = 'a324d8cb-5265-4552-b57a-2f86c0f7fa0a';
-export const VIEW_POLICIES_EXPIRING_COL1 = 'fa2483f8-cf6e-4272-b37a-a0435834013c';
-export const VIEW_POLICIES_EXPIRING_COL2 = 'f902f309-77c1-41a8-b276-8811dfbe42da';
-export const VIEW_POLICIES_EXPIRING_COL3 = '19b5c774-764f-45ba-bcdf-eab90364ce6c';
-export const VIEW_POLICIES_EXPIRING_COL4 = '32289b13-c6d2-42ac-8ca5-a6a7f7c53c9f';
-export const VIEW_POLICIES_EXPIRING_COL5 = '0d469d3a-d23a-493c-886e-185287b62e32';
-export const VIEW_POLICIES_EXPIRING_COL6 = '3baa9a26-74ea-4889-b30b-825be05d44b9';
+export const VIEW_POLICIES_EXPIRING_COL0 =
+  'a324d8cb-5265-4552-b57a-2f86c0f7fa0a';
+export const VIEW_POLICIES_EXPIRING_COL1 =
+  'fa2483f8-cf6e-4272-b37a-a0435834013c';
+export const VIEW_POLICIES_EXPIRING_COL2 =
+  'f902f309-77c1-41a8-b276-8811dfbe42da';
+export const VIEW_POLICIES_EXPIRING_COL3 =
+  '19b5c774-764f-45ba-bcdf-eab90364ce6c';
+export const VIEW_POLICIES_EXPIRING_COL4 =
+  '32289b13-c6d2-42ac-8ca5-a6a7f7c53c9f';
+export const VIEW_POLICIES_EXPIRING_COL5 =
+  '0d469d3a-d23a-493c-886e-185287b62e32';
+export const VIEW_POLICIES_EXPIRING_COL6 =
+  '3baa9a26-74ea-4889-b30b-825be05d44b9';
 export const VIEW_QUOTES_ALL_COL0 = '84e07707-28bb-4bc7-9f07-e038c433adcf';
 export const VIEW_QUOTES_ALL_COL1 = '7fd3c19e-2b1a-4fea-996e-5b6f6733d4a5';
 export const VIEW_QUOTES_ALL_COL2 = '42b3dd67-1f44-4a0b-8c3a-8faf1c57b894';
@@ -338,7 +360,8 @@ export const W_PARTNER = '0ce3e89d-3407-464a-a630-6c94a0208a58';
 export const W_RESPONSE_STATUS = '79acb62a-4cd5-40e9-a3db-082c1c556454';
 export const W_STATUS = '3f41100d-c25a-4ff4-8d70-954f086a5a80';
 export const W_TARGET_URL = '8a8234e1-53af-4800-8b57-d5923c7aa0f7';
-export const VAR_REQUIRE_PAYMENT_SIGNATURE = 'f0dee9cf-211f-4656-a557-41b54c820547';
+export const VAR_REQUIRE_PAYMENT_SIGNATURE =
+  'f0dee9cf-211f-4656-a557-41b54c820547';
 
 // View fields, groups, filters and layout tabs/widgets
 export const VF_VEH_00 = 'a866a9b2-7e63-4ad9-8860-9a8a0c0745b9';
@@ -454,11 +477,25 @@ export const LAYOUT_PAYMENT = 'aafdd762-3e04-4c7b-be74-559176e045bc';
 export const LAYOUT_CLAIM = 'a3951dd8-57dc-4814-8f3e-dca7b440b9b7';
 export const TIMELINE_QUOTE_ISSUED = '6ec96d19-b940-419d-b0b8-9fd903683709';
 export const TIMELINE_POLICY_ISSUED = 'ec663f13-b7a8-483c-94f5-9255b773f600';
-export const TIMELINE_PAYMENT_CONFIRMED = 'f57707db-14eb-45be-81d7-4c436024ed2c';
+export const TIMELINE_PAYMENT_CONFIRMED =
+  'f57707db-14eb-45be-81d7-4c436024ed2c';
 export const TIMELINE_CLAIM_UPDATED = '45f13b89-bdf2-4ad7-8e7e-ae7b6eac4063';
 export const FC_COMMISSION_STATEMENT = '8bd693e7-77dc-4a64-b03e-9c286ec51620';
 export const PERSON_PROTECTA_CONSENT = '3d2d2991-2914-40d4-b17b-36e6be7698e2';
 export const APP_FUNCTION_ROLE = 'acae9734-bfa6-497d-8d2e-21011f1a42f4';
 
 // Extra route handlers (added after seed generation)
-export const WHATSAPP_VERIFY = 'b1f6c2a4-9d3e-4f5a-8e71-6c0d9f3a55b1';
+export const WHATSAPP_VERIFY_HANDLER = 'b1f6c2a4-9d3e-4f5a-8e71-6c0d9f3a55b1';
+
+export const API_PARTNER_EVENTS = '56fb7730-0dec-4cb5-bace-fb6be363ddbc';
+export const API_PARTNER_LIST = '7ed84536-9c71-449b-ab94-8d121e50a8c4';
+export const API_PARTNER_REGISTER = '5187a2a0-0ca6-4756-a47b-f403ca17e134';
+export const CLAIM_PAGE = '0d6a8065-74d3-42bc-8005-a2de6e37ce72';
+export const SUPPORT_PAGE = '28a05428-d892-4412-8009-3928254aff65';
+export const WHATSAPP_WEBHOOK = '1eff5b82-aa47-4407-b577-d4731de19d6b';
+export const PA_NAME = '07bad851-ee7e-43f9-8d98-1d70f1fdd66d';
+export const PA_TYPE = 'a4ae2cdf-006f-43da-af3b-0b9c130450c9';
+export const PA_EMAIL = '529f585a-581c-4a69-a4fa-ec5e04c34882';
+export const PA_PHONE = 'ff536e73-4d05-4f83-8f46-d7321c39d297';
+export const PA_COMPANY_ID = '5d8d8cac-0b17-4bbe-b766-f021653f4532';
+export const STAFF_ACTION = '522a3510-1fb6-4319-94ad-a91506b72120';

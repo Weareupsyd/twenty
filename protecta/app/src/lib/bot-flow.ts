@@ -21,7 +21,12 @@ export type BotSession = {
 export type BotAction =
   | { kind: 'CREATE_QUOTE'; vehicleValue: number; plate: string; name: string }
   | { kind: 'INITIATE_PAYMENT'; quoteRef: string; phone: string }
-  | { kind: 'CREATE_CLAIM'; policyNo: string; description: string; location: string }
+  | {
+      kind: 'CREATE_CLAIM';
+      policyNo: string;
+      description: string;
+      location: string;
+    }
   | { kind: 'CREATE_TICKET'; text: string }
   | { kind: 'LOOKUP_POLICIES' }
   | { kind: 'LOOKUP_QUOTE'; quoteRef: string };
@@ -40,11 +45,19 @@ export const BOT_MENU = [
   '5. Talk to support',
 ].join('\n');
 
-const emptySession = (): BotSession => ({ state: 'IDLE', data: {}, updatedAt: Date.now() });
+const emptySession = (): BotSession => ({
+  state: 'IDLE',
+  data: {},
+  updatedAt: Date.now(),
+});
 
-const withState = (session: BotSession, state: BotState, data?: Record<string, string>): BotSession => ({
+const withState = (
+  session: BotSession,
+  state: BotState,
+  data?: Record<string, string>,
+): BotSession => ({
   state,
-  data: { ...session.data, ...(data ?? {}) },
+  data: state === 'IDLE' ? {} : { ...session.data, ...(data ?? {}) },
   updatedAt: Date.now(),
 });
 
@@ -110,7 +123,8 @@ export const handleBotTurn = (
       }
       if (text === '5') {
         return {
-          reply: 'Describe your issue in one message and our team will respond.',
+          reply:
+            'Describe your issue in one message and our team will respond.',
           next: withState(session, 'TICKET_TEXT'),
         };
       }
@@ -144,7 +158,10 @@ export const handleBotTurn = (
 
     case 'BUY_PLATE': {
       if (!isValidPlate(text)) {
-        return { reply: 'That plate looks invalid. Try again, e.g. UAX 123C.', next: session };
+        return {
+          reply: 'That plate looks invalid. Try again, e.g. UAX 123C.',
+          next: session,
+        };
       }
       return {
         reply: 'What is your full name?',
@@ -159,8 +176,7 @@ export const handleBotTurn = (
       const value = Number(session.data.vehicleValue);
       const premium = Math.round(value * 0.015);
       return {
-        reply:
-          `Confirm your quote:\n• Name: ${text}\n• Plate: ${session.data.plate}\n• Value: UGX ${value.toLocaleString('en-US')}\n• Premium (1.5%): UGX ${premium.toLocaleString('en-US')}\n\nReply YES to confirm or NO to restart.`,
+        reply: `Confirm your quote:\n• Name: ${text}\n• Plate: ${session.data.plate}\n• Value: UGX ${value.toLocaleString('en-US')}\n• Premium (1.5%): UGX ${premium.toLocaleString('en-US')}\n\nReply YES to confirm or NO to restart.`,
         next: withState(session, 'BUY_CONFIRM', { name: text }),
       };
     }
@@ -189,22 +205,31 @@ export const handleBotTurn = (
       if (/^\d{15}$/.test(text)) {
         return {
           reply: 'Which mobile-money number should we debit? (e.g. 0772000000)',
-          next: withState(session, 'PAY_PHONE', { quoteRef: text, step: 'phone' }),
+          next: withState(session, 'PAY_PHONE', {
+            quoteRef: text,
+            step: 'phone',
+          }),
         };
       }
       if (session.data.step === 'phone') {
         const phone = normalizeUgPhone(text);
         if (!phone) {
-          return { reply: 'That number looks invalid. Send a 10-digit Ugandan number.', next: session };
+          return {
+            reply: 'That number looks invalid. Send a 10-digit Ugandan number.',
+            next: session,
+          };
         }
         const quoteRef = session.data.quoteRef ?? '';
         return {
-          reply: 'Starting your payment… approve the MoMo prompt on your phone.',
+          reply: 'Opening secure payment options for your quote…',
           next: withState(session, 'IDLE', {}),
           action: { kind: 'INITIATE_PAYMENT', quoteRef, phone },
         };
       }
-      return { reply: 'Send the 15-digit quote reference first.', next: session };
+      return {
+        reply: 'Send the 15-digit quote reference first.',
+        next: session,
+      };
     }
 
     case 'CLAIM_POLICY': {
@@ -213,13 +238,18 @@ export const handleBotTurn = (
       }
       return {
         reply: 'Briefly describe what happened.',
-        next: withState(session, 'CLAIM_DESCRIPTION', { policyNo: text.toUpperCase() }),
+        next: withState(session, 'CLAIM_DESCRIPTION', {
+          policyNo: text.toUpperCase(),
+        }),
       };
     }
 
     case 'CLAIM_DESCRIPTION': {
       if (text.length < 8) {
-        return { reply: 'Please give a little more detail (at least a few words).', next: session };
+        return {
+          reply: 'Please give a little more detail (at least a few words).',
+          next: session,
+        };
       }
       return {
         reply: 'Where did it happen? (area / town)',
@@ -245,7 +275,10 @@ export const handleBotTurn = (
 
     case 'TICKET_TEXT': {
       if (text.length < 5) {
-        return { reply: 'Please describe the issue in a bit more detail.', next: session };
+        return {
+          reply: 'Please describe the issue in a bit more detail.',
+          next: session,
+        };
       }
       return {
         reply: 'Thank you — our team will reach out shortly.',
@@ -255,6 +288,9 @@ export const handleBotTurn = (
     }
 
     default:
-      return { reply: `Let's start over.\n${BOT_MENU}`, next: withState(session, 'IDLE', {}) };
+      return {
+        reply: `Let's start over.\n${BOT_MENU}`,
+        next: withState(session, 'IDLE', {}),
+      };
   }
 };

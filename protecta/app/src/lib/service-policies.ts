@@ -1,4 +1,8 @@
-import { policyPeriod, pricingFromEnv, type PricingConfig } from 'src/lib/pricing';
+import {
+  policyPeriod,
+  pricingFromEnv,
+  type PricingConfig,
+} from 'src/lib/pricing';
 import { makePolicyNo, makeQuoteRef } from 'src/lib/refs';
 import { statementMonth } from 'src/lib/reports';
 import { type DbClient, type RecordData } from 'src/lib/records';
@@ -41,23 +45,61 @@ export const issuePolicy = async (
   const period = policyPeriod(new Date(), pricing.policyDays);
   const policyNo = makePolicyNo(input.rng);
 
-  const policy = await db.create('insurancePolicy', {
-    protectaRef: policyNo,
-    policyNo,
-    quoteRef: quote.reference,
-    status: 'ACTIVE',
-    premiumUgx: quote.premium,
-    plate: quote.plate,
-    vehicleMake: quote.vehicleMake ?? '',
-    vehicleModel: quote.vehicleModel ?? '',
-    periodStart: period.start,
-    periodEnd: period.end,
-    quoteId: quote.id,
-  });
+  let policy = await db.findFirst(
+    'insurancePolicies',
+    { quoteRef: { eq: input.quoteRef } },
+    [
+      'policyNo',
+      'quoteRef',
+      'status',
+      'plate',
+      'premiumUgx',
+      'periodStart',
+      'periodEnd',
+    ],
+  );
+  if (!policy) {
+    try {
+      policy = await db.create('insurancePolicy', {
+        protectaRef: policyNo,
+        policyNo,
+        quoteRef: quote.reference,
+        status: 'ACTIVE',
+        premiumUgx: quote.premium,
+        plate: quote.plate,
+        vehicleMake: quote.vehicleMake ?? '',
+        vehicleModel: quote.vehicleModel ?? '',
+        periodStart: period.start,
+        periodEnd: period.end,
+        quoteId: quote.id,
+        ...(quote.policyholderId
+          ? { policyholderId: quote.policyholderId }
+          : {}),
+      });
+    } catch (error) {
+      // A concurrent callback may have won the unique quoteRef constraint.
+      policy = await db.findFirst(
+        'insurancePolicies',
+        { quoteRef: { eq: input.quoteRef } },
+        [
+          'policyNo',
+          'quoteRef',
+          'status',
+          'plate',
+          'premiumUgx',
+          'periodStart',
+          'periodEnd',
+        ],
+      );
+      if (!policy) throw error;
+    }
+  }
 
   await db.update('insuranceQuote', String(quote.id), { status: 'ACCEPTED' });
   if (input.paymentId) {
-    await db.update('insurancePayment', input.paymentId, { policyId: policy.id });
+    await db.update('insurancePayment', input.paymentId, {
+      policyId: policy.id,
+    });
   }
 
   let commission: RecordData | null = null;
@@ -65,23 +107,43 @@ export const issuePolicy = async (
     const premium = Number(quote.premium ?? 0);
     const rate =
       input.commissionRate ?? Number(process.env.COMMISSION_DEFAULT ?? 0.1);
-    commission = await db.create('commission', {
-      protectaRef: `CM-${policyNo}`,
-      rate,
-      amountUgx: Math.round(premium * rate),
-      status: 'ACCRUED',
-      statementMonth: statementMonth(),
-      payoutRef: '',
-      policyNo,
-      policyId: policy.id,
-      beneficiaryId: input.agentPersonId,
-    });
+    const commissionKey = `CM-${policy.policyNo}`;
+    commission = await db.findFirst(
+      'commissions',
+      { protectaRef: { eq: commissionKey } },
+      ['amountUgx', 'rate', 'policyNo'],
+    );
+    if (!commission) {
+      try {
+        commission = await db.create('commission', {
+          protectaRef: commissionKey,
+          rate,
+          amountUgx: Math.round(premium * rate),
+          status: 'ACCRUED',
+          statementMonth: statementMonth(),
+          payoutRef: '',
+          policyNo: policy.policyNo,
+          policyId: policy.id,
+          beneficiaryId: input.agentPersonId,
+        });
+      } catch (error) {
+        commission = await db.findFirst(
+          'commissions',
+          { protectaRef: { eq: commissionKey } },
+          ['amountUgx', 'rate', 'policyNo'],
+        );
+        if (!commission) throw error;
+      }
+    }
   }
 
   return { policy, quote, commission };
 };
 
-export const findPolicyByNo = (db: DbClient, policyNo: string): Promise<RecordData | null> =>
+export const findPolicyByNo = (
+  db: DbClient,
+  policyNo: string,
+): Promise<RecordData | null> =>
   db.findFirst('insurancePolicies', { policyNo: { eq: policyNo } }, [
     'policyNo',
     'protectaRef',
@@ -110,7 +172,15 @@ export const findPoliciesByPhone = async (
     const matches = await db.findMany(
       'insurancePolicies',
       { filter: { quoteRef: { eq: ref } }, first: 10 },
-      ['policyNo', 'status', 'plate', 'premiumUgx', 'periodStart', 'periodEnd', 'quoteRef'],
+      [
+        'policyNo',
+        'status',
+        'plate',
+        'premiumUgx',
+        'periodStart',
+        'periodEnd',
+        'quoteRef',
+      ],
     );
     policies.push(...matches);
   }

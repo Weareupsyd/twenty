@@ -16,15 +16,31 @@ const handler = async (event: RoutePayload): Promise<Response> => {
     const phone = normalizeUgPhone(event.queryStringParameters?.phone ?? '');
     const session = (event.queryStringParameters?.session ?? '').trim();
     if (!phone) {
-      return jsonResponse({ ok: false, error: 'A valid ?phone= is required.' }, 400);
+      return jsonResponse(
+        { ok: false, error: 'A valid ?phone= is required.' },
+        400,
+      );
     }
     const secret = process.env.SESSION_JWT_SECRET ?? '';
     if (!secret) {
-      return jsonResponse({ ok: false, error: 'Sessions are not configured.' }, 500);
+      return jsonResponse(
+        { ok: false, error: 'Sessions are not configured.' },
+        500,
+      );
     }
-    const claims = verifyJwtHs256<{ sub?: string }>(session, secret);
-    if (!claims || claims.sub !== phone) {
-      return jsonResponse({ ok: false, error: 'Invalid or expired session.' }, 401);
+    const claims = verifyJwtHs256<{ sub?: string; purpose?: string }>(
+      session,
+      secret,
+    );
+    if (
+      !claims ||
+      claims.sub !== phone ||
+      claims.purpose !== 'customer-session'
+    ) {
+      return jsonResponse(
+        { ok: false, error: 'Invalid or expired session.' },
+        401,
+      );
     }
     const policies = await findPoliciesByPhone(new CoreDbClient(), phone);
     return jsonResponse({ ok: true, phone, policies });

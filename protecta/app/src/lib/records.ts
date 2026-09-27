@@ -14,7 +14,11 @@ export type DbClient = {
   ) => Promise<RecordData | null>;
   findMany: (
     objectPlural: string,
-    args: { filter?: DbFilter; first?: number },
+    args: {
+      filter?: DbFilter;
+      first?: number;
+      orderBy?: Record<string, string>[];
+    },
     select: string[],
   ) => Promise<RecordData[]>;
   create: (objectSingular: string, data: RecordData) => Promise<RecordData>;
@@ -28,10 +32,16 @@ export type DbClient = {
 const capitalize = (value: string): string =>
   value.length === 0 ? value : value[0].toUpperCase() + value.slice(1);
 
-const selection = (select: string[]): Record<string, boolean> => {
-  const node: Record<string, boolean> = { id: true };
+const selection = (
+  select: string[],
+  objectPlural: string,
+): Record<string, boolean | Record<string, boolean>> => {
+  const node: Record<string, boolean | Record<string, boolean>> = { id: true };
   for (const field of select) {
-    node[field] = true;
+    node[field] =
+      field === 'name' && objectPlural === 'people'
+        ? { firstName: true, lastName: true }
+        : true;
   }
   return node;
 };
@@ -39,26 +49,42 @@ const selection = (select: string[]): Record<string, boolean> => {
 type GraphQlEdge = { node: RecordData };
 
 export class CoreDbClient implements DbClient {
-  private readonly client = new CoreApiClient();
+  private readonly client: CoreApiClient;
+
+  constructor(options: { runAs?: 'user' | 'application' } = {}) {
+    this.client = new CoreApiClient(options);
+  }
 
   async findFirst(
     objectPlural: string,
     filter: DbFilter,
     select: string[],
   ): Promise<RecordData | null> {
-    const rows = await this.findMany(objectPlural, { filter, first: 1 }, select);
+    const rows = await this.findMany(
+      objectPlural,
+      { filter, first: 1 },
+      select,
+    );
     return rows[0] ?? null;
   }
 
   async findMany(
     objectPlural: string,
-    args: { filter?: DbFilter; first?: number },
+    args: {
+      filter?: DbFilter;
+      first?: number;
+      orderBy?: Record<string, string>[];
+    },
     select: string[],
   ): Promise<RecordData[]> {
     const result = (await this.client.query({
       [objectPlural]: {
-        __args: { filter: args.filter ?? {}, first: args.first ?? 100 },
-        edges: { node: selection(select) },
+        __args: {
+          filter: args.filter ?? {},
+          first: args.first ?? 100,
+          ...(args.orderBy ? { orderBy: args.orderBy } : {}),
+        },
+        edges: { node: selection(select, objectPlural) },
       },
     })) as Record<string, { edges?: GraphQlEdge[] }>;
     return (result[objectPlural]?.edges ?? []).map((edge) => edge.node);
@@ -72,7 +98,9 @@ export class CoreDbClient implements DbClient {
         id: true,
       },
     })) as Record<string, RecordData>;
-    return result[key];
+    if (!result[key]?.id)
+      throw new Error(`Record mutation ${key} returned no record.`);
+    return { ...data, ...result[key] };
   }
 
   async update(
@@ -87,7 +115,9 @@ export class CoreDbClient implements DbClient {
         id: true,
       },
     })) as Record<string, RecordData>;
-    return result[key];
+    if (!result[key]?.id)
+      throw new Error(`Record mutation ${key} returned no record.`);
+    return { ...data, ...result[key] };
   }
 }
 
@@ -101,29 +131,52 @@ export class MemoryDbClient implements DbClient {
     filter: DbFilter,
     _select: string[],
   ): Promise<RecordData | null> {
-    const rows = await this.findMany(objectPlural, { filter, first: 1 }, _select);
+    const rows = await this.findMany(
+      objectPlural,
+      { filter, first: 1 },
+      _select,
+    );
     return rows[0] ?? null;
   }
 
   async findMany(
     objectPlural: string,
-    args: { filter?: DbFilter; first?: number },
+    args: {
+      filter?: DbFilter;
+      first?: number;
+      orderBy?: Record<string, string>[];
+    },
     _select: string[],
   ): Promise<RecordData[]> {
     const rows = this.store[objectPlural] ?? [];
     const filter = args.filter ?? {};
-    const matched = rows.filter((row) =>
-      Object.entries(filter).every(([field, condition]) => {
-        if (
-          typeof condition === 'object' &&
-          condition !== null &&
-          'eq' in condition
-        ) {
-          return row[field] === (condition as { eq: unknown }).eq;
+    const matches = (row: RecordData, query: DbFilter): boolean =>
+      Object.entries(query).every(([field, condition]) => {
+        if (field === 'and' && Array.isArray(condition))
+          return condition.every((part) => matches(row, part));
+        if (field === 'or' && Array.isArray(condition))
+          return condition.some((part) => matches(row, part));
+        if (typeof condition === 'object' && condition !== null) {
+          const comparison = condition as Record<string, unknown>;
+          if ('eq' in comparison) return row[field] === comparison.eq;
+          if ('lt' in comparison)
+            return String(row[field]) < String(comparison.lt);
+          if ('lte' in comparison)
+            return String(row[field]) <= String(comparison.lte);
+          if ('gte' in comparison)
+            return String(row[field]) >= String(comparison.gte);
         }
         return row[field] === condition;
-      }),
-    );
+      });
+    const matched = rows.filter((row) => matches(row, filter));
+    for (const order of [...(args.orderBy ?? [])].reverse()) {
+      const [field, direction] = Object.entries(order)[0];
+      matched.sort(
+        (a, b) =>
+          String(a[field]).localeCompare(String(b[field])) *
+          (direction.startsWith('Desc') ? -1 : 1),
+      );
+    }
     return matched.slice(0, args.first ?? 100);
   }
 

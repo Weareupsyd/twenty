@@ -25,6 +25,7 @@ export default defineObject({
     {
       universalIdentifier: CM_PROTECTA_REF,
       name: 'protectaRef',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Protecta ref',
       icon: 'IconHash',
@@ -57,7 +58,12 @@ export default defineObject({
         { value: 'ACCRUED', label: 'Accrued', position: 0, color: 'blue' },
         { value: 'PAYABLE', label: 'Payable', position: 1, color: 'yellow' },
         { value: 'PAID', label: 'Paid', position: 2, color: 'green' },
-        { value: 'CLAWED_BACK', label: 'Clawed back', position: 3, color: 'red' },
+        {
+          value: 'CLAWED_BACK',
+          label: 'Clawed back',
+          position: 3,
+          color: 'red',
+        },
       ],
     },
     {

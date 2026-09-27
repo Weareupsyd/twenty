@@ -35,6 +35,7 @@ export default defineObject({
     {
       universalIdentifier: PM_PAYMENT_REF,
       name: 'paymentRef',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Payment ref',
       icon: 'IconHash',

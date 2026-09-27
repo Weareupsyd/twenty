@@ -1,8 +1,14 @@
 import { enqueueJobs } from 'twenty-sdk/logic-function';
-import { WEBHOOK_DISPATCH, WHATSAPP_SEND } from 'src/constants/universal-identifiers';
+import {
+  WEBHOOK_DISPATCH,
+  WHATSAPP_SEND,
+} from 'src/constants/universal-identifiers';
 import { getQuotePartner } from 'src/lib/attribution';
 import { type DbClient, type RecordData } from 'src/lib/records';
-import { createDelivery, type PartnerEventName } from 'src/lib/service-webhooks';
+import {
+  createDelivery,
+  type PartnerEventName,
+} from 'src/lib/service-webhooks';
 
 export const queueWhatsApp = (to: string, text: string): Promise<unknown> =>
   enqueueJobs({
@@ -44,7 +50,13 @@ export const fanoutPartnerEvent = async (
   try {
     await enqueueJobs({
       logicFunctionUniversalIdentifier: WEBHOOK_DISPATCH,
-      jobs: [{ payload: { deliveryId: String(delivery.id), body: payload } }],
+      retryLimit: 8,
+      jobs: [
+        {
+          jobId: `delivery-${delivery.id}`,
+          payload: { deliveryId: String(delivery.id), body: payload },
+        },
+      ],
     });
   } catch (error) {
     console.error('fanout enqueue failed', error);

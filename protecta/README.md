@@ -86,3 +86,53 @@ have to re-run the script after every edit.
   that is not intended.
 - The Docker image version is resolved from the app's `engines.twenty` range, so
   the server matches what the app declares.
+
+## Repaired build: prerequisites and validation
+
+The pinned Twenty SDK/client SDK 2.43 require **Node 24.5+ within Node 24**.
+Node 20 can authenticate but is not a supported build environment. React and
+its types are aligned with the SDK's React 19 tooling.
+
+You can use Node 24 just for these commands without changing Node for other VPS
+applications:
+
+```bash
+cd ~/twenty/protecta/app
+npx --yes --package=node@24 -c 'npm ci --no-audit --no-fund && npm run check'
+cd ..
+npx --yes --package=node@24 -c 'bash ./start.sh'
+```
+
+`npm run check` runs TypeScript, unit/handler tests, mocked startup-script tests,
+and the actual SDK manifest/bundle build. The build also verifies that all
+command/settings/timeline components and queued workers exist. It does **not**
+connect to a workspace or prove a successful database migration or provider
+transaction. Output is ignored under `app/.twenty/`.
+
+First-boot seeding can take longer than the SDK's three-minute wait. `start.sh`
+now continues waiting when the container is still running; it never resets the
+container or deletes its volumes. A stopped container still fails immediately.
+Custom `--port` values are used for both health checks and remote authentication.
+
+### Setting the workspace API key on a headless server
+
+Run this first, then paste the key **only when the prompt appears**:
+
+```bash
+read -r -s -p 'Paste workspace API key: ' TWENTY_API_KEY; echo
+```
+
+Then, at the normal shell prompt:
+
+```bash
+export TWENTY_API_KEY
+npx --yes --package=node@24 -c 'bash ./start.sh'
+```
+
+The environment variable is the workspace deployment credential, not a Protecta
+partner key. Never send either key in chat or commit it. Revoke any exposed key.
+
+## Provider configuration and smoke tests
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) before testing real payments or exposing the
+public routes. A successful local build is not a production-readiness signoff.

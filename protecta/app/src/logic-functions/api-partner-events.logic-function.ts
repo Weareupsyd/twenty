@@ -10,12 +10,15 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   try {
     const auth = await requirePartnerApiKey(new CoreDbClient(), event.headers);
     if (!auth.ok) {
-      return jsonResponse({ ok: false, error: 'Invalid or missing API key.' }, 401);
+      return jsonResponse(
+        { ok: false, error: 'Invalid or missing API key.' },
+        401,
+      );
     }
     const q = event.queryStringParameters ?? {};
     const events = await listEventsForPartner(
+      new CoreDbClient(),
       auth.partner,
-      String(auth.partner.partnerCode),
       {
         type: q.type ? String(q.type) : undefined,
         limit: q.limit ? Number(q.limit) : undefined,
@@ -37,5 +40,6 @@ export default defineLogicFunction({
     path: '/protecta/api/partners/events',
     httpMethod: 'GET',
     isAuthRequired: false,
+    forwardedRequestHeaders: ['x-api-key', 'authorization'],
   },
 });

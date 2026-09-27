@@ -8,14 +8,17 @@ import { registerPartner } from 'src/lib/service-partners';
 const handler = async (event: RoutePayload): Promise<Response> => {
   try {
     const body = parseJsonBody(event);
-    const db = new CoreDbClient();
+    const db = new CoreDbClient({ runAs: 'user' });
     const { partner, apiKey } = await registerPartner(db, {
       type: str(body.type) || 'AGENT',
       name: str(body.name),
       email: str(body.email) || undefined,
       phone: str(body.phone) || undefined,
       companyId: str(body.companyId) || undefined,
-      commissionRate: body.commissionRate !== undefined ? Number(body.commissionRate) : undefined,
+      commissionRate:
+        body.commissionRate !== undefined
+          ? Number(body.commissionRate)
+          : undefined,
     });
     // The plaintext key is returned exactly once; only its hash is stored.
     return jsonResponse({ ok: true, partner, apiKey }, 201);

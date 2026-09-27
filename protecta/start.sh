@@ -47,12 +47,12 @@ die() { printf '\n\033[1;31mError: %s\033[0m\n' "$*" >&2; exit 1; }
 
 step "Checking prerequisites"
 
-command -v node >/dev/null || die "node is not installed. Install Node 20+ (the app's engines.node is >=20)."
+command -v node >/dev/null || die "node is not installed. Install Node 24.5+ (within Node 24)."
 command -v npm >/dev/null || die "npm is not installed."
+command -v curl >/dev/null || die "curl is not installed."
 
-NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
-if (( NODE_MAJOR < 20 )); then
-  die "Node $(node -v) is too old; the app requires Node 20 or newer."
+if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major === 24 && minor >= 5 ? 0 : 1)'; then
+  die "Node $(node -v) is unsupported; Twenty SDK 2.43 requires Node 24.5+ within Node 24."
 fi
 info "node $(node -v)"
 
@@ -127,14 +127,19 @@ step "Starting Twenty server (port $PORT)"
 if curl -fsS --max-time 2 "$SERVER_URL/healthz" >/dev/null 2>&1; then
   info "already healthy at $SERVER_URL"
 else
-  "$TWENTY" docker:start --port "$PORT"
+  if ! "$TWENTY" docker:start --port "$PORT"; then
+    if [[ "$(docker inspect --format '{{.State.Running}}' twenty-app-dev 2>/dev/null || true)" != "true" ]]; then
+      die "Twenty did not start. Inspect: docker logs --tail 200 twenty-app-dev"
+    fi
+    info "CLI startup wait ended, but the container is running; allowing extra time for first-boot seeding."
+  fi
 fi
 
-# Belt and braces: docker:start waits up to 180s, but a fresh database can still
-# be warming up when it returns.
+# The CLI waits 180s. A fresh database can need longer; wait up to another
+# 10 minutes without discarding the running container or its volumes.
 info "waiting for $SERVER_URL/healthz"
 SERVER_HEALTHY=0
-for _ in $(seq 1 90); do
+for _ in $(seq 1 300); do
   if curl -fsS --max-time 2 "$SERVER_URL/healthz" 2>/dev/null | grep -qE '"status"[[:space:]]*:[[:space:]]*"ok"'; then
     SERVER_HEALTHY=1
     break
@@ -157,11 +162,11 @@ if [[ "${SKIP_REMOTE:-0}" == "1" ]]; then
   step "Skipping remote setup (SKIP_REMOTE=1)"
 elif [[ -n "${TWENTY_API_KEY:-}" ]]; then
   step "Authenticating remote '$REMOTE_NAME'"
-  "$TWENTY" remote:add --local --as "$REMOTE_NAME" --api-key "$TWENTY_API_KEY"
+  "$TWENTY" remote:add --url "$SERVER_URL" --as "$REMOTE_NAME" --api-key "$TWENTY_API_KEY"
 else
   step "Configuring remote '$REMOTE_NAME'"
 
-  if "$TWENTY" remote:status 2>/dev/null | grep -qE '\(valid\)'; then
+  if "$TWENTY" remote:use "$REMOTE_NAME" >/dev/null 2>&1 && "$TWENTY" remote:status 2>/dev/null | grep -qE '\(valid\)'; then
     info "existing remote is already authenticated"
   else
     cat <<EOF
@@ -175,7 +180,7 @@ else
     On a headless box, the OAuth prompt below prints a URL you can open from
     any machine that can reach this server.
 EOF
-    "$TWENTY" remote:add --local --as "$REMOTE_NAME"
+    "$TWENTY" remote:add --url "$SERVER_URL" --as "$REMOTE_NAME"
   fi
 fi
 

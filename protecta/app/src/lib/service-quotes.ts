@@ -31,7 +31,9 @@ export type CreatedQuote = {
   isNewPerson: boolean;
 };
 
-export const splitName = (fullName: string): { firstName: string; lastName: string } => {
+export const splitName = (
+  fullName: string,
+): { firstName: string; lastName: string } => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) {
     return { firstName: 'Protecta', lastName: 'Customer' };
@@ -79,10 +81,11 @@ export const ensureVehicle = async (
 ): Promise<RecordData> => {
   const plate = normalizePlate(input.plate);
   const key = `${input.phone}:${plate}`;
-  const existing = await db.findFirst('vehicles', { protectaRef: { eq: key } }, [
-    'plate',
-    'protectaRef',
-  ]);
+  const existing = await db.findFirst(
+    'vehicles',
+    { protectaRef: { eq: key } },
+    ['plate', 'protectaRef'],
+  );
   if (existing) {
     return existing;
   }
@@ -147,7 +150,11 @@ export const createQuote = async (
     reference,
     status: 'QUOTED',
     channel: input.channel ?? 'PORTAL',
-    productCode: input.productCode ?? options.productCode ?? process.env.PRODUCT_CODE ?? 'BODE-01',
+    productCode:
+      input.productCode ??
+      options.productCode ??
+      process.env.PRODUCT_CODE ??
+      'BODE-01',
     plate,
     vehicleMake: input.make ?? '',
     vehicleModel: input.model ?? '',
@@ -163,7 +170,10 @@ export const createQuote = async (
   return { quote, person, vehicle, premium, isNewPerson: isNew };
 };
 
-export const findQuoteByRef = (db: DbClient, reference: string): Promise<RecordData | null> =>
+export const findQuoteByRef = (
+  db: DbClient,
+  reference: string,
+): Promise<RecordData | null> =>
   db.findFirst('insuranceQuotes', { reference: { eq: reference } }, [
     'reference',
     'protectaRef',
@@ -175,6 +185,7 @@ export const findQuoteByRef = (db: DbClient, reference: string): Promise<RecordD
     'vehicleValue',
     'premium',
     'policyholderPhone',
+    'policyholderId',
     'shareUrl',
     'validUntil',
   ]);

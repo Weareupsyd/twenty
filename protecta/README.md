@@ -32,12 +32,12 @@ Run on the VPS:
 
 ```bash
 cd ~
-git clone --single-branch --branch arena/01a0e3bb-twenty \
+git clone --single-branch --branch arena/01a0e432-twenty \
   https://github.com/Weareupsyd/twenty.git twenty-fresh
 ```
 
 **Use that branch explicitly.** The repair and these instructions are published
-on `arena/01a0e3bb-twenty`; a default clone of `main` may not contain them yet.
+on `arena/01a0e432-twenty`; a default clone of `main` may not contain them yet.
 If `~/twenty-fresh` already exists, choose another unused directory and adjust
 the following paths. Do not delete a folder just to make this command succeed.
 
@@ -198,7 +198,7 @@ source trees.
 
 ```bash
 cd ~/twenty-fresh
-git pull --ff-only origin arena/01a0e3bb-twenty
+git pull --ff-only origin arena/01a0e432-twenty
 cd protecta
 npx --yes --package=node@24 -c 'bash ./start.sh'
 ```

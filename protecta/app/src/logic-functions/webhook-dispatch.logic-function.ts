@@ -35,7 +35,7 @@ export const handler = async (payload: {
   const delivery = await db.findFirst(
     'webhookDeliveries',
     { id: { eq: payload.deliveryId } },
-    ['deliveryId', 'event', 'targetUrl', 'status', 'attempts', 'partnerId'],
+    ['deliveryId', 'eventType', 'targetUrl', 'status', 'attempts', 'partnerId'],
   );
   if (!delivery) throw new Error('Delivery not found.');
   if (delivery.status === 'DELIVERED') return;
@@ -61,7 +61,7 @@ export const handler = async (payload: {
   const sending = { ...delivery, ...(await markDeliverySending(db, delivery)) };
   const body = JSON.stringify({
     id: delivery.deliveryId,
-    event: delivery.event,
+    event: delivery.eventType,
     data: payload.body,
   });
   try {

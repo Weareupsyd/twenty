@@ -1,5 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { PARTNER_SCOPES } from 'src/lib/partner-scopes';
+import {
+  normalizePartnerScopes,
+  PARTNER_SCOPES,
+  toStoredPartnerScopes,
+} from 'src/lib/partner-scopes';
 import {
   sha256Hex,
   signaturesEqual,
@@ -20,21 +24,30 @@ export type PartnerTokenClaims = {
 
 export const hashClientSecret = (secret: string): string => sha256Hex(secret);
 
-export const findPartnerByClientId = (
+export const findPartnerByClientId = async (
   db: DbClient,
   clientId: string,
-): Promise<RecordData | null> =>
-  db.findFirst('partnerAccounts', { clientId: { eq: clientId } }, [
-    'name',
-    'type',
-    'clientId',
-    'clientSecretHash',
-    'environment',
-    'commissionRate',
-    'isActive',
-    'webhookUrl',
-    'scopes',
-  ]);
+): Promise<RecordData | null> => {
+  const partner = await db.findFirst(
+    'partnerAccounts',
+    { clientId: { eq: clientId } },
+    [
+      'name',
+      'partnerType',
+      'clientId',
+      'clientSecretHash',
+      'environment',
+      'commissionRate',
+      'isActive',
+      'webhookUrl',
+      'scopes',
+    ],
+  );
+
+  return partner
+    ? { ...partner, scopes: normalizePartnerScopes(partner.scopes as string[]) }
+    : null;
+};
 
 export const authenticatePartner = async (
   db: DbClient,
@@ -166,7 +179,7 @@ export const registerPartner = async (
     clientId,
     clientSecretHash: hashClientSecret(secret),
     name,
-    type,
+    partnerType: type,
     contactEmail: input.email?.trim() ?? '',
     contactPhone: input.phone?.trim() ?? '',
     companyReference: input.companyId?.trim() ?? '',
@@ -174,7 +187,7 @@ export const registerPartner = async (
     environment: 'SANDBOX',
     isActive: true,
     webhookUrl: '',
-    scopes: [...PARTNER_SCOPES],
+    scopes: toStoredPartnerScopes(PARTNER_SCOPES),
   });
   return { partner: publicPartner(saved), apiKey: `${clientId}.${secret}` };
 };
@@ -184,10 +197,10 @@ export const publicPartner = (partner: RecordData): RecordData => ({
   code: partner.clientId,
   clientId: partner.clientId,
   name: partner.name,
-  type: partner.type,
+  type: partner.partnerType ?? partner.type,
   status: partner.isActive === true ? 'ACTIVE' : 'INACTIVE',
   environment: partner.environment,
-  scopes: partner.scopes,
+  scopes: normalizePartnerScopes(partner.scopes as string[]),
 });
 
 export const listEventsForPartner = async (
@@ -204,13 +217,13 @@ export const listEventsForPartner = async (
     throw new Error('limit must be between 1 and 100.');
   if (options.before && !Number.isFinite(Date.parse(options.before)))
     throw new Error('Invalid before timestamp.');
-  return db.findMany(
+  const deliveries = await db.findMany(
     'webhookDeliveries',
     {
       filter: {
         and: [
           { partnerId: { eq: String(partner.id) } },
-          ...(options.type ? [{ event: { eq: options.type } }] : []),
+          ...(options.type ? [{ eventType: { eq: options.type } }] : []),
           ...(options.before
             ? [{ createdAt: { lt: new Date(options.before).toISOString() } }]
             : []),
@@ -219,6 +232,13 @@ export const listEventsForPartner = async (
       first: limit,
       orderBy: [{ createdAt: 'DescNullsLast' }],
     },
-    ['deliveryId', 'event', 'status', 'attempts', 'createdAt'],
+    ['deliveryId', 'eventType', 'status', 'attempts', 'createdAt'],
   );
+
+  // Keep the public event log's established `event` key independent of the
+  // reserved metadata field name used by Twenty's GraphQL schema.
+  return deliveries.map(({ eventType, ...delivery }) => ({
+    ...delivery,
+    event: eventType,
+  }));
 };

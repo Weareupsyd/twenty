@@ -24,7 +24,7 @@ export const createDelivery = async (
 ): Promise<RecordData> =>
   db.create('webhookDelivery', {
     deliveryId: makeDeliveryId(input.rng),
-    event: input.event,
+    eventType: input.event,
     targetUrl: input.targetUrl,
     status: 'PENDING',
     attempts: 0,

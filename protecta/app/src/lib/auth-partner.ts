@@ -1,4 +1,5 @@
 import { sha256Hex, signaturesEqual } from 'src/lib/crypto';
+import { normalizePartnerScopes } from 'src/lib/partner-scopes';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import {
   bearerToken,
@@ -42,12 +43,13 @@ export const requirePartnerApiKey = async (
   const partner = await findPartnerByClientId(db, claims.clientId);
   if (!partner || partner.isActive !== true || partner.id !== claims.partnerId)
     return { ok: false };
-  const current = Array.isArray(partner.scopes) ? partner.scopes : [];
+  const current = normalizePartnerScopes(partner.scopes as string[]);
+  const granted = normalizePartnerScopes(claims.scopes);
   return {
     ok: true,
     partner: {
       ...partner,
-      scopes: current.filter((scope) => claims.scopes.includes(String(scope))),
+      scopes: current.filter((scope) => granted.includes(scope)),
     },
   };
 };

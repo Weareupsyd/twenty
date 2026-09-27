@@ -1,4 +1,5 @@
 import { defineObject, FieldType, NumberDataType } from 'twenty-sdk/define';
+import { PARTNER_SCOPE_VALUES } from 'src/lib/partner-scopes';
 import {
   PA_NAME,
   PA_TYPE,
@@ -36,7 +37,7 @@ export default defineObject({
     },
     {
       universalIdentifier: PA_TYPE,
-      name: 'type',
+      name: 'partnerType',
       type: FieldType.SELECT,
       label: 'Partner type',
       defaultValue: "'AGENT'",
@@ -143,37 +144,37 @@ export default defineObject({
       icon: 'IconLock',
       options: [
         {
-          value: 'customers:write',
+          value: PARTNER_SCOPE_VALUES['customers:write'],
           label: 'customers:write',
           position: 0,
           color: 'blue',
         },
         {
-          value: 'quotes:write',
+          value: PARTNER_SCOPE_VALUES['quotes:write'],
           label: 'quotes:write',
           position: 1,
           color: 'blue',
         },
         {
-          value: 'policies:read',
+          value: PARTNER_SCOPE_VALUES['policies:read'],
           label: 'policies:read',
           position: 2,
           color: 'green',
         },
         {
-          value: 'payments:write',
+          value: PARTNER_SCOPE_VALUES['payments:write'],
           label: 'payments:write',
           position: 3,
           color: 'blue',
         },
         {
-          value: 'claims:write',
+          value: PARTNER_SCOPE_VALUES['claims:write'],
           label: 'claims:write',
           position: 4,
           color: 'blue',
         },
         {
-          value: 'reports:read',
+          value: PARTNER_SCOPE_VALUES['reports:read'],
           label: 'reports:read',
           position: 5,
           color: 'green',

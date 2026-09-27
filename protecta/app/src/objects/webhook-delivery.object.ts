@@ -32,7 +32,7 @@ export default defineObject({
     },
     {
       universalIdentifier: W_EVENT,
-      name: 'event',
+      name: 'eventType',
       type: FieldType.TEXT,
       label: 'Event',
       icon: 'IconBolt',

@@ -79,6 +79,7 @@ export default defineObject({
       type: FieldType.FILES,
       label: 'ID front',
       icon: 'IconFile',
+      universalSettings: { maxNumberOfValues: 1 },
     },
     {
       universalIdentifier: K_BACK_FILE,
@@ -86,6 +87,7 @@ export default defineObject({
       type: FieldType.FILES,
       label: 'ID back',
       icon: 'IconFile',
+      universalSettings: { maxNumberOfValues: 1 },
     },
     {
       universalIdentifier: K_SELFIE_FILE,
@@ -93,6 +95,7 @@ export default defineObject({
       type: FieldType.FILES,
       label: 'Selfie',
       icon: 'IconFile',
+      universalSettings: { maxNumberOfValues: 1 },
     },
   ],
 });

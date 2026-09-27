@@ -1,0 +1,46 @@
+import { defineView, ViewType } from 'twenty-sdk/define';
+import {
+  CLAIMS_KANBAN,
+  C_CLAIM_REF,
+  C_LOCATION,
+  C_POLICY_NO,
+  C_RESERVE,
+  C_STATUS,
+  INSURANCE_CLAIM,
+  VG_CLAIM_00,
+  VG_CLAIM_01,
+  VG_CLAIM_02,
+  VG_CLAIM_03,
+  VG_CLAIM_04,
+  VG_CLAIM_05,
+  VIEW_CLAIMS_KANBAN_COL0,
+  VIEW_CLAIMS_KANBAN_COL1,
+  VIEW_CLAIMS_KANBAN_COL2,
+  VIEW_CLAIMS_KANBAN_COL3,
+  VIEW_CLAIMS_KANBAN_COL4,
+} from 'src/constants/universal-identifiers';
+
+export default defineView({
+  universalIdentifier: CLAIMS_KANBAN,
+  name: 'Claims board',
+  objectUniversalIdentifier: INSURANCE_CLAIM,
+  type: ViewType.KANBAN,
+  icon: 'IconLayoutKanban',
+  position: 0,
+  mainGroupByFieldMetadataUniversalIdentifier: C_STATUS,
+  groups: [
+    { universalIdentifier: VG_CLAIM_00, fieldValue: 'REPORTED', position: 0, isVisible: true },
+    { universalIdentifier: VG_CLAIM_01, fieldValue: 'ASSIGNED', position: 1, isVisible: true },
+    { universalIdentifier: VG_CLAIM_02, fieldValue: 'ASSESSED', position: 2, isVisible: true },
+    { universalIdentifier: VG_CLAIM_03, fieldValue: 'APPROVED', position: 3, isVisible: true },
+    { universalIdentifier: VG_CLAIM_04, fieldValue: 'REJECTED', position: 4, isVisible: true },
+    { universalIdentifier: VG_CLAIM_05, fieldValue: 'SETTLED', position: 5, isVisible: true },
+  ],
+  fields: [
+    { universalIdentifier: VIEW_CLAIMS_KANBAN_COL0, fieldMetadataUniversalIdentifier: C_CLAIM_REF, position: 0, isVisible: true, size: 160 },
+    { universalIdentifier: VIEW_CLAIMS_KANBAN_COL1, fieldMetadataUniversalIdentifier: C_POLICY_NO, position: 1, isVisible: true, size: 160 },
+    { universalIdentifier: VIEW_CLAIMS_KANBAN_COL2, fieldMetadataUniversalIdentifier: C_STATUS, position: 2, isVisible: true, size: 130 },
+    { universalIdentifier: VIEW_CLAIMS_KANBAN_COL3, fieldMetadataUniversalIdentifier: C_RESERVE, position: 3, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_CLAIMS_KANBAN_COL4, fieldMetadataUniversalIdentifier: C_LOCATION, position: 4, isVisible: true, size: 180 },
+  ],
+});

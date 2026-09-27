@@ -1,0 +1,40 @@
+import { defineView, ViewType } from 'twenty-sdk/define';
+import {
+  INSURANCE_QUOTE,
+  QUOTES_ALL,
+  Q_PLATE,
+  Q_POLICYHOLDER_PHONE,
+  Q_PREMIUM,
+  Q_PRODUCT_CODE,
+  Q_REFERENCE,
+  Q_STATUS,
+  Q_VALID_UNTIL,
+  Q_VEHICLE_VALUE,
+  VIEW_QUOTES_ALL_COL0,
+  VIEW_QUOTES_ALL_COL1,
+  VIEW_QUOTES_ALL_COL2,
+  VIEW_QUOTES_ALL_COL3,
+  VIEW_QUOTES_ALL_COL4,
+  VIEW_QUOTES_ALL_COL5,
+  VIEW_QUOTES_ALL_COL6,
+  VIEW_QUOTES_ALL_COL7,
+} from 'src/constants/universal-identifiers';
+
+export default defineView({
+  universalIdentifier: QUOTES_ALL,
+  name: 'All quotes',
+  objectUniversalIdentifier: INSURANCE_QUOTE,
+  type: ViewType.TABLE,
+  icon: 'IconFileText',
+  position: 0,
+  fields: [
+    { universalIdentifier: VIEW_QUOTES_ALL_COL0, fieldMetadataUniversalIdentifier: Q_REFERENCE, position: 0, isVisible: true, size: 160 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL1, fieldMetadataUniversalIdentifier: Q_STATUS, position: 1, isVisible: true, size: 130 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL2, fieldMetadataUniversalIdentifier: Q_VEHICLE_VALUE, position: 2, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL3, fieldMetadataUniversalIdentifier: Q_PREMIUM, position: 3, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL4, fieldMetadataUniversalIdentifier: Q_POLICYHOLDER_PHONE, position: 4, isVisible: true, size: 150 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL5, fieldMetadataUniversalIdentifier: Q_PLATE, position: 5, isVisible: true, size: 140 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL6, fieldMetadataUniversalIdentifier: Q_PRODUCT_CODE, position: 6, isVisible: true, size: 120 },
+    { universalIdentifier: VIEW_QUOTES_ALL_COL7, fieldMetadataUniversalIdentifier: Q_VALID_UNTIL, position: 7, isVisible: true, size: 130 },
+  ],
+});

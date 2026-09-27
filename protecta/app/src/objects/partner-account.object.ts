@@ -1,0 +1,102 @@
+import { defineObject, FieldType, NumberDataType } from 'twenty-sdk/define';
+import {
+  PA_CLIENT_ID,
+  PA_CLIENT_SECRET_HASH,
+  PA_COMMISSION_RATE,
+  PA_ENVIRONMENT,
+  PA_IS_ACTIVE,
+  PA_PROTECTA_REF,
+  PA_SCOPES,
+  PA_WEBHOOK_URL,
+  PARTNER_ACCOUNT,
+} from 'src/constants/universal-identifiers';
+
+export const PARTNER_ACCOUNT_UNIVERSAL_IDENTIFIER = PARTNER_ACCOUNT;
+
+export default defineObject({
+  universalIdentifier: PARTNER_ACCOUNT_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'partnerAccount',
+  namePlural: 'partnerAccounts',
+  labelSingular: 'Partner account',
+  labelPlural: 'Partner accounts',
+  description: 'External broker or integrator on the Partner API',
+  icon: 'IconBuildingStore',
+  labelIdentifierFieldMetadataUniversalIdentifier: PA_CLIENT_ID,
+  fields: [
+    {
+      universalIdentifier: PA_PROTECTA_REF,
+      name: 'protectaRef',
+      type: FieldType.TEXT,
+      label: 'Protecta ref',
+      description: 'Partner client id',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: PA_CLIENT_ID,
+      name: 'clientId',
+      type: FieldType.TEXT,
+      label: 'Client id',
+      icon: 'IconHash',
+      isSearchable: true,
+    },
+    {
+      universalIdentifier: PA_CLIENT_SECRET_HASH,
+      name: 'clientSecretHash',
+      type: FieldType.TEXT,
+      label: 'Client secret hash',
+      description: 'One-way hash; the secret itself is shown once at creation',
+      icon: 'IconKey',
+    },
+    {
+      universalIdentifier: PA_ENVIRONMENT,
+      name: 'environment',
+      type: FieldType.SELECT,
+      label: 'Environment',
+      icon: 'IconServer',
+      defaultValue: "'SANDBOX'",
+      options: [
+        { value: 'SANDBOX', label: 'Sandbox', position: 0, color: 'yellow' },
+        { value: 'PRODUCTION', label: 'Production', position: 1, color: 'green' },
+      ],
+    },
+    {
+      universalIdentifier: PA_COMMISSION_RATE,
+      name: 'commissionRate',
+      type: FieldType.NUMBER,
+      label: 'Commission rate',
+      icon: 'IconPercentage',
+      universalSettings: { dataType: NumberDataType.FLOAT },
+    },
+    {
+      universalIdentifier: PA_IS_ACTIVE,
+      name: 'isActive',
+      type: FieldType.BOOLEAN,
+      label: 'Active',
+      icon: 'IconCheck',
+      defaultValue: true,
+    },
+    {
+      universalIdentifier: PA_WEBHOOK_URL,
+      name: 'webhookUrl',
+      type: FieldType.TEXT,
+      label: 'Webhook URL',
+      icon: 'IconLink',
+    },
+    {
+      universalIdentifier: PA_SCOPES,
+      name: 'scopes',
+      type: FieldType.MULTI_SELECT,
+      label: 'Scopes',
+      icon: 'IconLock',
+      options: [
+        { value: 'customers:write', label: 'customers:write', position: 0, color: 'blue' },
+        { value: 'quotes:write', label: 'quotes:write', position: 1, color: 'blue' },
+        { value: 'policies:read', label: 'policies:read', position: 2, color: 'green' },
+        { value: 'payments:write', label: 'payments:write', position: 3, color: 'blue' },
+        { value: 'claims:write', label: 'claims:write', position: 4, color: 'blue' },
+        { value: 'reports:read', label: 'reports:read', position: 5, color: 'green' },
+      ],
+    },
+  ],
+});

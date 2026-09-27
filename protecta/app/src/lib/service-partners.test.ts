@@ -16,7 +16,7 @@ const seedPartner = async (db: MemoryDbClient) =>
     commissionRate: 0.12,
     isActive: true,
     webhookUrl: '',
-    scopes: ['quotes:write'],
+    scopes: ['QUOTES_WRITE'],
   });
 
 describe('partner auth', () => {

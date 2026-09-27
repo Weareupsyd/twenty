@@ -17,6 +17,10 @@ describe('partner API', () => {
     });
     const [clientId, secret] = apiKey.split('.');
     expect(partner).not.toHaveProperty('clientSecretHash');
+    expect(partner.type).toBe('BROKER');
+    expect(partner.scopes).toContain('quotes:write');
+    expect(db.store.partnerAccounts[0].partnerType).toBe('BROKER');
+    expect(db.store.partnerAccounts[0].scopes).toContain('QUOTES_WRITE');
     expect(db.store.partnerAccounts[0].clientSecretHash).not.toEqual(secret);
     expect(JSON.stringify(db.store)).not.toContain(secret);
     expect((await requirePartnerApiKey(db, { 'X-API-Key': apiKey })).ok).toBe(
@@ -51,17 +55,17 @@ describe('partner API', () => {
     const current = db.store.partnerAccounts[0];
     await db.create('webhookDelivery', {
       partnerId: partner.id,
-      event: 'quote.created',
+      eventType: 'quote.created',
       createdAt: '2026-09-01T00:00:00.000Z',
     });
     await db.create('webhookDelivery', {
       partnerId: 'another-partner',
-      event: 'quote.created',
+      eventType: 'quote.created',
       createdAt: '2026-09-02T00:00:00.000Z',
     });
     await db.create('webhookDelivery', {
       partnerId: partner.id,
-      event: 'policy.issued',
+      eventType: 'policy.issued',
       createdAt: '2026-09-03T00:00:00.000Z',
     });
     const rows = await listEventsForPartner(db, current, {
@@ -70,6 +74,7 @@ describe('partner API', () => {
     });
     expect(rows).toHaveLength(1);
     expect(rows[0].partnerId).toBe(partner.id);
+    expect(rows[0].event).toBe('quote.created');
     await expect(
       listEventsForPartner(db, { ...current, scopes: [] }),
     ).rejects.toThrow('scope');
@@ -91,7 +96,7 @@ describe('partner API', () => {
       jwtSecret: 'test-signing-secret',
     });
     await db.update('partnerAccount', String(partner.id), {
-      scopes: ['policies:read'],
+      scopes: ['POLICIES_READ'],
     });
     const auth = await requirePartnerApiKey(db, {
       authorization: `Bearer ${token}`,

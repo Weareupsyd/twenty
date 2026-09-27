@@ -2,7 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 
-/** SDK validation doesn't cover every command/settings reference or queued job. */
+/** SDK validation doesn't cover every command/settings/field reference. */
 export const verifyManifest = (appPath) => {
   const manifest = JSON.parse(
     readFileSync(path.join(appPath, '.twenty/output/manifest.json'), 'utf8'),
@@ -23,6 +23,50 @@ export const verifyManifest = (appPath) => {
     for (const child of Object.values(value)) visit(child);
   };
   visit(manifest);
+
+  const fields = [
+    ...manifest.fields,
+    ...manifest.objects.flatMap((object) => object.fields ?? []),
+  ];
+  const fieldIdentifiers = new Set(
+    fields.map((field) => field.universalIdentifier),
+  );
+  const reservedFieldNames = new Set(['event', 'type']);
+  for (const field of fields) {
+    assert(
+      !reservedFieldNames.has(field.name),
+      `Field name "${field.name}" is reserved; use a distinct name.`,
+    );
+
+    if (field.type === 'FILES') {
+      const maxNumberOfValues = field.universalSettings?.maxNumberOfValues;
+      assert(
+        Number.isInteger(maxNumberOfValues) &&
+          maxNumberOfValues > 0 &&
+          maxNumberOfValues <= 60,
+        `FILES field "${field.name}" must set universalSettings.maxNumberOfValues to an integer from 1 to 60.`,
+      );
+    }
+
+    if (field.type === 'SELECT' || field.type === 'MULTI_SELECT') {
+      for (const option of field.options ?? []) {
+        assert(
+          /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/.test(option.value),
+          `Option "${option.value}" on field "${field.name}" must use UPPER_CASE_SNAKE_CASE.`,
+        );
+      }
+    }
+  }
+
+  for (const view of manifest.views) {
+    for (const field of view.fields ?? []) {
+      assert(
+        fieldIdentifiers.has(field.fieldMetadataUniversalIdentifier),
+        `View "${view.name}" references missing field metadata ${field.fieldMetadataUniversalIdentifier}.`,
+      );
+    }
+  }
+
   const constants = readFileSync(
     path.join(appPath, 'src/constants/universal-identifiers.ts'),
     'utf8',
@@ -52,6 +96,6 @@ export const verifyManifest = (appPath) => {
   };
   scan(path.join(appPath, 'src'));
   console.log(
-    `Verified ${components.size} UI components and ${functions.size} functions, including queued-worker references.`,
+    `Verified ${components.size} UI components, ${functions.size} functions, field settings and view field references.`,
   );
 };

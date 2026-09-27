@@ -1,5 +1,10 @@
 import { defineObject, FieldType, NumberDataType } from 'twenty-sdk/define';
 import {
+  PA_NAME,
+  PA_TYPE,
+  PA_EMAIL,
+  PA_PHONE,
+  PA_COMPANY_ID,
   PA_CLIENT_ID,
   PA_CLIENT_SECRET_HASH,
   PA_COMMISSION_RATE,
@@ -24,6 +29,47 @@ export default defineObject({
   labelIdentifierFieldMetadataUniversalIdentifier: PA_CLIENT_ID,
   fields: [
     {
+      universalIdentifier: PA_NAME,
+      name: 'name',
+      type: FieldType.TEXT,
+      label: 'Name',
+    },
+    {
+      universalIdentifier: PA_TYPE,
+      name: 'type',
+      type: FieldType.SELECT,
+      label: 'Partner type',
+      defaultValue: "'AGENT'",
+      options: [
+        { value: 'AGENT', label: 'Agent', position: 0, color: 'blue' },
+        { value: 'BROKER', label: 'Broker', position: 1, color: 'green' },
+        {
+          value: 'INTEGRATOR',
+          label: 'Integrator',
+          position: 2,
+          color: 'purple',
+        },
+      ],
+    },
+    {
+      universalIdentifier: PA_EMAIL,
+      name: 'contactEmail',
+      type: FieldType.TEXT,
+      label: 'Contact email',
+    },
+    {
+      universalIdentifier: PA_PHONE,
+      name: 'contactPhone',
+      type: FieldType.TEXT,
+      label: 'Contact phone',
+    },
+    {
+      universalIdentifier: PA_COMPANY_ID,
+      name: 'companyReference',
+      type: FieldType.TEXT,
+      label: 'Company reference',
+    },
+    {
       universalIdentifier: PA_PROTECTA_REF,
       name: 'protectaRef',
       type: FieldType.TEXT,
@@ -35,6 +81,7 @@ export default defineObject({
     {
       universalIdentifier: PA_CLIENT_ID,
       name: 'clientId',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Client id',
       icon: 'IconHash',
@@ -57,7 +104,12 @@ export default defineObject({
       defaultValue: "'SANDBOX'",
       options: [
         { value: 'SANDBOX', label: 'Sandbox', position: 0, color: 'yellow' },
-        { value: 'PRODUCTION', label: 'Production', position: 1, color: 'green' },
+        {
+          value: 'PRODUCTION',
+          label: 'Production',
+          position: 1,
+          color: 'green',
+        },
       ],
     },
     {
@@ -90,12 +142,42 @@ export default defineObject({
       label: 'Scopes',
       icon: 'IconLock',
       options: [
-        { value: 'customers:write', label: 'customers:write', position: 0, color: 'blue' },
-        { value: 'quotes:write', label: 'quotes:write', position: 1, color: 'blue' },
-        { value: 'policies:read', label: 'policies:read', position: 2, color: 'green' },
-        { value: 'payments:write', label: 'payments:write', position: 3, color: 'blue' },
-        { value: 'claims:write', label: 'claims:write', position: 4, color: 'blue' },
-        { value: 'reports:read', label: 'reports:read', position: 5, color: 'green' },
+        {
+          value: 'customers:write',
+          label: 'customers:write',
+          position: 0,
+          color: 'blue',
+        },
+        {
+          value: 'quotes:write',
+          label: 'quotes:write',
+          position: 1,
+          color: 'blue',
+        },
+        {
+          value: 'policies:read',
+          label: 'policies:read',
+          position: 2,
+          color: 'green',
+        },
+        {
+          value: 'payments:write',
+          label: 'payments:write',
+          position: 3,
+          color: 'blue',
+        },
+        {
+          value: 'claims:write',
+          label: 'claims:write',
+          position: 4,
+          color: 'blue',
+        },
+        {
+          value: 'reports:read',
+          label: 'reports:read',
+          position: 5,
+          color: 'green',
+        },
       ],
     },
   ],

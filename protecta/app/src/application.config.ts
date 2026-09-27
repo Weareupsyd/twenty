@@ -2,7 +2,6 @@ import { FieldType, defineApplication } from 'twenty-sdk/define';
 import {
   COMMISSION_DEFAULT,
   COOLING_DAYS,
-  DEFAULT_ROLE,
   MAX_VEHICLE_VALUE,
   MIN_VEHICLE_VALUE,
   POLICY_DAYS,
@@ -24,7 +23,6 @@ export default defineApplication({
   description:
     'Motor insurance on Twenty CRM: 1.5% quotes, mobile-money payments, policies, claims, WhatsApp bot and partner API.',
   logo: 'public/brand/assets/protecta-bode-logo.png',
-  defaultRoleUniversalIdentifier: DEFAULT_ROLE,
   applicationVariables: {
     PRODUCT_CODE: {
       universalIdentifier: PRODUCT_CODE,
@@ -36,7 +34,8 @@ export default defineApplication({
     PRODUCT_RATE: {
       universalIdentifier: PRODUCT_RATE,
       label: 'Premium rate',
-      description: 'Yearly premium as a fraction of vehicle value (0.015 = 1.5%).',
+      description:
+        'Yearly premium as a fraction of vehicle value (0.015 = 1.5%).',
       type: FieldType.NUMBER,
       value: 0.015,
       isSecret: false,
@@ -68,7 +67,8 @@ export default defineApplication({
     COMMISSION_DEFAULT: {
       universalIdentifier: COMMISSION_DEFAULT,
       label: 'Default commission rate',
-      description: 'Agent and broker commission as a fraction of premium (0.10 = 10%).',
+      description:
+        'Agent and broker commission as a fraction of premium (0.10 = 10%).',
       type: FieldType.NUMBER,
       value: 0.1,
       isSecret: false,
@@ -122,7 +122,8 @@ export default defineApplication({
   },
   serverVariables: {
     SESSION_JWT_SECRET: {
-      description: 'Signs customer session tokens for self-service pages. Required.',
+      description:
+        'Signs customer session tokens for self-service pages. Required.',
       isSecret: true,
       isRequired: true,
     },
@@ -132,7 +133,8 @@ export default defineApplication({
       isRequired: true,
     },
     WHATSAPP_TOKEN: {
-      description: 'Meta WhatsApp Cloud API permanent token for the bot number.',
+      description:
+        'Meta WhatsApp Cloud API permanent token for the bot number.',
       isSecret: true,
       isRequired: false,
     },
@@ -141,13 +143,31 @@ export default defineApplication({
       isSecret: false,
       isRequired: false,
     },
+    WHATSAPP_APP_SECRET: {
+      description: 'Meta app secret used to verify inbound webhook signatures.',
+      isSecret: true,
+      isRequired: false,
+    },
+    PARTNER_WEBHOOK_ALLOWED_ORIGINS: {
+      description:
+        'Comma-separated approved HTTPS origins for outbound partner webhooks. Empty denies all.',
+      isSecret: false,
+      isRequired: false,
+    },
+    PARTNER_WEBHOOK_SECRET: {
+      description:
+        'HMAC signing secret shared with receiving partner webhook services.',
+      isSecret: true,
+      isRequired: false,
+    },
     WHATSAPP_VERIFY: {
       description: 'Verify token pasted into the Meta webhook configuration.',
       isSecret: true,
       isRequired: false,
     },
     OPS_WHATSAPP: {
-      description: 'E.164 number for ops alerts (daily flash, failed webhooks).',
+      description:
+        'E.164 number for ops alerts (daily flash, failed webhooks).',
       isSecret: false,
       isRequired: false,
     },
@@ -207,7 +227,8 @@ export default defineApplication({
       isRequired: false,
     },
     KYC_PROVIDER_URL: {
-      description: 'Optional automated KYC provider endpoint (leave empty for manual review).',
+      description:
+        'Optional automated KYC provider endpoint (leave empty for manual review).',
       isSecret: false,
       isRequired: false,
     },

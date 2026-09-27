@@ -4,8 +4,11 @@ import { SUPPORT_PAGE } from 'src/constants/universal-identifiers';
 import { htmlResponse } from 'src/lib/http';
 
 const handler = async (_event: RoutePayload): Promise<Response> => {
-  const wa = (process.env.SUPPORT_WHATSAPP ?? process.env.SUPPORT_PHONE ?? '+256312246500')
-    .replace(/[^\d]/g, '');
+  const wa = (
+    process.env.SUPPORT_WHATSAPP ??
+    process.env.SUPPORT_PHONE ??
+    '+256312246500'
+  ).replace(/[^\d]/g, '');
   return htmlResponse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Support · Protecta Bode</title>
@@ -37,7 +40,7 @@ fetch('/s/protecta/api/tickets',{method:'POST',headers:{'Content-Type':'applicat
 phone:document.getElementById('phone').value,subject:document.getElementById('subject').value,
 description:document.getElementById('desc').value,channel:'PORTAL'})})
 .then(function(r){return r.json()}).then(function(d){
-if(d.ok){out.style.background='#E6F6EC';out.style.color='#14532D';out.textContent='Received — ticket '+d.ticket.ticketNo+'. We will be in touch shortly.';}
+if(d.ok){out.style.background='#E6F6EC';out.style.color='#14532D';out.textContent='Received — ticket '+d.ticket.ticketRef+'. We will be in touch shortly.';}
 else{out.style.background='#FDECEC';out.style.color='#7A1C1C';out.textContent=d.error||'Something went wrong.';}
 }).catch(function(){out.style.background='#FDECEC';out.style.color='#7A1C1C';out.textContent='Network error. Please try again.';});
 };

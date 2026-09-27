@@ -1,4 +1,8 @@
-const digits = (length: number, rng: () => number = Math.random): string => {
+import { randomInt } from 'node:crypto';
+const digits = (
+  length: number,
+  rng: () => number = () => randomInt(0, 10) / 10,
+): string => {
   let out = '';
   for (let i = 0; i < length; i += 1) {
     out += String(Math.floor(rng() * 10));
@@ -29,7 +33,12 @@ export const makeClientSecret = (rng?: () => number): string => {
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let out = 'pb_';
   for (let i = 0; i < 32; i += 1) {
-    out += alphabet[Math.floor((rng ?? Math.random)() * alphabet.length)];
+    out +=
+      alphabet[
+        rng
+          ? Math.floor(rng() * alphabet.length)
+          : randomInt(0, alphabet.length)
+      ];
   }
   return out;
 };

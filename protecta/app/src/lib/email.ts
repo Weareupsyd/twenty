@@ -19,13 +19,16 @@ export const emailConfigFromEnv = (
 
 export const sendEmail = async (
   config: EmailConfig,
-  input: { to: string; subject: string; html: string },
+  input: { to: string; subject: string; html: string; idempotencyKey?: string },
 ): Promise<void> => {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${config.apiKey}`,
       'Content-Type': 'application/json',
+      ...(input.idempotencyKey
+        ? { 'Idempotency-Key': input.idempotencyKey }
+        : {}),
     },
     body: JSON.stringify({
       from: config.from,
@@ -36,6 +39,8 @@ export const sendEmail = async (
   });
   if (!response.ok) {
     const detail = await response.text().catch(() => '');
-    throw new Error(`Email send failed (${response.status}): ${detail.slice(0, 200)}`);
+    throw new Error(
+      `Email send failed (${response.status}): ${detail.slice(0, 200)}`,
+    );
   }
 };

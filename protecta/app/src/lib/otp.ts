@@ -1,10 +1,13 @@
+import { randomInt } from 'node:crypto';
 import { sha256Hex } from 'src/lib/crypto';
 
 export const OTP_LENGTH = 6;
 export const OTP_TTL_SECONDS = 10 * 60;
 export const OTP_MAX_ATTEMPTS = 5;
 
-export const generateOtp = (rng: () => number = Math.random): string => {
+export const generateOtp = (
+  rng: () => number = () => randomInt(0, 10) / 10,
+): string => {
   let out = '';
   for (let i = 0; i < OTP_LENGTH; i += 1) {
     out += String(Math.floor(rng() * 10));
@@ -39,7 +42,7 @@ export const verifyOtpChallenge = (
   if (challenge.purpose !== purpose) {
     return { ok: false, attemptsLeft: 0, reason: 'purpose_mismatch' };
   }
-  if (nowMs > challenge.expiresAt) {
+  if (nowMs >= challenge.expiresAt) {
     return { ok: false, attemptsLeft: 0, reason: 'expired' };
   }
   if (challenge.attempts >= OTP_MAX_ATTEMPTS) {
@@ -48,7 +51,9 @@ export const verifyOtpChallenge = (
   const ok = sha256Hex(`${purpose}:${otp}`) === challenge.hash;
   return {
     ok,
-    attemptsLeft: ok ? OTP_MAX_ATTEMPTS - challenge.attempts : OTP_MAX_ATTEMPTS - challenge.attempts - 1,
+    attemptsLeft: ok
+      ? OTP_MAX_ATTEMPTS - challenge.attempts
+      : OTP_MAX_ATTEMPTS - challenge.attempts - 1,
     ...(ok ? {} : { reason: 'mismatch' }),
   };
 };

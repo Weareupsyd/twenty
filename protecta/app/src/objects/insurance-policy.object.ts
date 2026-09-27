@@ -37,6 +37,7 @@ export default defineObject({
     {
       universalIdentifier: P_POLICY_NO,
       name: 'policyNo',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Policy no',
       icon: 'IconHash',
@@ -45,6 +46,7 @@ export default defineObject({
     {
       universalIdentifier: P_QUOTE_REF,
       name: 'quoteRef',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Quote ref',
       icon: 'IconHash',
@@ -57,7 +59,12 @@ export default defineObject({
       icon: 'IconProgress',
       defaultValue: "'ACTIVE'",
       options: [
-        { value: 'PENDING_PAYMENT', label: 'Pending payment', position: 0, color: 'yellow' },
+        {
+          value: 'PENDING_PAYMENT',
+          label: 'Pending payment',
+          position: 0,
+          color: 'yellow',
+        },
         { value: 'ACTIVE', label: 'Active', position: 1, color: 'green' },
         { value: 'LAPSED', label: 'Lapsed', position: 2, color: 'orange' },
         { value: 'CANCELLED', label: 'Cancelled', position: 3, color: 'red' },

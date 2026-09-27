@@ -48,7 +48,10 @@ export const decideKyc = async (
     status: decision,
     ...(typeof reviewNotes === 'string' ? { reviewNotes } : {}),
   });
-  if ((decision === 'APPROVED' || decision === 'REJECTED') && kycCase.subjectId) {
+  if (
+    (decision === 'APPROVED' || decision === 'REJECTED') &&
+    kycCase.subjectId
+  ) {
     await db.update('person', String(kycCase.subjectId), {
       protectaKycStatus: decision,
     });
@@ -60,8 +63,8 @@ export const findKycByPerson = async (
   db: DbClient,
   personId: string,
 ): Promise<RecordData[]> =>
-  db.findMany('kycCases', { filter: {}, first: 100 }, [
-    'idNumber',
-    'idType',
-    'status',
-  ]).then((rows) => rows.filter((row) => row.subjectId === personId));
+  db.findMany(
+    'kycCases',
+    { filter: { subjectId: { eq: personId } }, first: 100 },
+    ['idNumber', 'idType', 'status'],
+  );

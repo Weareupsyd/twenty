@@ -5,22 +5,25 @@ import { errorResponse, jsonResponse, parseJsonBody, str } from 'src/lib/http';
 import { CoreDbClient } from 'src/lib/records';
 import { submitKyc } from 'src/lib/service-kyc';
 
-const handler = async (event: RoutePayload): Promise<Response> => {
+export const handler = async (event: RoutePayload): Promise<Response> => {
   try {
     const body = parseJsonBody(event);
     const result = await submitKyc(new CoreDbClient(), {
       phone: str(body.phone),
-      policyholderName: str(body.policyholderName),
-      dateOfBirth: str(body.dateOfBirth),
-      nationalIdNumber: str(body.nationalIdNumber),
-      nationalIdFrontUrl: str(body.nationalIdFrontUrl) || undefined,
-      nationalIdBackUrl: str(body.nationalIdBackUrl) || undefined,
-      logbookNumber: str(body.logbookNumber) || undefined,
-      driverPermitNumber: str(body.driverPermitNumber) || undefined,
-      quoteRef: str(body.quoteRef) || undefined,
-      vehiclePlate: str(body.vehiclePlate) || undefined,
+      name: str(body.policyholderName) || str(body.name),
+      idType: str(body.idType) || 'NIN',
+      idNumber: str(body.nationalIdNumber) || str(body.idNumber),
+      reviewNotes: JSON.stringify({
+        dateOfBirth: str(body.dateOfBirth),
+        nationalIdFrontUrl: str(body.nationalIdFrontUrl),
+        nationalIdBackUrl: str(body.nationalIdBackUrl),
+        logbookNumber: str(body.logbookNumber),
+        driverPermitNumber: str(body.driverPermitNumber),
+        quoteRef: str(body.quoteRef),
+        vehiclePlate: str(body.vehiclePlate),
+      }),
     });
-    return jsonResponse({ ok: true, kyc: result.kyc }, 201);
+    return jsonResponse({ ok: true, kyc: result.kycCase }, 201);
   } catch (error) {
     return errorResponse(error);
   }

@@ -40,6 +40,7 @@ export default defineObject({
     {
       universalIdentifier: Q_REFERENCE,
       name: 'reference',
+      isUnique: true,
       type: FieldType.TEXT,
       label: 'Quote ref',
       icon: 'IconHash',
@@ -69,7 +70,12 @@ export default defineObject({
       options: [
         { value: 'PORTAL', label: 'Portal', position: 0, color: 'blue' },
         { value: 'WHATSAPP', label: 'WhatsApp', position: 1, color: 'green' },
-        { value: 'PARTNER_API', label: 'Partner API', position: 2, color: 'purple' },
+        {
+          value: 'PARTNER_API',
+          label: 'Partner API',
+          position: 2,
+          color: 'purple',
+        },
         { value: 'PHONE', label: 'Phone', position: 3, color: 'orange' },
       ],
     },

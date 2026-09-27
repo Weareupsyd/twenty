@@ -30,6 +30,14 @@ Twenty gives technical teams the building blocks for a custom CRM that meets com
 
 # Installation
 
+### Protecta Bode (this fork)
+
+For the repaired Protecta app, follow the [Protecta setup guide](./protecta/README.md).
+It includes a fresh-checkout procedure that keeps your existing Twenty database,
+Node 24 build commands, and step-by-step workspace API-key authentication.
+The repair is on `arena/01a0e3bb-twenty`; use that branch until it is merged.
+See the [deployment checklist](./protecta/DEPLOYMENT.md) before connecting live providers.
+
 ### <img src="./packages/twenty-website/public/images/readme/globe-icon.svg" width="14" height="14"/> Cloud
 
 The fastest way to get started. Sign up at [twenty.com](https://twenty.com) and spin up a workspace in under a minute, with no infrastructure to manage and always up to date.

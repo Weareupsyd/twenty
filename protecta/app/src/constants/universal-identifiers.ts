@@ -564,3 +564,4 @@ export const FC_PROTECTA_REPORTS = 'b562e9f1-ed48-4534-98d1-99c8caef5f46';
 export const PROTECTA_DASHBOARD_W_EXPIRING = 'f5c7b4f1-2a3e-41a8-bb5c-4d8e9d2c1f3a';
 export const PROTECTA_DASHBOARD_W_PENDING_PAYMENTS_TABLE = 'e8a12f4e-7b1a-4c3e-9c2d-5e8a9f3d2c1e';
 export const NAV_REPORTS = 'c61f9675-6e5a-49e5-a859-7d3d100e6e4b';
+export const FC_SHARE_BUTTONS = 'cf55f571-89b3-4ccd-ac34-815af660230e';

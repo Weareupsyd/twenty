@@ -15,7 +15,9 @@
   "packageManager": "yarn@4.13.0",
   "frontComponentSharedDependencies": [
     "react",
-    "react-dom/client"
+    "react-dom/client",
+    "@hugeicons/react",
+    "@hugeicons/core-free-icons"
   ],
   "scripts": {
     "twenty": "twenty",
@@ -27,6 +29,8 @@
     "test:startup": "bash ../tests/start.test.sh && bash ../tests/create-api-key.test.sh && bash ../tests/install.test.sh && bash ../tests/twenty-cli.test.sh"
   },
   "dependencies": {
+    "@hugeicons/core-free-icons": "^3.3.0",
+    "@hugeicons/react": "^1.1.10",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryDbClient } from 'src/lib/records';
 import {
+  asSelectValue,
   deliverSms,
   fillSmsMessage,
   findSmsTemplate,
@@ -44,30 +45,38 @@ describe('makeSmsRef', () => {
   });
 });
 
+describe('asSelectValue', () => {
+  it('normalizes SELECT values to UPPER_SNAKE_CASE', () => {
+    expect(asSelectValue('quote_issued')).toBe('QUOTE_ISSUED');
+    expect(asSelectValue(' lg ')).toBe('LG');
+    expect(asSelectValue(undefined)).toBe('');
+  });
+});
+
 describe('findSmsTemplate', () => {
   it('prefers the exact language, then the default, then any', async () => {
     const db = new MemoryDbClient();
     await db.create('smsTemplate', {
       name: 'English',
-      eventKey: 'quote_issued',
-      language: 'en',
+      eventKey: 'QUOTE_ISSUED',
+      language: 'EN',
       body: 'Quote {{reference}}',
     });
     await db.create('smsTemplate', {
       name: 'Luganda',
-      eventKey: 'quote_issued',
-      language: 'lg',
+      eventKey: 'QUOTE_ISSUED',
+      language: 'LG',
       body: 'Quote {{reference}} lg',
     });
     expect(await findSmsTemplate(db, 'quote_issued', 'lg')).toEqual({
       body: 'Quote {{reference}} lg',
-      language: 'lg',
+      language: 'LG',
     });
     configure();
-    // 'sw' falls back to the configured default language 'en'
+    // 'sw' falls back to the configured default language 'EN'
     expect(await findSmsTemplate(db, 'quote_issued', 'sw')).toEqual({
       body: 'Quote {{reference}}',
-      language: 'en',
+      language: 'EN',
     });
     expect(await findSmsTemplate(db, 'policy_issued', 'en')).toBeNull();
   });
@@ -78,7 +87,7 @@ describe('deliverSms', () => {
     const db = new MemoryDbClient();
     const outcome = await deliverSms(db, {
       recipient: '0779644690',
-      eventKey: 'quote_issued',
+      eventKey: 'QUOTE_ISSUED',
     });
     expect(outcome.outcome).toBe('SKIPPED');
     expect(outcome.record).toBeNull();
@@ -90,7 +99,7 @@ describe('deliverSms', () => {
     const db = new MemoryDbClient();
     const outcome = await deliverSms(db, {
       recipient: '0779644690',
-      eventKey: 'quote_issued',
+      eventKey: 'QUOTE_ISSUED',
     });
     expect(outcome.outcome).toBe('SKIPPED');
     expect(outcome.error).toContain('No SMS template');
@@ -101,8 +110,8 @@ describe('deliverSms', () => {
     const db = new MemoryDbClient();
     await db.create('smsTemplate', {
       name: 'Quote en',
-      eventKey: 'quote_issued',
-      language: 'en',
+      eventKey: 'QUOTE_ISSUED',
+      language: 'EN',
       body: 'Quote {{reference}} costs {{premium}}',
     });
     const fetchMock = stubFetchOk();
@@ -117,6 +126,8 @@ describe('deliverSms', () => {
     expect(outcome.record?.message).toBe('Quote 123 costs 150,000');
     expect(outcome.record?.recipient).toBe('256779644690');
     expect(outcome.record?.status).toBe('SENT');
+    expect(outcome.record?.eventKey).toBe('QUOTE_ISSUED');
+    expect(outcome.record?.language).toBe('EN');
     expect(outcome.record?.providerRef).toBe('REF1');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // The created-event handler must not re-send message-filled records.
@@ -130,21 +141,21 @@ describe('deliverSms', () => {
     const db = new MemoryDbClient();
     await db.create('smsTemplate', {
       name: 'Policy en',
-      eventKey: 'policy_issued',
-      language: 'en',
+      eventKey: 'POLICY_ISSUED',
+      language: 'EN',
       body: 'Policy {{policyNo}} is active',
     });
     stubFetchOk();
     const first = await deliverSms(db, {
       recipient: '0779644690',
-      eventKey: 'policy_issued',
+      eventKey: 'POLICY_ISSUED',
       variables: { policyNo: 'PB-1' },
       makeRef: () => 'SMS-000011',
     });
     expect(first.outcome).toBe('SENT');
     const second = await deliverSms(db, {
       recipient: '+256779644690',
-      eventKey: 'policy_issued',
+      eventKey: 'POLICY_ISSUED',
       variables: { policyNo: 'PB-1' },
       makeRef: () => 'SMS-000012',
     });
@@ -154,7 +165,7 @@ describe('deliverSms', () => {
     // A different message to the same recipient still goes out.
     const third = await deliverSms(db, {
       recipient: '0779644690',
-      eventKey: 'policy_issued',
+      eventKey: 'POLICY_ISSUED',
       variables: { policyNo: 'PB-2' },
       makeRef: () => 'SMS-000013',
     });
@@ -166,8 +177,8 @@ describe('deliverSms', () => {
     const db = new MemoryDbClient();
     await db.create('smsTemplate', {
       name: 'Quote en',
-      eventKey: 'quote_issued',
-      language: 'en',
+      eventKey: 'QUOTE_ISSUED',
+      language: 'EN',
       body: 'Hi',
     });
     vi.stubGlobal(
@@ -181,7 +192,7 @@ describe('deliverSms', () => {
     );
     const outcome = await deliverSms(db, {
       recipient: '0779644690',
-      eventKey: 'quote_issued',
+      eventKey: 'QUOTE_ISSUED',
       makeRef: () => 'SMS-000002',
     });
     expect(outcome.outcome).toBe('FAILED');
@@ -197,14 +208,14 @@ describe('fillSmsMessage', () => {
     const db = new MemoryDbClient();
     await db.create('smsTemplate', {
       name: 'Policy lg',
-      eventKey: 'policy_issued',
-      language: 'lg',
+      eventKey: 'POLICY_ISSUED',
+      language: 'LG',
       body: 'Policy {{policyNo}}',
     });
     const manual = await db.create('smsMessage', {
       reference: '',
-      eventKey: 'policy_issued',
-      language: 'lg',
+      eventKey: 'POLICY_ISSUED',
+      language: 'LG',
       recipient: '0772000000',
       message: '',
       variables: JSON.stringify({ policyNo: 'PB-1' }),
@@ -218,6 +229,7 @@ describe('fillSmsMessage', () => {
     expect(filled.message).toBe('Policy PB-1');
     expect(filled.status).toBe('SENT');
     expect(filled.recipient).toBe('256772000000');
+    expect(filled.language).toBe('LG');
     expect(filled.sentAt).toBeTruthy();
   });
 
@@ -226,7 +238,7 @@ describe('fillSmsMessage', () => {
     const db = new MemoryDbClient();
     const manual = await db.create('smsMessage', {
       reference: 'SMS-000004',
-      eventKey: 'claim_created',
+      eventKey: 'CLAIM_CREATED',
       recipient: '0772000000',
       message: '',
       status: 'PENDING',
@@ -241,7 +253,7 @@ describe('fillSmsMessage', () => {
     const db = new MemoryDbClient();
     const record = await db.create('smsMessage', {
       reference: 'SMS-000005',
-      eventKey: 'custom',
+      eventKey: 'CUSTOM',
       recipient: '0772000000',
       message: 'Raw text',
       status: 'PENDING',

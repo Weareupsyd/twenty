@@ -5,6 +5,10 @@ import { type DbClient, type RecordData } from 'src/lib/records';
 
 export type SmsVariables = Record<string, string>;
 
+/** Twenty SELECT option values must be UPPER_SNAKE_CASE. */
+export const asSelectValue = (value: unknown): string =>
+  String(value ?? '').trim().toUpperCase();
+
 const digits = (
   length: number,
   rng: () => number = () => Math.random(),
@@ -29,19 +33,23 @@ export const findSmsTemplate = async (
   language: string,
 ): Promise<{ body: string; language: string } | null> => {
   const select = ['eventKey', 'language', 'body'];
+  const key = asSelectValue(eventKey);
+  const lang = asSelectValue(language);
   const exact = await db.findFirst(
     'smsTemplates',
-    { eventKey: { eq: eventKey }, language: { eq: language } },
+    { eventKey: { eq: key }, language: { eq: lang } },
     select,
   );
   if (exact && typeof exact.body === 'string' && exact.body.trim()) {
-    return { body: exact.body, language: String(exact.language ?? language) };
+    return { body: exact.body, language: String(exact.language ?? lang) };
   }
-  const fallbackLanguage = (smsConfigFromEnv()?.defaultLanguage ?? 'en').toLowerCase();
-  if (fallbackLanguage !== language.toLowerCase()) {
+  const fallbackLanguage = asSelectValue(
+    smsConfigFromEnv()?.defaultLanguage ?? 'EN',
+  );
+  if (fallbackLanguage !== lang) {
     const fallback = await db.findFirst(
       'smsTemplates',
-      { eventKey: { eq: eventKey }, language: { eq: fallbackLanguage } },
+      { eventKey: { eq: key }, language: { eq: fallbackLanguage } },
       select,
     );
     if (fallback && typeof fallback.body === 'string' && fallback.body.trim()) {
@@ -53,7 +61,7 @@ export const findSmsTemplate = async (
   }
   const any = await db.findFirst(
     'smsTemplates',
-    { eventKey: { eq: eventKey } },
+    { eventKey: { eq: key } },
     select,
   );
   if (any && typeof any.body === 'string' && any.body.trim()) {
@@ -118,14 +126,12 @@ export const resolveSmsBody = async (
   | { ok: false; error: string }
 > => {
   const config = smsConfigFromEnv();
-  const language = (
-    input.language?.trim() ||
-    config?.defaultLanguage ||
-    'en'
-  ).toLowerCase();
+  const language = asSelectValue(
+    input.language?.trim() || config?.defaultLanguage || 'EN',
+  );
   const message = (input.message ?? '').trim();
   if (message) return { ok: true, message, language };
-  const eventKey = (input.eventKey ?? '').trim();
+  const eventKey = asSelectValue(input.eventKey);
   if (!eventKey) {
     return { ok: false, error: 'eventKey or message is required.' };
   }
@@ -201,7 +207,7 @@ export const deliverSms = async (
     'smsMessages',
     {
       filter: {
-        eventKey: { eq: (input.eventKey ?? '').trim() },
+        eventKey: { eq: asSelectValue(input.eventKey) },
         recipient: { eq: recipient },
         status: { eq: 'SENT' },
       },
@@ -220,7 +226,7 @@ export const deliverSms = async (
   const record = await createWithReference(
     db,
     {
-      eventKey: (input.eventKey ?? '').trim(),
+      eventKey: asSelectValue(input.eventKey),
       language: resolved.language,
       recipient,
       message: resolved.message,
@@ -269,8 +275,8 @@ export const fillSmsMessage = async (
   const config = smsConfigFromEnv();
   const variables = parseVariables(record.variables);
   const resolved = await resolveSmsBody(db, {
-    eventKey: String(record.eventKey ?? '').trim(),
-    language: String(record.language ?? '').trim(),
+    eventKey: asSelectValue(record.eventKey),
+    language: asSelectValue(record.language),
     variables,
   });
   if (!resolved.ok) {

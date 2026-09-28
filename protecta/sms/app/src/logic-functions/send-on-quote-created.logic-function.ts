@@ -26,7 +26,7 @@ export const handler = async (
   if (!recipient) return { processed: false, reason: 'no policyholderPhone' };
   const outcome = await deliverSms(new CoreDbClient(), {
     recipient,
-    eventKey: 'quote_issued',
+    eventKey: 'QUOTE_ISSUED',
     variables: {
       reference: fmt(quote.reference),
       premium: fmt(quote.premium),
@@ -47,7 +47,7 @@ export const handler = async (
 export default defineLogicFunction({
   universalIdentifier: SMS_ON_QUOTE,
   name: 'send-on-quote-created',
-  description: 'Sends the quote_issued SMS when a Protecta quote is created.',
+  description: 'Sends the QUOTE_ISSUED SMS when a Protecta quote is created.',
   timeoutSeconds: 30,
   handler,
   databaseEventTriggerSettings: {

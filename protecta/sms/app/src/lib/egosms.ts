@@ -19,7 +19,7 @@ export const smsConfigFromEnv = (
     username,
     password,
     senderId: env.EGOSMS_SENDER_ID || 'Upsyd',
-    defaultLanguage: (env.SMS_DEFAULT_LANGUAGE || 'en').toLowerCase(),
+    defaultLanguage: (env.SMS_DEFAULT_LANGUAGE || 'EN').toUpperCase(),
   };
 };
 

@@ -22,7 +22,7 @@ describe('smsConfigFromEnv', () => {
     });
     expect(config).not.toBeNull();
     expect(config?.senderId).toBe('Upsyd');
-    expect(config?.defaultLanguage).toBe('en');
+    expect(config?.defaultLanguage).toBe('EN');
   });
 
   it('honours sender id and default language overrides', () => {
@@ -30,10 +30,10 @@ describe('smsConfigFromEnv', () => {
       EGOSMS_USERNAME: 'u',
       EGOSMS_PASSWORD: 'p',
       EGOSMS_SENDER_ID: 'Protecta',
-      SMS_DEFAULT_LANGUAGE: 'LG',
+      SMS_DEFAULT_LANGUAGE: 'lg',
     });
     expect(config?.senderId).toBe('Protecta');
-    expect(config?.defaultLanguage).toBe('lg');
+    expect(config?.defaultLanguage).toBe('LG');
   });
 });
 
@@ -42,7 +42,7 @@ describe('sendEgoSms', () => {
     username: 'u',
     password: 'p',
     senderId: 'Upsyd',
-    defaultLanguage: 'en',
+    defaultLanguage: 'EN',
   };
 
   it('posts the EgoSMS JSON payload and reads the follow-up code', async () => {

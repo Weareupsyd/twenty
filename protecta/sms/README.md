@@ -15,10 +15,10 @@ SMS log.
 
 | Event key | Trigger | Recipient | Template variables |
 |---|---|---|---|
-| `quote_issued` | `insuranceQuote.created` | `policyholderPhone` | `{{reference}}`, `{{premium}}`, `{{plate}}`, `{{validUntil}}`, `{{policyholderPhone}}`, `{{shareUrl}}` |
-| `policy_issued` | `insurancePolicy.created` | phone on the originating quote | `{{policyNo}}`, `{{quoteRef}}`, `{{premiumUgx}}`, `{{plate}}`, `{{periodStart}}`, `{{periodEnd}}` |
-| `claim_created` | `insuranceClaim.created` | `reporterPhone` | `{{claimRef}}`, `{{policyNo}}`, `{{status}}`, `{{reporterPhone}}` |
-| `renewal_quote`, `custom` | manual / API | as given | whatever the caller passes |
+| `QUOTE_ISSUED` | `insuranceQuote.created` | `policyholderPhone` | `{{reference}}`, `{{premium}}`, `{{plate}}`, `{{validUntil}}`, `{{policyholderPhone}}`, `{{shareUrl}}` |
+| `POLICY_ISSUED` | `insurancePolicy.created` | phone on the originating quote | `{{policyNo}}`, `{{quoteRef}}`, `{{premiumUgx}}`, `{{plate}}`, `{{periodStart}}`, `{{periodEnd}}` |
+| `CLAIM_CREATED` | `insuranceClaim.created` | `reporterPhone` | `{{claimRef}}`, `{{policyNo}}`, `{{status}}`, `{{reporterPhone}}` |
+| `RENEWAL_QUOTE`, `CUSTOM` | manual / API | as given | whatever the caller passes |
 
 There are three ways a message goes out:
 
@@ -29,7 +29,7 @@ There are three ways a message goes out:
    save. The reference, rendered message and delivery status fill
    themselves in.
 3. **Manual (API)** — `POST /s/sms/send` with
-   `{ "phone": "0772...", "eventKey": "policy_issued", "language": "lg", "variables": { ... } }`.
+   `{ "phone": "0772...", "eventKey": "POLICY_ISSUED", "language": "LG", "variables": { ... } }`.
    Either `eventKey` (template) or a raw `message` is required. This is how
    Protecta Bode triggers SMS from its own flows.
 
@@ -43,12 +43,13 @@ job), the first send wins and the customer is never double-texted.
 ## Templates and languages
 
 Templates live in the **Sms templates** object: one row per **event key +
-language** (English `en`, Luganda `lg`, Swahili `sw`, Runyankole `run` out
+language** (English `EN`, Luganda `LG`, Swahili `SW`, Runyankole `RUN` out
 of the box). Placeholders use `{{name}}` and are replaced at send time from
-the event's variables.
+the event's variables. Event keys and languages are Twenty SELECT values, so
+they are stored as `UPPER_SNAKE_CASE`; the send API still accepts lowercase.
 
 Language choice: the caller's `language` first, then the configured default
-(`SMS_DEFAULT_LANGUAGE`, normally `en`), then any template for the event.
+(`SMS_DEFAULT_LANGUAGE`, normally `EN`), then any template for the event.
 **No template means no send** — an SMS costs money, so nothing is guessed
 or invented.
 
@@ -61,7 +62,7 @@ Set these on the SMS Sender app's settings — never in source code:
 | `EGOSMS_USERNAME` | EgoSMS account username |
 | `EGOSMS_PASSWORD` | EgoSMS account password (**secret**) |
 | `EGOSMS_SENDER_ID` | Sender id shown to the customer (default `Upsyd`) |
-| `SMS_DEFAULT_LANGUAGE` | Template fallback language (default `en`) |
+| `SMS_DEFAULT_LANGUAGE` | Template fallback language (default `EN`) |
 
 Until `EGOSMS_USERNAME` and `EGOSMS_PASSWORD` are set the app is inert:
 events resolve and log nothing, and the API answers

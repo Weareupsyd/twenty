@@ -32,12 +32,15 @@ Run on the VPS:
 
 ```bash
 cd ~
-git clone --single-branch --branch arena/01a0e432-twenty \
+git clone --single-branch --branch arena/01a0e86f-twenty \
   https://github.com/Weareupsyd/twenty.git twenty-fresh
 ```
 
-**Use that branch explicitly.** The repair and these instructions are published
-on `arena/01a0e432-twenty`; a default clone of `main` may not contain them yet.
+**Use a repair branch explicitly.** The repair and these instructions are
+published on `arena/01a0e86f-twenty`; a default clone of `main` may not contain them yet. Repair
+branches are named `arena/<id>-twenty`, one per repair round, so if the
+repository lists a newer one, use that instead. Already have a checkout?
+`git fetch origin arena/01a0e86f-twenty && git checkout arena/01a0e86f-twenty` gets the same files.
 If `~/twenty-fresh` already exists, choose another unused directory and adjust
 the following paths. Do not delete a folder just to make this command succeed.
 
@@ -53,7 +56,8 @@ npx --yes --package=node@24 -c 'npm ci --no-audit --no-fund && npm run check'
 ```
 
 The Node 24 wrapper affects this command and its children only; it does not
-replace system Node or change other VPS applications.
+replace system Node or change other VPS applications. `./start.sh` does not need
+it: it re-runs itself under Node 24 when the system Node is older.
 
 `npm run check` runs TypeScript, unit/handler tests, startup-script tests and the
 actual SDK manifest/bundle build. It also checks referenced UI components and
@@ -94,7 +98,33 @@ docker logs --tail 200 twenty-app-dev
 Do not create another container if an existing one is merely still seeding.
 `start.sh` also allows extra startup time when the container remains running.
 
-### 4. Create or select the workspace API key in Twenty
+### 4. Get a workspace API key (no browser required)
+
+The sync needs a **workspace API key** for the workspace Protecta is installed
+into. On a headless VPS there are two ways to get one.
+
+**Recommended: let the scripts do it.** `start.sh` mints a key inside the running
+`twenty-app-dev` container through [`./create-api-key.sh`](./create-api-key.sh)
+and saves it in `protecta/.twenty-api-key` (chmod 600, git-ignored). Later runs
+reuse that file, so it only happens once. You can also drive it yourself:
+
+| Command | What it does |
+| --- | --- |
+| `./create-api-key.sh` | Mint a key, verify it against the server, save it |
+| `./create-api-key.sh --check` | Test `$TWENTY_API_KEY` or `.twenty-api-key` |
+| `./create-api-key.sh --list` | List the workspaces inside the container |
+| `./create-api-key.sh --workspace-id <uuid>` | Mint for a specific workspace |
+| `./start.sh --new-api-key` | Rotate the key and deploy in one command |
+
+The key is created with the workspace's Admin role, is named `protecta-cli`, and
+can be revoked in **Settings → API keys**.
+
+A key only works on the Twenty instance that issued it: a key from twenty.com or
+from another VPS cannot authenticate against this container, and
+`./create-api-key.sh --check` says so explicitly instead of starting an OAuth
+prompt.
+
+**Alternative: create the key in the browser.**
 
 1. Open your working Twenty instance in your browser.
 2. Select the workspace where Protecta should be installed.
@@ -112,7 +142,10 @@ own browser means your own computer, not the VPS; use your configured HTTPS
 address or an SSH tunnel. Do not open the firewall just to make a local OAuth
 URL work.
 
-### 5. Enter the API key in the terminal — one step at a time
+### 5. Optional: hand a browser-made key to the scripts
+
+This step is only for the browser path in step 4; `start.sh` looks after its own
+keys otherwise.
 
 **Do not paste this entire section at once.** The key must be pasted after the
 prompt appears, not into the command itself.
@@ -155,24 +188,36 @@ if [ -n "$TWENTY_API_KEY" ]; then echo "API key is SET"; else echo "API key is E
 - **EMPTY:** repeat the `read` command, wait for its prompt, paste the key and
   press Enter; then export and check again.
 
+You can also save the key to the file `start.sh` reads, which survives a new SSH
+session:
+
+```bash
+read -r -s -p "PASTE YOUR API KEY HERE: " K; echo
+printf '%s\n' "$K" > .twenty-api-key && chmod 600 .twenty-api-key
+./create-api-key.sh --check
+```
+
 `export` does not assign a key by itself. Do not replace the variable name with
 the secret, and do not put the key after the closing quote in the `read` command.
-This environment variable belongs to this shell; opening a new SSH session does
-not preserve it. The CLI can separately retain authenticated remote credentials
-under `~/.twenty/` after a successful login.
+The environment variable belongs to this shell; a new SSH session does not
+preserve it, while `.twenty-api-key` does.
 
 ### 6. Sync Protecta from the same terminal
 
 ```bash
-npx --yes --package=node@24 -c 'bash ./start.sh'
+./start.sh
 ```
 
-With the exported key, expect these stages:
+`start.sh` re-runs itself under Node 24 through `npx` when the system Node is
+older, so the old `npx --yes --package=node@24 -c 'bash ./start.sh'` wrapper is
+no longer required. Expect these stages:
 
 1. Checking prerequisites / installing app dependencies.
 2. Detecting the healthy Twenty server.
-3. **Authenticating remote 'protecta-local'** via API key.
-4. **Syncing app into the workspace**.
+3. **Checking the workspace API key**, minting one if needed, then
+   **authenticating remote 'protecta-local'**.
+4. Syncing the Document Generator and SMS apps, then **syncing the app into the
+   workspace**.
 5. **Ready**, with `protecta-bode` shown as synced.
 
 Do not assume installation succeeded until the sync finishes. If it fails, keep
@@ -218,21 +263,27 @@ source trees.
 
 ```bash
 cd ~/twenty-fresh
-git pull --ff-only origin arena/01a0e432-twenty
+git pull --ff-only origin arena/01a0e86f-twenty
 cd protecta
-npx --yes --package=node@24 -c 'bash ./start.sh'
+./start.sh
 ```
 
 If Git reports local changes/conflicts, stop and review them; do not use a hard
-reset to discard work. If authentication expired, repeat step 5 with a valid key.
+reset to discard work. If the saved key was revoked, `./start.sh --new-api-key`
+creates a replacement without a browser.
 
-With Node 24.5+ already active in your shell, you can run `./start.sh` directly.
+Node is handled for you: `start.sh` re-runs itself under Node 24 via `npx` when
+the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
+`./start.sh` works even on a VPS whose system Node is 20.
 
-| Task | Command from `protecta/` with supported Node active |
+| Task | Command from `protecta/` |
 | --- | --- |
 | Rebuild and sync | `./start.sh` |
 | Sync and watch source changes | `./start.sh --watch` |
 | Use a custom port | `./start.sh --port 3000` |
+| Rotate the workspace API key | `./start.sh --new-api-key` |
+| Mint a key without deploying | `./create-api-key.sh` |
+| Check a key | `./create-api-key.sh --check` |
 | Preview metadata changes | `app/node_modules/.bin/twenty plan app` |
 | Server logs without Node/Yarn | `docker logs --tail 200 twenty-app-dev` |
 | Server status | `app/node_modules/.bin/twenty docker:status` |
@@ -246,10 +297,12 @@ by itself a reason to erase the database.
 
 | Variable | Purpose |
 | --- | --- |
-| `TWENTY_API_KEY` | Workspace deployment key; enter it using the hidden prompt above. Without it the script tries saved authentication, then interactive login. |
+| `TWENTY_API_KEY` | Workspace deployment key. Without it the script uses `.twenty-api-key`, mints a key in the container, reuses saved authentication, or falls back to interactive login. |
+| `TWENTY_API_KEY_FILE` | Key file to read/write instead of `protecta/.twenty-api-key`. |
 | `PKG_MANAGER` | `npm` for this lockfile-based setup, or `yarn` if deliberately selected. |
 | `SKIP_INSTALL=1` | Skip dependency installation; use only when dependencies are already correct. |
 | `SKIP_REMOTE=1` | Skip authentication/remote setup; use only when the correct remote is already selected. |
+| `SKIP_NODE_BOOTSTRAP=1` | Don't re-run the script under Node 24 when the system Node is older. |
 
 The workspace deployment key is **not** a Protecta partner API key, a Meta token,
 or a payment-provider secret. Provider configuration is covered in

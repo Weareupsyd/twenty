@@ -30,10 +30,14 @@
 
 1. Back up the workspace database and persistent storage if it contains data.
    A source-folder backup does NOT back up Docker volumes or database records.
-2. Use Node 24.5+ (24.x). Run `npm ci` and `npm run check` in `protecta/app`.
-3. Use an API key from the exact workspace you want to install into. On a shared
-   VPS, use `npx --yes --package=node@24 -c 'bash ./start.sh'` to avoid replacing
-   system Node. Follow the hidden key prompt in README if reauthentication is needed.
+2. Use Node 24.5+ (24.x). Run `npm ci` and `npm run check` in `protecta/app`
+   (the `npx --yes --package=node@24` wrapper above only affects that command).
+3. Use an API key from the exact workspace you want to install into. On this VPS
+   `protecta/start.sh` mints one inside the running container
+   (`protecta/create-api-key.sh`, saved to `protecta/.twenty-api-key`) when
+   `TWENTY_API_KEY` is unset, and re-runs itself under Node 24 when the system
+   Node is older — no browser and no wrapper command needed. `./start.sh --new-api-key`
+   rotates it; `./create-api-key.sh --check` explains a rejected key.
 4. Apply with `protecta/start.sh`. Stop on any server-side migration error; do not
    reset Twenty to bypass a validation error.
 5. Refresh that workspace. Check Quotes, Policies, Payments, Claims, Vehicles,

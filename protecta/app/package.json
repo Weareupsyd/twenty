@@ -24,7 +24,7 @@
     "test:watch": "vitest --config vitest.unit.config.ts",
     "build": "node scripts/build.mjs",
     "check": "npm run typecheck && npm test && npm run test:startup && npm run build",
-    "test:startup": "bash ../tests/start.test.sh"
+    "test:startup": "bash ../tests/start.test.sh && bash ../tests/create-api-key.test.sh"
   },
   "dependencies": {
     "pdf-lib": "^1.17.1"

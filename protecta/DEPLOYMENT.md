@@ -45,7 +45,12 @@
    rotates it; `./create-api-key.sh --check` explains a rejected key.
 4. Apply with `protecta/start.sh` (or `protecta/install.sh` for the full chain).
    Stop on any server-side migration error; do not reset Twenty to bypass a
-   validation error.
+   validation error. To sync a single app instead, use `protecta/twenty.sh`
+   (`./twenty.sh app`, `./twenty.sh docgen`, `./twenty.sh sms`): it runs that
+   app's own `node_modules/.bin/twenty` and installs it first when it is
+   missing. Do not use `npx twenty` — it downloads the unrelated `twenty`
+   package from the registry and fails with `could not determine executable to
+   run` instead of reporting the missing install.
 5. Refresh that workspace. Check Quotes, Policies, Payments, Claims, Vehicles,
    Commissions, Partner accounts, KYC and Support tickets. Open Protecta Bode in
    settings. Assign the Protecta support role deliberately; do not grant it to
@@ -86,7 +91,7 @@ policy wording is not in the repo yet; recreate it as a template body when
 it arrives. Documents are served at `/s/docgen/documents/view?policyNo=...`
 (PDF) and `/s/docgen/documents/docx?policyNo=...` (Word); the Protecta
 policy page links to them automatically. To skip the app, delete
-`protecta/docgen` or sync only `protecta/app` with the twenty CLI.
+`protecta/docgen` or sync only `protecta/app` (`./twenty.sh app`).
 
 ## SMS Sender app (`protecta/sms`)
 
@@ -103,7 +108,12 @@ record with a `SMS-XXXXXX` reference and delivery status. Other apps
 `POST /s/sms/send` with `{ phone, eventKey, language?, variables?,
 message? }`; identical sends to the same recipient are suppressed, so
 event handlers and app triggers never double-text a customer. To skip the
-app, delete `protecta/sms` or sync only `protecta/app` with the twenty CLI.
+app, delete `protecta/sms` or sync only `protecta/app` (`./twenty.sh app`).
+
+Sync either standalone app on its own with `./twenty.sh docgen` or
+`./twenty.sh sms`; never with a bare `npx twenty`, which resolves the name from
+the registry (unrelated `twenty` package, no executable) and reports
+`could not determine executable to run` when the app's dependencies are missing.
 
 ## Smoke-test in a disposable workspace / provider sandbox
 

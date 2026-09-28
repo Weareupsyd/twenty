@@ -71,5 +71,17 @@ events resolve and log nothing, and the API answers
 ## Install
 
 `protecta/start.sh` syncs this app together with Protecta and the Document
-Generator. On its own: `cd protecta/sms/app && npm install --legacy-peer-deps && npx twenty apply .`
+Generator. On its own, from `protecta/`:
+
+```bash
+./twenty.sh sms              # install what is missing, then apply sms/app
+./twenty.sh sms plan .       # any other twenty subcommand, run in sms/app
+```
+
+`./twenty.sh` always runs this app's own CLI (`sms/app/node_modules/.bin/twenty`)
+and installs the dependencies first when they are missing. Do **not** reach for a
+bare `npx twenty` instead: in a folder without `node_modules` npm resolves that
+name from the registry, picks the unrelated `twenty` package and stops with
+`could not determine executable to run`, which hides the real cause.
+
 Tests: `npm test`. Build: `npm run build`.

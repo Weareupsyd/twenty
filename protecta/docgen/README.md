@@ -79,3 +79,15 @@ that renderer can be added without changing records or routes.
 npm install
 npm run check   # typecheck + unit tests + manifest build
 ```
+
+Syncing this app on its own, from `protecta/`:
+
+```bash
+./twenty.sh docgen           # install what is missing, then apply docgen/app
+./twenty.sh docgen plan .    # any other twenty subcommand, run in docgen/app
+```
+
+Always go through the app's own CLI (`docgen/app/node_modules/.bin/twenty`). A
+bare `npx twenty` does not fail with "not installed": npm looks the name up on
+the registry, finds the unrelated `twenty` package and stops with
+`could not determine executable to run`.

@@ -344,6 +344,7 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | --- | --- |
 | Install or redo everything | `./install.sh` |
 | Rebuild and sync | `./start.sh` |
+| Sync one app on its own | `./twenty.sh sms` (also `app`, `docgen` or a path) |
 | Sync and watch source changes | `./start.sh --watch` |
 | Use a custom port | `./start.sh --port 3000` |
 | Rotate the workspace API key | `./start.sh --new-api-key` |
@@ -390,6 +391,12 @@ reset as part of the fresh-checkout procedure above.
 
 - `app/` is not a root monorepo workspace member. Install its dependencies from
   `protecta/app`, not by installing the entire repository at its root.
+- `./twenty.sh app|docgen|sms` runs the CLI that belongs to that app
+  (`<app>/node_modules/.bin/twenty`), installing the dependencies first when they
+  are missing, and re-running under Node 24 when the system Node is older. A bare
+  `npx twenty` is a different program: without `node_modules` npm resolves the
+  name from the registry, finds the unrelated `twenty` package and fails with
+  `could not determine executable to run` instead of saying the CLI is missing.
 - `start.sh` starts/syncs this app; it does not build all of Twenty from source.
 - Docker publishes port 2020 on all interfaces by default. Keep access restricted
   and use HTTPS/SSH tunneling as appropriate.

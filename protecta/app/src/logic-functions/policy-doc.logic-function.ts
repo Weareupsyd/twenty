@@ -11,14 +11,31 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   if (!ref) {
     return htmlResponse(renderErrorPage('Missing reference', 'Provide ?ref=<policyNo>.'), 400);
   }
-  const policy = await findPolicyByNo(new CoreDbClient(), ref);
+  const db = new CoreDbClient();
+  const policy = await findPolicyByNo(db, ref);
   if (!policy) {
     return htmlResponse(
       renderErrorPage('Policy not found', `No policy with number ${ref}.`),
       404,
     );
   }
-  return htmlResponse(renderPolicyPage(policy));
+  // Generated documents come from the optional Document Generator app;
+  // when it is not installed the lookup simply finds nothing.
+  let documents: { reference: string }[] = [];
+  try {
+    const rows = await db.findMany(
+      'generatedDocuments',
+      {
+        filter: { policyNo: { eq: ref }, status: { eq: 'GENERATED' } },
+        first: 5,
+      },
+      ['reference'],
+    );
+    documents = rows.map((row) => ({ reference: String(row.reference) }));
+  } catch {
+    documents = [];
+  }
+  return htmlResponse(renderPolicyPage(policy, documents));
 };
 
 export default defineLogicFunction({

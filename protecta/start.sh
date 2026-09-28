@@ -184,6 +184,26 @@ EOF
   fi
 fi
 
+# --- Sync the Document Generator app -----------------------------------------
+#
+# A standalone app linked to Protecta through workspace events: it generates
+# policy certificate documents (PDF + Word) when policies are issued.
+
+DOCGEN_DIR="$SCRIPT_DIR/docgen/app"
+
+if [[ -d "$DOCGEN_DIR" ]]; then
+  step "Syncing Document Generator app"
+  if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
+    info "skipping dependency install (SKIP_INSTALL=1)"
+  elif [[ ! -x "$DOCGEN_DIR/node_modules/.bin/twenty" ]]; then
+    (cd "$DOCGEN_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
+    info "installed with npm"
+  else
+    info "dependencies are up to date, skipping install"
+  fi
+  "$TWENTY" apply "$DOCGEN_DIR"
+fi
+
 # --- Sync the app ------------------------------------------------------------
 #
 # `apply` builds the app and syncs it once. `dev` does the same and then watches
@@ -207,7 +227,9 @@ $(printf '\033[1;32m==> Ready\033[0m')
     Login:      tim@apple.dev / tim@apple.dev
 
     App:        protecta-bode (synced from $APP_DIR)
+    Docs app:   Document Generator (synced from $DOCGEN_DIR)
     Landing:    $SERVER_URL/s/protecta/
+    Documents:  $SERVER_URL/s/docgen/documents/view?policyNo=<policy no>
     WhatsApp:   Settings → WhatsApp bot (Evolution API)
     Ollama:     ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     Stop:       $TWENTY docker:stop

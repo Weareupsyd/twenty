@@ -65,7 +65,10 @@ ${quote.status === 'QUOTED' ? `<a class="cta" href="${escapeHtml(payUrl)}">Pay w
 <p class="muted">Questions? WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')}.</p>`,
   );
 
-export const renderPolicyPage = (policy: RecordData): string =>
+export const renderPolicyPage = (
+  policy: RecordData,
+  documents: { reference: string }[] = [],
+): string =>
   shell(
     `Policy ${policy.policyNo}`,
     `
@@ -78,6 +81,16 @@ export const renderPolicyPage = (policy: RecordData): string =>
   <div class="row"><span>Cover from</span><span>${escapeHtml(String(policy.periodStart ?? ''))}</span></div>
   <div class="row"><span>Cover until</span><span>${escapeHtml(String(policy.periodEnd ?? ''))}</span></div>
 </div>
+${
+  documents.length > 0
+    ? `<h2>Documents</h2><div class="rows">${documents
+        .map(
+          (document) =>
+            `<div class="row"><span>${escapeHtml(document.reference)}</span><span><a href="/s/docgen/documents/view?ref=${encodeURIComponent(document.reference)}">PDF</a> · <a href="/s/docgen/documents/docx?ref=${encodeURIComponent(document.reference)}">Word</a></span></div>`,
+        )
+        .join('')}</div>`
+    : ''
+}
 <div class="note">Keep this page as proof of cover. For claims, WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')} or reply <b>4</b> to the Protecta bot.</div>`,
   );
 

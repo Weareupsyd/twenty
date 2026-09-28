@@ -65,6 +65,18 @@ not in source files. Application variables include pricing and `PUBLIC_BASE_URL`
 Secrets for different purposes must differ. An unset provider remains
 unconfigured; it does not simulate a payment or authenticate a customer.
 
+## Document Generator app (`protecta/docgen`)
+
+`start.sh` also syncs the standalone **Document Generator** app, which is
+linked to Protecta through workspace events: when a policy is issued it
+generates the policy certificate document (PDF and Word) from a template
+(`{{placeholder}}` convention — see `docgen/README.md`). The original Word
+policy wording is not in the repo yet; recreate it as a template body when
+it arrives. Documents are served at `/s/docgen/documents/view?policyNo=...`
+(PDF) and `/s/docgen/documents/docx?policyNo=...` (Word); the Protecta
+policy page links to them automatically. To skip the app, delete
+`protecta/docgen` or sync only `protecta/app` with the twenty CLI.
+
 ## Smoke-test in a disposable workspace / provider sandbox
 
 - Open `/s/protecta/health` and check configuration flags. These flags report

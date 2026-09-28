@@ -145,6 +145,40 @@ elif [[ "$(cat "$STAMP")" != "$MANIFEST_HASH" ]]; then
   NEEDS_INSTALL=1
 fi
 
+# npm ci installs exactly what package-lock.json pins and refuses to run as soon
+# as the lockfile and package.json disagree ("... can only install packages when
+# your package.json and package-lock.json ... are in sync", "Missing: x@1 from
+# lock file"). That is only a stale lockfile: npm install rewrites it to match,
+# so use that (loudly) instead of stopping at a failure the user cannot read.
+npm_ci_or_repair() {
+  local log rc
+  log="$(mktemp)"
+
+  if (cd "$APP_DIR" && npm ci --no-audit --no-fund) 2>&1 | tee "$log"; then
+    rm -f "$log"
+    return 0
+  fi
+  rc="${PIPESTATUS[0]}"
+
+  if ! grep -qiE 'can only install packages|are in sync|from lock file|does not satisfy' "$log"; then
+    rm -f "$log"
+    return "$rc"
+  fi
+
+  warn "package-lock.json is out of sync with package.json (npm ci exited with $rc)"
+  warn "repairing it with: npm install --no-audit --no-fund"
+  if (cd "$APP_DIR" && npm install --no-audit --no-fund) 2>&1 | tee -a "$log"; then
+    warn "the repaired lockfile is $APP_DIR/package-lock.json; commit it there too,"
+    warn "otherwise the next npm ci on a clean checkout fails again."
+    rm -f "$log"
+    return 0
+  fi
+  rc="${PIPESTATUS[0]}"
+
+  rm -f "$log"
+  return "$rc"
+}
+
 if (( NEEDS_INSTALL )); then
   if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
     warn "dependencies are missing, but SKIP_INSTALL=1"
@@ -164,7 +198,7 @@ if (( NEEDS_INSTALL )); then
       npm)
         command -v npm >/dev/null || die "PKG_MANAGER=npm but npm is missing."
         if [[ "$APP_KIND" == "main" && -f "$APP_DIR/package-lock.json" ]]; then
-          (cd "$APP_DIR" && npm ci --no-audit --no-fund)
+          npm_ci_or_repair
         elif [[ "$APP_KIND" == "linked" ]]; then
           # The same flags start.sh uses for the linked apps.
           (cd "$APP_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)

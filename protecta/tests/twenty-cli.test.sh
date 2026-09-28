@@ -30,6 +30,14 @@ MOCK
 cat > "$TMP/bin/npm" <<'MOCK'
 #!/usr/bin/env bash
 printf 'npm %s (cwd=%s)\n' "$*" "$PWD" >> "$COMMAND_LOG"
+# TEST_LOCK_STALE=1: npm ci refuses a lockfile that does not match package.json.
+if [[ "$*" == ci* && "${TEST_LOCK_STALE:-0}" == 1 ]]; then
+  cat >&2 <<'ERR'
+npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+npm error Missing: @hugeicons/react@1.1.10 from lock file
+ERR
+  exit 1
+fi
 if [[ "$*" == *install* || "$*" == *ci* ]]; then
   [[ "${TEST_INSTALL_FAILS:-0}" == 1 ]] && exit 1
   [[ "${TEST_NO_CLI:-0}" == 1 ]] && exit 0
@@ -112,6 +120,21 @@ run app plan app
 grep -q "^npm ci --no-audit --no-fund (cwd=$BASE/app)$" "$COMMAND_LOG"
 grep -q "^cli plan app (cwd=$BASE/app)$" "$COMMAND_LOG"
 echo 'PASS app: uses npm ci and the Protecta CLI'
+
+# 4b. A stale lockfile is repaired, not fatal -----------------------------------
+# npm ci stops with "can only install packages when your package.json and
+# package-lock.json ... are in sync" when the lockfile was never regenerated.
+# npm install rewrites it, so the sync still happens.
+reset_apps
+export TEST_LOCK_STALE=1
+run app plan app
+unset TEST_LOCK_STALE
+grep -q 'package-lock.json is out of sync with package.json' "$TMP/output"
+grep -q 'repairing it with: npm install' "$TMP/output"
+grep -q "^npm ci --no-audit --no-fund (cwd=$BASE/app)$" "$COMMAND_LOG"
+grep -q "^npm install --no-audit --no-fund (cwd=$BASE/app)$" "$COMMAND_LOG"
+grep -q "^cli plan app (cwd=$BASE/app)$" "$COMMAND_LOG"
+echo 'PASS stale lockfile: npm install repairs it, then the app is synced'
 
 # 5. An install that produces no CLI is reported, not hidden --------------------
 reset_apps

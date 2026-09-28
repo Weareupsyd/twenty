@@ -449,6 +449,45 @@ info "docker $(docker --version | awk '{print $3}') (daemon up)"
 # The build resolves tsc and twenty-client-sdk from the app's own node_modules,
 # so this install is mandatory before any sync will work.
 
+# npm ci installs exactly what package-lock.json pins and refuses to run as soon
+# as the lockfile and package.json disagree:
+#
+#   `npm ci` can only install packages when your package.json and
+#   package-lock.json or npm-shrinkwrap.json are in sync.
+#   Missing: @hugeicons/core-free-icons@3.3.0 from lock file
+#
+# That is a hard failure, but only a stale lockfile: npm install rewrites the
+# lockfile to match, so use it (loudly) for that one failure mode instead of
+# aborting the deployment. Any other npm ci failure is reported unchanged.
+npm_ci_or_repair() {
+  local log rc
+  log="$(mktemp)"
+
+  if (cd "$APP_DIR" && npm ci --no-audit --no-fund) 2>&1 | tee "$log"; then
+    rm -f "$log"
+    return 0
+  fi
+  rc="${PIPESTATUS[0]}"
+
+  if ! grep -qiE 'can only install packages|are in sync|from lock file|does not satisfy' "$log"; then
+    rm -f "$log"
+    return "$rc"
+  fi
+
+  warn "package-lock.json is out of sync with package.json (npm ci exited with $rc)"
+  warn "repairing it with: npm install --no-audit --no-fund"
+  if (cd "$APP_DIR" && npm install --no-audit --no-fund) 2>&1 | tee -a "$log"; then
+    warn "the repaired lockfile is $APP_DIR/package-lock.json; commit it there too,"
+    warn "otherwise the next npm ci on a clean checkout fails again."
+    rm -f "$log"
+    return 0
+  fi
+  rc="${PIPESTATUS[0]}"
+
+  rm -f "$log"
+  return "$rc"
+}
+
 if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
   step "Skipping dependency install (SKIP_INSTALL=1)"
 else
@@ -483,7 +522,7 @@ else
       npm)
         command -v npm >/dev/null || die "PKG_MANAGER=npm but npm is missing."
         if [[ -f "$APP_DIR/package-lock.json" ]]; then
-          (cd "$APP_DIR" && npm ci --no-audit --no-fund)
+          npm_ci_or_repair
         else
           (cd "$APP_DIR" && npm install --no-audit --no-fund)
         fi

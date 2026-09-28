@@ -2,6 +2,8 @@
 // For .xlsx we also serve HTML with openxml mime and .xlsx extension — Excel warns but opens.
 // For strict CSV, we use RFC 4180.
 
+import { Response } from 'twenty-sdk/logic-function';
+
 export type Column = { key: string; header: string; format?: (v: unknown, row: Record<string, unknown>) => string };
 
 const csvEscape = (value: string): string => {

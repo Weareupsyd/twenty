@@ -28,7 +28,7 @@ whole chain without asking anything:
 | Source | When the script runs outside a checkout it clones `main` into `~/twenty-protecta` first; later runs update that checkout |
 | Node 24 | Uses the system Node when it is 24.5+, re-runs under Node 24 through `npx` when it is older, and downloads Node 24 to `~/.twenty-node24` when Node is missing entirely |
 | Docker | Installs it with the system package manager (`docker.io`, `docker`, `apk`, ...) when missing, then enables and starts the daemon |
-| Dependencies | `npm ci` for `app/`, `docgen/app` and `sms/app` |
+| Dependencies | `npm ci` for `app/`, `docgen/app` and `sms/app`; when a lockfile no longer matches its `package.json`, it is repaired with `npm install` (with a warning) instead of stopping the install |
 | Server | Starts Twenty in the `twenty-app-dev` container, including a slow first boot |
 | API key | Reuses `TWENTY_API_KEY` or `.twenty-api-key`, otherwise mints one inside the container and saves it (chmod 600, git-ignored) |
 | Apps | Syncs Document Generator, SMS Sender and Protecta Bode into the workspace |
@@ -401,6 +401,12 @@ reset as part of the fresh-checkout procedure above.
   `npx twenty` is a different program: without `node_modules` npm resolves the
   name from the registry, finds the unrelated `twenty` package and fails with
   `could not determine executable to run` instead of saying the CLI is missing.
+- Every app is installed with `npm ci`, so its `package-lock.json` has to match
+  its `package.json`. `tests/lockfiles.test.sh` (part of `npm run check`) fails
+  when one does not, and `start.sh`/`twenty.sh` repair a stale lockfile with
+  `npm install` instead of aborting the deployment: `npm ci` would otherwise
+  stop with ``can only install packages when your package.json and
+  package-lock.json ... are in sync``. Commit the regenerated lockfile.
 - `start.sh` starts/syncs this app; it does not build all of Twenty from source.
 - Docker publishes port 2020 on all interfaces by default. Keep access restricted
   and use HTTPS/SSH tunneling as appropriate.

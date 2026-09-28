@@ -19,6 +19,15 @@ if [[ "$1" == "-v" ]]; then echo "v${TEST_NODE_MAJOR:-24}.10.0"; exit 0; fi
 MOCK
 cat > "$TMP/bin/npm" <<'MOCK'
 #!/usr/bin/env bash
+printf 'npm %s (cwd=%s)\n' "$*" "$PWD" >> "$COMMAND_LOG"
+# TEST_LOCK_STALE=1: npm ci refuses a lockfile that does not match package.json.
+if [[ "$*" == ci* && "${TEST_LOCK_STALE:-0}" == 1 ]]; then
+  cat >&2 <<'ERR'
+npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+npm error Missing: @hugeicons/react@1.1.10 from lock file
+ERR
+  exit 1
+fi
 exit 0
 MOCK
 cat > "$TMP/bin/npx" <<'MOCK'
@@ -315,3 +324,21 @@ mint_line="$(grep -n 'create-api-key --stdout' "$COMMAND_LOG" | cut -d: -f1 | he
 grep -q "remote:add .*--api-key $MINTED_TOKEN" "$COMMAND_LOG"
 grep -q '^apply ' "$COMMAND_LOG"
 echo 'PASS no key + unfinished seed: re-seeds before minting'
+
+# 18. A stale lockfile is repaired instead of stopping the deployment ---------
+# npm ci exits 1 when package-lock.json and package.json disagree. npm install
+# rewrites the lockfile, so the deployment continues (this is what a Protecta
+# checkout with an unregenerated lockfile used to break).
+reset_env
+printf '{ "name": "protecta-bode", "version": "1.0.0" }\n' > "$TMP/protecta/app/package.json"
+printf '{ "name": "protecta-bode", "version": "1.0.0", "lockfileVersion": 3 }\n' > "$TMP/protecta/app/package-lock.json"
+export SKIP_INSTALL=0 TEST_LOCK_STALE=1
+touch "$TMP/protecta/app/package.json"          # newer than the installed CLI
+run
+unset TEST_LOCK_STALE SKIP_INSTALL
+grep -q 'package-lock.json is out of sync with package.json' "$TMP/output"
+grep -q 'repairing it with: npm install' "$TMP/output"
+grep -q "^npm ci --no-audit --no-fund (cwd=$TMP/protecta/app)$" "$COMMAND_LOG"
+grep -q "^npm install --no-audit --no-fund (cwd=$TMP/protecta/app)$" "$COMMAND_LOG"
+grep -q '^apply ' "$COMMAND_LOG"
+echo 'PASS stale lockfile: npm install repairs it, then the app still syncs'

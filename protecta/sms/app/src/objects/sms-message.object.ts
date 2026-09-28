@@ -40,11 +40,11 @@ export default defineObject({
       type: FieldType.SELECT,
       description: 'Event that triggered this message',
       options: [
-        { value: 'quote_issued', label: 'Quote issued', position: 0, color: 'green' },
-        { value: 'policy_issued', label: 'Policy issued', position: 1, color: 'blue' },
-        { value: 'claim_created', label: 'Claim created', position: 2, color: 'orange' },
-        { value: 'renewal_quote', label: 'Renewal quote', position: 3, color: 'turquoise' },
-        { value: 'custom', label: 'Custom', position: 4, color: 'gray' },
+        { value: 'QUOTE_ISSUED', label: 'Quote issued', position: 0, color: 'green' },
+        { value: 'POLICY_ISSUED', label: 'Policy issued', position: 1, color: 'blue' },
+        { value: 'CLAIM_CREATED', label: 'Claim created', position: 2, color: 'orange' },
+        { value: 'RENEWAL_QUOTE', label: 'Renewal quote', position: 3, color: 'turquoise' },
+        { value: 'CUSTOM', label: 'Custom', position: 4, color: 'gray' },
       ],
     },
     {
@@ -54,10 +54,10 @@ export default defineObject({
       type: FieldType.SELECT,
       description: 'Language of the rendered message',
       options: [
-        { value: 'en', label: 'English', position: 0, color: 'blue' },
-        { value: 'lg', label: 'Luganda', position: 1, color: 'green' },
-        { value: 'sw', label: 'Swahili', position: 2, color: 'orange' },
-        { value: 'run', label: 'Runyankole', position: 3, color: 'turquoise' },
+        { value: 'EN', label: 'English', position: 0, color: 'blue' },
+        { value: 'LG', label: 'Luganda', position: 1, color: 'green' },
+        { value: 'SW', label: 'Swahili', position: 2, color: 'orange' },
+        { value: 'RUN', label: 'Runyankole', position: 3, color: 'turquoise' },
       ],
     },
     {

@@ -26,8 +26,8 @@ export default defineApplication({
       universalIdentifier: VAR_SMS_DEFAULT_LANGUAGE,
       label: 'Default language',
       description:
-        'Template language used when no language is requested (e.g. en, lg, sw).',
-      value: 'en',
+        'Template language used when no language is requested (e.g. EN, LG, SW).',
+      value: 'EN',
       isSecret: false,
     },
   },

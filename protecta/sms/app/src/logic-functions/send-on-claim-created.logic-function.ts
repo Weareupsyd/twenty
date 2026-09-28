@@ -23,7 +23,7 @@ export const handler = async (
   if (!recipient) return { processed: false, reason: 'no reporterPhone' };
   const outcome = await deliverSms(new CoreDbClient(), {
     recipient,
-    eventKey: 'claim_created',
+    eventKey: 'CLAIM_CREATED',
     variables: {
       claimRef: fmt(claim.claimRef),
       policyNo: fmt(claim.policyNo),
@@ -42,7 +42,7 @@ export const handler = async (
 export default defineLogicFunction({
   universalIdentifier: SMS_ON_CLAIM,
   name: 'send-on-claim-created',
-  description: 'Sends the claim_created SMS when a Protecta claim is created.',
+  description: 'Sends the CLAIM_CREATED SMS when a Protecta claim is created.',
   timeoutSeconds: 30,
   handler,
   databaseEventTriggerSettings: {

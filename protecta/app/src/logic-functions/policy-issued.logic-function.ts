@@ -30,7 +30,7 @@ export const notifySms = async (input: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         phone: input.phone,
-        eventKey: 'policy_issued',
+        eventKey: 'POLICY_ISSUED',
         variables: input.variables,
       }),
     });

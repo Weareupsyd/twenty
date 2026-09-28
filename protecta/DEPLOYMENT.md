@@ -97,7 +97,7 @@ per-language `Sms template` records (`{{placeholder}}` convention — see
 `sms/README.md`); no template means no send. Configure `EGOSMS_USERNAME`
 and `EGOSMS_PASSWORD` (secret) on the app before sending; sender id
 defaults to `Upsyd` (`EGOSMS_SENDER_ID`) and the fallback language is
-`en` (`SMS_DEFAULT_LANGUAGE`). Every send is logged as an `Sms message`
+`EN` (`SMS_DEFAULT_LANGUAGE`). Every send is logged as an `Sms message`
 record with a `SMS-XXXXXX` reference and delivery status. Other apps
 (Protecta Bode does this on policy issue) can trigger sends through
 `POST /s/sms/send` with `{ phone, eventKey, language?, variables?,

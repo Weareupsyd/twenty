@@ -39,7 +39,7 @@ export const handler = async (
 
   const outcome = await deliverSms(db, {
     recipient,
-    eventKey: 'policy_issued',
+    eventKey: 'POLICY_ISSUED',
     variables: {
       policyNo,
       quoteRef,
@@ -60,7 +60,7 @@ export const handler = async (
 export default defineLogicFunction({
   universalIdentifier: SMS_ON_POLICY,
   name: 'send-on-policy-created',
-  description: 'Sends the policy_issued SMS when a Protecta policy is created.',
+  description: 'Sends the POLICY_ISSUED SMS when a Protecta policy is created.',
   timeoutSeconds: 30,
   handler,
   databaseEventTriggerSettings: {

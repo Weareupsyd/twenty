@@ -68,7 +68,7 @@ describe('policy-issued', () => {
     expect(String(url)).toContain('/s/sms/send');
     const body = JSON.parse(String(init.body));
     expect(body.phone).toBe('0772000000');
-    expect(body.eventKey).toBe('policy_issued');
+    expect(body.eventKey).toBe('POLICY_ISSUED');
     expect(body.variables).toMatchObject({
       policyNo: 'PB-2026-004213',
       quoteRef: '123456789012345',

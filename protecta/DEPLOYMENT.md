@@ -32,7 +32,7 @@
    key handling) in one run, including Node/Docker provisioning and a final
    verification that all three apps are registered. The steps below are the
    manual version of the same procedure. On a machine with nothing installed:
-   `curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/arena/01a0e86f-twenty/protecta/install.sh | bash`
+   `curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/main/protecta/install.sh | bash`
 1. Back up the workspace database and persistent storage if it contains data.
    A source-folder backup does NOT back up Docker volumes or database records.
 2. Use Node 24.5+ (24.x). Run `npm ci` and `npm run check` in `protecta/app`

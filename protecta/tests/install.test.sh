@@ -151,6 +151,7 @@ case "$1" in
     ;;
   exec)
     printf 'docker exec %s\n' "$*" >> "$COMMAND_LOG"
+    if [[ "$*" == *activationStatus* ]]; then printf '%s\n' "${TEST_WORKSPACE_STATE:-ACTIVE}"; exit 0; fi
     if [[ "$*" == *psql* ]]; then printf '%s\n' "${TEST_APPS:-}"; fi
     ;;
 esac
@@ -161,7 +162,7 @@ export TMP_DAEMON_DOWN="$TMP/daemon-down"
 
 reset() {
   unset TEST_NODE TEST_HEALTH TEST_PORT TEST_APPS TEST_START_FAIL SKIP_DOCKER_INSTALL SKIP_NODE_INSTALL \
-    CLEAN_ENV 2>/dev/null || true
+    TEST_WORKSPACE_STATE CLEAN_ENV 2>/dev/null || true
   export TEST_APPS=$'f7d814ab-cbfd-48bc-9ee0-06a06daae1a4|Protecta Bode\nc92c1ffa-0652-4380-b82d-1eabb94945f5|Document Generator\nad58822e-4e44-41c2-8e48-ca60f5066f6c|SMS Messaging'
   export PATH="$TMP/bin:$TMP/node-tools:$TMP/tools:/usr/bin:/bin"
   rm -f "$TMP_DAEMON_DOWN"
@@ -276,3 +277,19 @@ run
 grep -q 'Install complete' "$TMP/out"
 [[ "$(grep -c 'start.sh' "$COMMAND_LOG")" -ge 2 ]]
 echo 'PASS idempotent: a second install run succeeds against the same checkout'
+
+# --- 11. --reseed is forwarded to start.sh -----------------------------------
+reset
+run --port 3030 --reseed
+grep -q 'start.sh --port 3030 --reseed' "$COMMAND_LOG"
+grep -q 'Install complete' "$TMP/out"
+echo 'PASS --reseed: forwarded to start.sh'
+
+# --- 12. a missing app on an unfinished seed points at the repair ------------
+reset
+export TEST_APPS=$'f7d814ab-cbfd-48bc-9ee0-06a06daae1a4|Protecta Bode' TEST_WORKSPACE_STATE=PENDING_CREATION
+if run; then echo 'Expected verification failure'; exit 1; fi
+grep -q 'still in PENDING_CREATION' "$TMP/err"
+grep -q 'the first-boot seed never finished' "$TMP/err"
+grep -q './start.sh --reseed' "$TMP/err"
+echo 'PASS verification: an unfinished seed is named as the cause'

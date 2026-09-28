@@ -11,6 +11,8 @@ cp "$ROOT/create-api-key.sh" "$TMP/create-api-key.sh"
 export COMMAND_LOG="$TMP/commands"
 export TEST_VALID_KEY="eyJhbGciOiJIUzI1NiJ9.good.token"
 export TEST_TOKEN="eyJhbGciOiJIUzI1NiJ9.fresh.token"
+# A rejected key, shaped like a Twenty API key so its workspace can be decoded.
+export TEST_BAD_KEY='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyMDIwMjAyMC05ZTNiLTQ2ZDQtYTU1Ni04OGI5ZGRjMmIwMzQiLCJ3b3Jrc3BhY2VJZCI6IjIwMjAyMDIwLTFjMjUtNGQwMi1iZjI1LTZhZWNjZjdlYTQxOSIsInR5cGUiOiJBQ0NFU1MifQ.signature'
 export PATH="$TMP/bin:$PATH"
 DEV_WS="20202020-1c25-4d02-bf25-6aeccf7ea419"
 : > "$COMMAND_LOG"
@@ -29,6 +31,15 @@ case "$1" in
     ;;
   exec)
     printf '%s\n' "$*" >> "$COMMAND_LOG"
+    if [[ "$*" == *"SELECT 'meta'"* ]]; then
+      printf '%s\n' "${TEST_SEED_ROWS:-meta|1|||}"
+      [[ -n "${TEST_SEED_ROWS:-}" ]] || printf '%s\n' 'row|20202020-1c25-4d02-bf25-6aeccf7ea419|Apple|ACTIVE|workspace_test'
+      exit 0
+    fi
+    if [[ "$*" == *workspaceMember* ]]; then
+      echo "${TEST_MEMBER_COUNT:-12}"
+      exit 0
+    fi
     if [[ "$*" == *psql* ]]; then
       printf '%s\n' "${TEST_WORKSPACES:-20202020-1c25-4d02-bf25-6aeccf7ea419|Apple}"
       exit 0
@@ -195,3 +206,20 @@ env TEST_WORKSPACES=$'11111111-2222-3333-4444-555555555555|Protecta\n66666666-77
 grep -q 'Protecta  11111111-2222-3333-4444-555555555555' "$TMP/err"
 grep -q 'Bode  66666666-7777-8888-9999-000000000000' "$TMP/err"
 echo 'PASS --list: prints the workspaces held by the container'
+
+# --- --list: an unfinished first-boot seed is called out ---------------------
+env TEST_WORKSPACES='20202020-1c25-4d02-bf25-6aeccf7ea419|Apple|PENDING_CREATION' \
+  bash "$script" --list > "$TMP/out" 2> "$TMP/err"
+grep -q 'PENDING_CREATION, first-boot seed unfinished' "$TMP/err"
+echo 'PASS --list: flags a workspace the seed never activated'
+
+# --- --check: a rejected key is explained together with the container state --
+: > "$COMMAND_LOG"
+if env TWENTY_API_KEY="$TEST_BAD_KEY" TEST_SEED_ROWS="$(printf '%s\n' 'meta|1|||' 'row|20202020-1c25-4d02-bf25-6aeccf7ea419|Apple|PENDING_CREATION|workspace_test')" \
+    bash "$script" --check --key-file "$key_file" > "$TMP/out" 2> "$TMP/err"; then
+  echo 'Expected --check to fail for a rejected key'; exit 1
+fi
+grep -q 'the key was issued for workspace' "$TMP/err"
+grep -q 'still in PENDING_CREATION' "$TMP/err"
+grep -q 'repair it with: ./start.sh --reseed' "$TMP/err"
+echo 'PASS --check: rejected key on an unfinished seed points at the repair'

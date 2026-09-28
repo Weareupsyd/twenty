@@ -10,7 +10,7 @@ workspace. A healthy Twenty server alone does **not** mean Protecta is installed
 ## One command on a fresh VPS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/arena/01a0e86f-twenty/protecta/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/main/protecta/install.sh | bash
 ```
 
 Or, from a checkout you already have:
@@ -25,7 +25,7 @@ whole chain without asking anything:
 
 | Step | What it does |
 | --- | --- |
-| Source | When the script runs outside a checkout it clones `arena/01a0e86f-twenty` into `~/twenty-protecta` first; later runs update that checkout |
+| Source | When the script runs outside a checkout it clones `main` into `~/twenty-protecta` first; later runs update that checkout |
 | Node 24 | Uses the system Node when it is 24.5+, re-runs under Node 24 through `npx` when it is older, and downloads Node 24 to `~/.twenty-node24` when Node is missing entirely |
 | Docker | Installs it with the system package manager (`docker.io`, `docker`, `apk`, ...) when missing, then enables and starts the daemon |
 | Dependencies | `npm ci` for `app/`, `docgen/app` and `sms/app` |
@@ -38,10 +38,11 @@ whole chain without asking anything:
 | --- | --- |
 | `--port 3000` | Publish the server on another port (default 2020) |
 | `--watch` | Keep watching `app/src` and re-sync after the install |
-| `--branch <ref>` | Branch to clone in bootstrap mode (default `arena/01a0e86f-twenty`) |
+| `--branch <ref>` | Branch to clone in bootstrap mode (default `main`) |
 | `--dir <path>` | Checkout to create/use in bootstrap mode (default `~/twenty-protecta`) |
 | `--skip-prereqs` | Do not touch Node or Docker |
 | `--no-verify` | Skip the post-install verification |
+| `--reseed` | Re-run the Twenty dev seed before deploying (see step 3) |
 | `--help` | List the options |
 
 Re-running is safe: every step is idempotent, and existing data, containers and
@@ -72,23 +73,22 @@ contains important data. Keeping the old source directory is **not** a database
 backup. These instructions do not rebuild the Twenty image from the monorepo;
 they rebuild Protecta against the existing Twenty server.
 
-### 1. Clone the repaired branch into a new folder
+### 1. Clone the source into a new folder
 
 Run on the VPS:
 
 ```bash
 cd ~
-git clone --single-branch --branch arena/01a0e86f-twenty \
+git clone --single-branch --branch main \
   https://github.com/Weareupsyd/twenty.git twenty-fresh
 ```
 
-**Use a repair branch explicitly.** The repair and these instructions are
-published on `arena/01a0e86f-twenty`; a default clone of `main` may not contain them yet. Repair
-branches are named `arena/<id>-twenty`, one per repair round, so if the
-repository lists a newer one, use that instead. Already have a checkout?
-`git fetch origin arena/01a0e86f-twenty && git checkout arena/01a0e86f-twenty` gets the same files.
-If `~/twenty-fresh` already exists, choose another unused directory and adjust
-the following paths. Do not delete a folder just to make this command succeed.
+If your repair round published its own branch — they are named
+`arena/<id>-twenty` — pass it instead with `--branch <ref>` (or
+`git fetch origin <ref> && git checkout <ref>` on an existing checkout), and use
+`--branch <ref>` with `install.sh` in bootstrap mode. If `~/twenty-fresh`
+already exists, choose another unused directory and adjust the following paths.
+Do not delete a folder just to make this command succeed.
 
 ### 2. Install dependencies and check the entire app
 
@@ -143,6 +143,22 @@ docker logs --tail 200 twenty-app-dev
 
 Do not create another container if an existing one is merely still seeding.
 `start.sh` also allows extra startup time when the container remains running.
+
+**When the seed really did fail.** The watch printing
+`Seeding workspace data... Failed` only means the three-minute look-out ended.
+If the seed never finishes at all, the container still becomes healthy but holds
+no workspace, and every API key is then rejected with
+`You must be authenticated` — the key is not the problem. Ask the container what
+it holds and repair it, without deleting anything:
+
+```bash
+cd ~/twenty-fresh/protecta
+./create-api-key.sh --list     # workspaces, with their activation status
+./start.sh --reseed            # re-run the dev seed, then deploy as usual
+```
+
+`start.sh` performs that check by itself before it mints a key, so a plain
+re-run also recovers when the seed was the cause.
 
 ### 4. Get a workspace API key (no browser required)
 
@@ -309,7 +325,7 @@ source trees.
 
 ```bash
 cd ~/twenty-fresh
-git pull --ff-only origin arena/01a0e86f-twenty
+git pull --ff-only          # your checkout's branch; add "origin main" if you cloned main
 cd protecta
 ./start.sh          # deploy the current source
 # or, to redo prerequisites and the verification as well:
@@ -331,6 +347,7 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | Sync and watch source changes | `./start.sh --watch` |
 | Use a custom port | `./start.sh --port 3000` |
 | Rotate the workspace API key | `./start.sh --new-api-key` |
+| Repair a failed first-boot seed | `./start.sh --reseed` |
 | Mint a key without deploying | `./create-api-key.sh` |
 | Check a key | `./create-api-key.sh --check` |
 | Preview metadata changes | `app/node_modules/.bin/twenty plan app` |

@@ -8,7 +8,7 @@ import {
 } from 'src/lib/crypto';
 import { OTP_MAX_ATTEMPTS, OTP_TTL_SECONDS } from 'src/lib/otp';
 import { normalizeUgPhone } from 'src/lib/phones';
-import { sendWhatsAppText, whatsappConfigFromEnv } from 'src/lib/whatsapp-api';
+import { NOT_CONFIGURED, whatsAppSender } from 'src/lib/whatsapp-transport';
 import { otpMessage } from 'src/lib/whatsapp-text';
 
 export type StateStore = Pick<typeof kv, 'get' | 'set' | 'delete'>;
@@ -61,13 +61,8 @@ export const issueOtp = async (
   const secret = options.secret ?? secretFromEnv();
   const store = options.store ?? kv;
   const now = options.now ?? Date.now();
-  const config = whatsappConfigFromEnv();
-  const send =
-    options.send ??
-    (config
-      ? (to: string, text: string) => sendWhatsAppText(config, to, text)
-      : null);
-  if (!send) throw new Error('WhatsApp OTP delivery is not configured.');
+  const send = options.send ?? (await whatsAppSender(store));
+  if (!send) throw new Error(NOT_CONFIGURED);
   const old = await store.get<Challenge>(phoneKey(phone));
   if (old && now - old.issuedAt < OTP_RESEND_SECONDS * 1000) {
     throw new Error('Please wait 60 seconds before requesting another code.');

@@ -59,6 +59,29 @@ describe('WhatsApp webhook', () => {
       401,
     );
   });
+  it('accepts a signed Evolution API message and rejects a missing key', async () => {
+    vi.stubEnv('EVOLUTION_API_URL', 'http://evolution.local');
+    vi.stubEnv('EVOLUTION_INSTANCE', 'protecta');
+    vi.stubEnv('EVOLUTION_API_KEY', 'evo-key');
+    const body = JSON.stringify({
+      event: 'messages.upsert',
+      apikey: 'evo-key',
+      data: {
+        key: {
+          remoteJid: '256701440613@s.whatsapp.net',
+          fromMe: false,
+          id: 'evo-1',
+        },
+        message: { conversation: 'calculate' },
+      },
+    });
+    expect((await handler(routeEvent({ rawBody: body }))).status).toBe(200);
+    expect(mocked.enqueue).toHaveBeenCalled();
+    mocked.enqueue.mockClear();
+    expect(
+      (await handler(routeEvent({ rawBody: body.replace('evo-key', 'wrong') }))).status,
+    ).toBe(401);
+  });
   it('answers Meta verification using the configured variable name', async () => {
     vi.stubEnv('WHATSAPP_VERIFY', 'verify-test');
     const response = await verifyHandler(

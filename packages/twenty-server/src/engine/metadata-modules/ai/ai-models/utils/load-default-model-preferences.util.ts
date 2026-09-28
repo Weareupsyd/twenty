@@ -17,6 +17,7 @@ export const DEFAULT_MODELS_BY_TIER: Record<AiModelTier, string[]> = {
     'anthropic/claude-sonnet-5@low',
     'xai/grok-4.5@low',
     'mistral/mistral-small-latest@none',
+    'ollama/llama3.2',
   ],
   fast: [
     'openai/gpt-5.6-luna@medium',
@@ -24,6 +25,7 @@ export const DEFAULT_MODELS_BY_TIER: Record<AiModelTier, string[]> = {
     'anthropic/claude-sonnet-5@medium',
     'xai/grok-4.5@medium',
     'mistral/mistral-medium-latest',
+    'ollama/llama3.2',
   ],
   balanced: [
     'openai/gpt-5.6-luna@high',
@@ -31,6 +33,7 @@ export const DEFAULT_MODELS_BY_TIER: Record<AiModelTier, string[]> = {
     'anthropic/claude-sonnet-5@high',
     'xai/grok-4.6@medium',
     'mistral/mistral-large-latest',
+    'ollama/llama3.2',
   ],
   smart: [
     'openai/gpt-5.6-sol@high',
@@ -38,6 +41,7 @@ export const DEFAULT_MODELS_BY_TIER: Record<AiModelTier, string[]> = {
     'anthropic/claude-opus-5@high',
     'xai/grok-4.6@high',
     'mistral/mistral-large-latest',
+    'ollama/llama3.2',
   ],
   extraSmart: [
     'openai/gpt-6-astra@xhigh',
@@ -45,6 +49,7 @@ export const DEFAULT_MODELS_BY_TIER: Record<AiModelTier, string[]> = {
     'anthropic/claude-opus-5-5',
     'xai/grok-4.6@xhigh',
     'mistral/mistral-large-latest',
+    'ollama/llama3.2',
   ],
 };
 

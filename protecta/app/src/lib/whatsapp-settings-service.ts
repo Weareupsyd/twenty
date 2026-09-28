@@ -1,0 +1,139 @@
+import { type StateStore } from 'src/lib/service-otp';
+import {
+  evolutionConnectionState,
+  evolutionConfigFromEnv,
+  setEvolutionWebhook,
+  type EvolutionConfig,
+} from 'src/lib/evolution-api';
+import { whatsappConfigFromEnv } from 'src/lib/whatsapp-api';
+import {
+  loadStoredWhatsAppSettings,
+  maskSecret,
+  WHATSAPP_SETTINGS_KEY,
+  type StoredWhatsAppSettings,
+  type WhatsAppProvider,
+} from 'src/lib/whatsapp-settings';
+
+export const BOT_ROUTES = [
+  '1. Calculate premium — send the car value, get the 1.5% premium',
+  '2. Get cover — make, model, year, plate and name, same as the website',
+  '3. My policies',
+  '4. Pay for a quote',
+  '5. Report a claim',
+  '6. Talk to support',
+];
+
+const clean = (value: unknown): string =>
+  typeof value === 'string' ? value.trim() : '';
+
+export const isWebhookUrl = (value: string): boolean => {
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === 'https:' || url.protocol === 'http:') &&
+      url.pathname.replace(/\/$/, '').endsWith('/s/protecta/whatsapp/webhook')
+    );
+  } catch {
+    return false;
+  }
+};
+
+export const whatsAppSettingsView = async (
+  store: Pick<StateStore, 'get'>,
+) => {
+  const saved = await loadStoredWhatsAppSettings(store);
+  const envEvolution = evolutionConfigFromEnv();
+  const envMeta = whatsappConfigFromEnv();
+  const provider: WhatsAppProvider =
+    saved?.provider ?? (envEvolution ? 'evolution' : envMeta ? 'meta' : 'evolution');
+  const baseUrl = saved?.evolutionBaseUrl || envEvolution?.baseUrl || '';
+  const instance = saved?.evolutionInstance || envEvolution?.instance || '';
+  const apiKey = saved?.evolutionApiKey || envEvolution?.apiKey || '';
+  return {
+    ok: true,
+    provider,
+    webhookPath: '/s/protecta/whatsapp/webhook',
+    botRoutes: BOT_ROUTES,
+    evolution: {
+      baseUrl,
+      instance,
+      apiKeySet: Boolean(apiKey),
+      apiKeyHint: maskSecret(apiKey),
+      source: saved?.evolutionApiKey ? 'settings' : envEvolution ? 'environment' : 'none',
+    },
+    meta: {
+      phoneId: saved?.metaPhoneId || envMeta?.phoneId || '',
+      tokenSet: Boolean(saved?.metaToken || envMeta?.token),
+      tokenHint: maskSecret(saved?.metaToken || envMeta?.token),
+      appSecretSet: Boolean(saved?.metaAppSecret || process.env.WHATSAPP_APP_SECRET),
+      verifyTokenSet: Boolean(saved?.metaVerifyToken || process.env.WHATSAPP_VERIFY),
+    },
+  };
+};
+
+export const saveWhatsAppSettings = async (
+  store: StateStore,
+  body: Record<string, unknown>,
+): Promise<{
+  ok: boolean;
+  error?: string;
+  saved?: boolean;
+  connection?: { ok: boolean; state: string; detail: string };
+  webhook?: { ok: boolean; detail: string };
+}> => {
+  const previous = await loadStoredWhatsAppSettings(store);
+  const provider = clean(body.provider) === 'meta' ? 'meta' : 'evolution';
+  const next: StoredWhatsAppSettings = {
+    provider,
+    evolutionBaseUrl: clean(body.baseUrl) || previous?.evolutionBaseUrl || '',
+    evolutionInstance: clean(body.instance) || previous?.evolutionInstance || '',
+    evolutionApiKey: clean(body.apiKey) || previous?.evolutionApiKey || '',
+    metaToken: clean(body.metaToken) || previous?.metaToken || '',
+    metaPhoneId: clean(body.metaPhoneId) || previous?.metaPhoneId || '',
+    metaAppSecret: clean(body.metaAppSecret) || previous?.metaAppSecret || '',
+    metaVerifyToken: clean(body.metaVerifyToken) || previous?.metaVerifyToken || '',
+  };
+  if (provider === 'evolution' && (!next.evolutionBaseUrl || !next.evolutionInstance || !next.evolutionApiKey)) {
+    const env = evolutionConfigFromEnv();
+    if (!env) {
+      return {
+        ok: false,
+        error: 'Evolution API needs a base URL, instance name and API key.',
+      };
+    }
+    next.evolutionBaseUrl = next.evolutionBaseUrl || env.baseUrl;
+    next.evolutionInstance = next.evolutionInstance || env.instance;
+    next.evolutionApiKey = next.evolutionApiKey || env.apiKey;
+  }
+  await store.set(WHATSAPP_SETTINGS_KEY, next);
+  if (provider !== 'evolution' || body.connect !== true) {
+    return { ok: true, saved: true };
+  }
+  const config: EvolutionConfig = {
+    baseUrl: next.evolutionBaseUrl ?? '',
+    instance: next.evolutionInstance ?? '',
+    apiKey: next.evolutionApiKey ?? '',
+  };
+  const webhookUrl = clean(body.webhookUrl);
+  const connection = await evolutionConnectionState(config).catch((error: unknown) => ({
+    ok: false,
+    state: 'error',
+    detail: error instanceof Error ? error.message : 'Could not reach Evolution API.',
+  }));
+  if (!webhookUrl) {
+    return { ok: true, saved: true, connection };
+  }
+  if (!isWebhookUrl(webhookUrl)) {
+    return {
+      ok: false,
+      saved: true,
+      connection,
+      error: 'Webhook URL must be the Protecta WhatsApp webhook on this server.',
+    };
+  }
+  const webhook = await setEvolutionWebhook(config, webhookUrl).catch((error: unknown) => ({
+    ok: false,
+    detail: error instanceof Error ? error.message : 'Could not register the webhook.',
+  }));
+  return { ok: webhook.ok, saved: true, connection, webhook };
+};

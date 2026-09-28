@@ -1,4 +1,5 @@
 import canonicalCatalog from 'src/engine/metadata-modules/ai/ai-models/ai-models.json';
+import localProviders from 'src/engine/metadata-modules/ai/ai-models/ai-local-providers.json';
 import shippedCatalog from 'src/engine/metadata-modules/ai/ai-models/ai-providers.json';
 import selfHostSpec from 'src/engine/metadata-modules/ai/ai-models/ai-self-host-spec.json';
 
@@ -17,6 +18,8 @@ describe('the shipped catalog', () => {
       spec: selfHostSpec as CatalogSpec,
     });
 
-    expect(projected).toEqual(shippedCatalog);
+    // Local servers such as Ollama are not in the models.dev catalog, so they
+    // are merged after projection and kept by the sync.
+    expect({ ...projected, ...localProviders }).toEqual(shippedCatalog);
   });
 });

@@ -3,7 +3,7 @@ import { type DbClient, type RecordData } from 'src/lib/records';
 import { advanceClaim } from 'src/lib/service-claims';
 import { decideKyc } from 'src/lib/service-kyc';
 import { renewPolicy } from 'src/lib/service-policies';
-import { sendWhatsAppText, whatsappConfigFromEnv } from 'src/lib/whatsapp-api';
+import { deliverWhatsAppText } from 'src/lib/whatsapp-transport';
 import { quoteIssuedMessage } from 'src/lib/whatsapp-text';
 
 export const runStaffAction = async (
@@ -55,10 +55,7 @@ export const runStaffAction = async (
       return { reference: quote.reference };
     }
     case 'quote-send': {
-      const config = whatsappConfigFromEnv();
-      if (!config) throw new Error('WhatsApp is not configured.');
-      await sendWhatsAppText(
-        config,
+      await deliverWhatsAppText(
         String(record.policyholderPhone),
         quoteIssuedMessage({
           name: 'Customer',

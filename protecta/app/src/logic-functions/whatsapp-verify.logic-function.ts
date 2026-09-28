@@ -1,7 +1,8 @@
 import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
-import { Response } from 'twenty-sdk/logic-function';
+import { kv, Response } from 'twenty-sdk/logic-function';
 import { jsonResponse } from 'src/lib/http';
 import { WHATSAPP_VERIFY_HANDLER } from 'src/constants/universal-identifiers';
+import { loadStoredWhatsAppSettings } from 'src/lib/whatsapp-settings';
 
 /**
  * Meta WhatsApp verification handshake (GET on the webhook path).
@@ -12,7 +13,8 @@ export const handler = async (event: RoutePayload): Promise<Response> => {
   const mode = event.queryStringParameters?.['hub.mode'] ?? '';
   const token = event.queryStringParameters?.['hub.verify_token'] ?? '';
   const challenge = event.queryStringParameters?.['hub.challenge'] ?? '';
-  const expected = process.env.WHATSAPP_VERIFY ?? '';
+  const saved = await loadStoredWhatsAppSettings(kv);
+  const expected = saved?.metaVerifyToken || process.env.WHATSAPP_VERIFY || '';
   if (mode === 'subscribe' && expected && token === expected && challenge) {
     return new Response(challenge, { status: 200 });
   }

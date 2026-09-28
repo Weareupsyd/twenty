@@ -27,6 +27,58 @@ import chalk from 'chalk';
 
 const HEALTH_POLL_INTERVAL_MS = 2000;
 const HEALTH_TIMEOUT_MS = 180 * 1000;
+
+// The published image has no Ollama catalog row. These args only apply when a
+// new container is created and the host has OLLAMA_BASE_URL set.
+const ollamaDockerArgs = (): string[] => {
+  const baseUrl = process.env.OLLAMA_BASE_URL;
+
+  if (!baseUrl) {
+    return [];
+  }
+
+  const model = process.env.OLLAMA_MODEL || 'llama3.2';
+  const providers = JSON.stringify({
+    ollama: {
+      npm: '@ai-sdk/openai-compatible',
+      name: 'ollama',
+      label: 'Ollama',
+      baseUrl,
+      apiKey: process.env.OLLAMA_API_KEY || 'ollama',
+      models: [
+        {
+          name: model,
+          label: model,
+          inputCostPerMillionTokens: 0,
+          outputCostPerMillionTokens: 0,
+          contextWindowTokens: 128000,
+          maxOutputTokens: 8192,
+        },
+      ],
+    },
+  });
+
+  const withOllama = (chain: string) => `${chain},ollama/${model}`;
+
+  return [
+    '-e',
+    `OLLAMA_BASE_URL=${baseUrl}`,
+    '-e',
+    `OLLAMA_API_KEY=${process.env.OLLAMA_API_KEY || 'ollama'}`,
+    '-e',
+    `AI_PROVIDERS=${providers}`,
+    '-e',
+    `AI_MODELS_DEFAULT_EXTRA_FAST=${withOllama('openai/gpt-5.6-luna@low,google/gemini-3.8-flash@low,anthropic/claude-sonnet-5@low,xai/grok-4.5@low,mistral/mistral-small-latest@none')}`,
+    '-e',
+    `AI_MODELS_DEFAULT_FAST=${withOllama('openai/gpt-5.6-luna@medium,google/gemini-3.8-flash@medium,anthropic/claude-sonnet-5@medium,xai/grok-4.5@medium,mistral/mistral-medium-latest')}`,
+    '-e',
+    `AI_MODELS_DEFAULT_BALANCED=${withOllama('openai/gpt-5.6-luna@high,google/gemini-3.8-flash@high,anthropic/claude-sonnet-5@high,xai/grok-4.6@medium,mistral/mistral-large-latest')}`,
+    '-e',
+    `AI_MODELS_DEFAULT_SMART=${withOllama('openai/gpt-5.6-sol@high,google/gemini-3.8-flash@high,anthropic/claude-opus-5@high,xai/grok-4.6@high,mistral/mistral-large-latest')}`,
+    '-e',
+    `AI_MODELS_DEFAULT_EXTRA_SMART=${withOllama('openai/gpt-6-astra@xhigh,google/gemini-3.8-flash@high,anthropic/claude-opus-5-5,xai/grok-4.6@xhigh,mistral/mistral-large-latest')}`,
+  ];
+};
 const MILESTONE_START = '==> START ';
 const MILESTONE_DONE = '==> DONE';
 
@@ -262,6 +314,7 @@ const innerServerStart = async (
         `NODE_PORT=${port}`,
         '-e',
         `SERVER_URL=http://localhost:${port}`,
+        ...ollamaDockerArgs(),
         '-v',
         `${volumeData}:/data/postgres`,
         '-v',

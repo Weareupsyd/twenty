@@ -2,7 +2,12 @@ import { isValidPlate, normalizePlate, normalizeUgPhone } from 'src/lib/phones';
 
 export type BotState =
   | 'IDLE'
+  | 'CALC_VALUE'
+  | 'CALC_OFFER'
   | 'BUY_VALUE'
+  | 'BUY_MAKE'
+  | 'BUY_MODEL'
+  | 'BUY_YEAR'
   | 'BUY_PLATE'
   | 'BUY_NAME'
   | 'BUY_CONFIRM'
@@ -19,7 +24,15 @@ export type BotSession = {
 };
 
 export type BotAction =
-  | { kind: 'CREATE_QUOTE'; vehicleValue: number; plate: string; name: string }
+  | {
+      kind: 'CREATE_QUOTE';
+      vehicleValue: number;
+      plate: string;
+      name: string;
+      make?: string;
+      model?: string;
+      year?: number;
+    }
   | { kind: 'INITIATE_PAYMENT'; quoteRef: string; phone: string }
   | {
       kind: 'CREATE_CLAIM';
@@ -38,11 +51,12 @@ export type BotTurn = {
 };
 
 export const BOT_MENU = [
-  '1. Buy motor cover (1.5% of value)',
-  '2. My policies',
-  '3. Pay for a quote',
-  '4. Report a claim',
-  '5. Talk to support',
+  '1. Calculate premium',
+  '2. Get cover (onboard)',
+  '3. My policies',
+  '4. Pay for a quote',
+  '5. Report a claim',
+  '6. Talk to support',
 ].join('\n');
 
 const emptySession = (): BotSession => ({
@@ -73,58 +87,111 @@ const parseMoney = (text: string): number | null => {
   return Number.isSafeInteger(value) ? value : null;
 };
 
+const yes = (text: string): boolean =>
+  ['yes', 'y', 'ok', 'proceed'].includes(text.trim().toLowerCase());
+
+const moneyReply = (value: number, rate: number): string => {
+  const premium = Math.round(value * rate);
+  const percent = `${(rate * 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
+  return [
+    `Car value: UGX ${value.toLocaleString('en-US')}`,
+    `Annual premium: UGX ${premium.toLocaleString('en-US')} (${percent})`,
+    'Cover: car body, third party and driver.',
+    '',
+    'Reply YES to get this cover, or MENU.',
+  ].join('\n');
+};
+
 export const startSession = (): BotSession => emptySession();
 
+const menuTurn = (session: BotSession, intro?: string): BotTurn => ({
+  reply: `${intro ? `${intro}\n` : ''}🛡️ *Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
+  next: withState(session, 'IDLE', {}),
+});
+
+const idleCommand = (text: string): string => {
+  const value = text.trim().toLowerCase();
+  if (value === '1' || value.includes('calc') || value.includes('premium')) {
+    return '1';
+  }
+  if (
+    value === '2' ||
+    value.includes('cover') ||
+    value.includes('buy') ||
+    value.includes('onboard')
+  ) {
+    return '2';
+  }
+  if (value === '3' || value.includes('polic')) {
+    return '3';
+  }
+  if (value === '4' || value === 'pay') {
+    return '4';
+  }
+  if (value === '5' || value.includes('claim')) {
+    return '5';
+  }
+  if (value === '6' || value.includes('support') || value === 'help') {
+    return '6';
+  }
+  return value;
+};
+
 /**
- * Pure menu-driven state machine. The caller persists `next`, runs `action`
- * against Twenty records, and sends `reply` (appending action results).
+ * Same jobs as the website: calculate a 1.5% premium, then onboard
+ * (make, model, year, plate, name) and hand payment to the quote page.
  */
 export const handleBotTurn = (
   session: BotSession,
   rawText: string,
-  minValue = 1_000_000,
-  maxValue = 300_000_000,
+  options: { minValue?: number; maxValue?: number; rate?: number } = {},
 ): BotTurn => {
   const text = rawText.trim();
+  const minValue = options.minValue ?? 1_000_000;
+  const maxValue = options.maxValue ?? 300_000_000;
+  const rate = options.rate ?? 0.015;
 
   if (isMenuCommand(text)) {
-    return {
-      reply: `🛡️ *Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
-      next: withState(session, 'IDLE', {}),
-    };
+    return menuTurn(session);
   }
 
   switch (session.state) {
     case 'IDLE': {
-      if (text === '1') {
+      const command = idleCommand(text);
+      if (command === '1') {
         return {
-          reply: 'What is the market value of the vehicle in UGX? (1M – 300M)',
+          reply: `Premium calculator — same 1.5% as the website.\nWhat is the market value of the vehicle in UGX? (${(minValue / 1_000_000).toLocaleString('en-US')}M – ${(maxValue / 1_000_000).toLocaleString('en-US')}M)`,
+          next: withState(session, 'CALC_VALUE'),
+        };
+      }
+      if (command === '2') {
+        return {
+          reply: 'Let’s get you covered. What is the market value of the vehicle in UGX?',
           next: withState(session, 'BUY_VALUE'),
         };
       }
-      if (text === '2') {
+      if (command === '3') {
         return {
           reply: 'Looking up your policies…',
           next: withState(session, 'IDLE'),
           action: { kind: 'LOOKUP_POLICIES' },
         };
       }
-      if (text === '3') {
+      if (command === '4') {
         return {
           reply: 'Send the quote reference (15 digits).',
           next: withState(session, 'PAY_PHONE'),
         };
       }
-      if (text === '4') {
+      if (command === '5') {
         return {
           reply: 'Sorry to hear that. What is the policy number?',
           next: withState(session, 'CLAIM_POLICY'),
         };
       }
-      if (text === '5') {
+      if (command === '6') {
         return {
-          reply:
-            'Describe your issue in one message and our team will respond.',
+          reply: 'Describe your issue in one message and our team will respond.',
           next: withState(session, 'TICKET_TEXT'),
         };
       }
@@ -136,10 +203,31 @@ export const handleBotTurn = (
           action: { kind: 'LOOKUP_QUOTE', quoteRef: quoteLookup[1] },
         };
       }
+      return menuTurn(session, "I didn't get that.");
+    }
+
+    case 'CALC_VALUE': {
+      const value = parseMoney(text);
+      if (value === null || value < minValue || value > maxValue) {
+        return {
+          reply: `Enter a value between UGX ${minValue.toLocaleString('en-US')} and UGX ${maxValue.toLocaleString('en-US')} (numbers only).`,
+          next: session,
+        };
+      }
       return {
-        reply: `I didn't get that.\n${BOT_MENU}`,
-        next: withState(session, 'IDLE'),
+        reply: moneyReply(value, rate),
+        next: withState(session, 'CALC_OFFER', { vehicleValue: String(value) }),
       };
+    }
+
+    case 'CALC_OFFER': {
+      if (yes(text)) {
+        return {
+          reply: 'What is the make? (e.g. Toyota)',
+          next: withState(session, 'BUY_MAKE'),
+        };
+      }
+      return menuTurn(session, 'Calculator closed.');
     }
 
     case 'BUY_VALUE': {
@@ -151,8 +239,43 @@ export const handleBotTurn = (
         };
       }
       return {
-        reply: `Value UGX ${value.toLocaleString('en-US')} ✅\nWhat is the number plate? (e.g. UAX 123C)`,
-        next: withState(session, 'BUY_PLATE', { vehicleValue: String(value) }),
+        reply: `${moneyReply(value, rate)}\n\nWhat is the make? (e.g. Toyota)`,
+        next: withState(session, 'BUY_MAKE', { vehicleValue: String(value) }),
+      };
+    }
+
+    case 'BUY_MAKE': {
+      if (text.replace(/\s/g, '').length < 2) {
+        return { reply: 'Enter the make, e.g. Toyota.', next: session };
+      }
+      return {
+        reply: 'What is the model? (e.g. Premio)',
+        next: withState(session, 'BUY_MODEL', { make: text }),
+      };
+    }
+
+    case 'BUY_MODEL': {
+      if (text.length < 1) {
+        return { reply: 'Enter the model.', next: session };
+      }
+      return {
+        reply: 'Year of manufacture? (e.g. 2018)',
+        next: withState(session, 'BUY_YEAR', { model: text }),
+      };
+    }
+
+    case 'BUY_YEAR': {
+      const year = Number(text.replace(/[^0-9]/g, ''));
+      const maxYear = new Date().getFullYear() + 1;
+      if (!Number.isInteger(year) || year < 1985 || year > maxYear) {
+        return {
+          reply: `Enter a year between 1985 and ${maxYear}.`,
+          next: session,
+        };
+      }
+      return {
+        reply: 'What is the number plate? (e.g. UAX 123C)',
+        next: withState(session, 'BUY_PLATE', { year: String(year) }),
       };
     }
 
@@ -174,16 +297,25 @@ export const handleBotTurn = (
         return { reply: 'Please send your full name.', next: session };
       }
       const value = Number(session.data.vehicleValue);
-      const premium = Math.round(value * 0.015);
+      const premium = Math.round(value * rate);
       return {
-        reply: `Confirm your quote:\n• Name: ${text}\n• Plate: ${session.data.plate}\n• Value: UGX ${value.toLocaleString('en-US')}\n• Premium (1.5%): UGX ${premium.toLocaleString('en-US')}\n\nReply YES to confirm or NO to restart.`,
+        reply: [
+          'Confirm your cover:',
+          `• Name: ${text}`,
+          `• Vehicle: ${session.data.year ?? ''} ${session.data.make ?? ''} ${session.data.model ?? ''}`.trim(),
+          `• Plate: ${session.data.plate}`,
+          `• Value: UGX ${value.toLocaleString('en-US')}`,
+          `• Premium: UGX ${premium.toLocaleString('en-US')}`,
+          '',
+          'Reply YES to confirm or NO to restart.',
+        ].join('\n'),
         next: withState(session, 'BUY_CONFIRM', { name: text }),
       };
     }
 
     case 'BUY_CONFIRM': {
-      const answer = text.toLowerCase();
-      if (answer === 'yes' || answer === 'y') {
+      if (yes(text)) {
+        const year = Number(session.data.year);
         return {
           reply: 'Creating your quote…',
           next: withState(session, 'IDLE', {}),
@@ -192,19 +324,19 @@ export const handleBotTurn = (
             vehicleValue: Number(session.data.vehicleValue),
             plate: session.data.plate ?? '',
             name: session.data.name ?? '',
+            make: session.data.make,
+            model: session.data.model,
+            ...(Number.isInteger(year) ? { year } : {}),
           },
         };
       }
-      return {
-        reply: `Restarted.\n${BOT_MENU}`,
-        next: withState(session, 'IDLE', {}),
-      };
+      return menuTurn(session, 'Restarted.');
     }
 
     case 'PAY_PHONE': {
       if (/^\d{15}$/.test(text)) {
         return {
-          reply: 'Which mobile-money number should we debit? (e.g. 0772000000)',
+          reply: 'Which mobile-money number should we use? (e.g. 0701440613)',
           next: withState(session, 'PAY_PHONE', {
             quoteRef: text,
             step: 'phone',
@@ -215,7 +347,7 @@ export const handleBotTurn = (
         const phone = normalizeUgPhone(text);
         if (!phone) {
           return {
-            reply: 'That number looks invalid. Send a 10-digit Ugandan number.',
+            reply: 'That number looks invalid. Try 0701440613 or 256701440613.',
             next: session,
           };
         }
@@ -288,9 +420,6 @@ export const handleBotTurn = (
     }
 
     default:
-      return {
-        reply: `Let's start over.\n${BOT_MENU}`,
-        next: withState(session, 'IDLE', {}),
-      };
+      return menuTurn(session, "Let's start over.");
   }
 };

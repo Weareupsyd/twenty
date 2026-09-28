@@ -2,13 +2,22 @@ import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
 import { Response } from 'twenty-sdk/logic-function';
 import { HEALTH_CHECK } from 'src/constants/universal-identifiers';
 import { jsonResponse } from 'src/lib/http';
+import { evolutionConfigFromEnv } from 'src/lib/evolution-api';
 
 const handler = async (_event: RoutePayload): Promise<Response> =>
   jsonResponse({
     ok: true,
     app: 'protecta-bode',
     time: new Date().toISOString(),
-    whatsapp: Boolean(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID),
+    whatsapp: Boolean(
+      evolutionConfigFromEnv() ||
+        (process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID),
+    ),
+    whatsappProvider: evolutionConfigFromEnv()
+      ? 'evolution'
+      : process.env.WHATSAPP_TOKEN
+        ? 'meta'
+        : 'none',
     momo: Boolean(process.env.MOMO_SUBSCRIPTION_KEY),
     airtel: Boolean(process.env.AIRTEL_CLIENT_ID),
     email: process.env.EMAIL_PROVIDER === 'resend',

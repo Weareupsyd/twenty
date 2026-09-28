@@ -8,7 +8,8 @@ over them.
 | `ai-models.json` | What every model is: identity, pricing, limits, modalities, efforts, benchmarks. No routes, no credentials. Synced daily. |
 | `ai-evaluation-models.json` | What every evaluation model is, in the same shape. Hand-maintained: models.dev describes language models only, so the sync can neither add these nor keep them. Folded into `ai-models.json` on every run. |
 | `ai-self-host-spec.json` | What a self-hosted deployment serves: the direct routes and their key templates. Hand-maintained. |
-| `ai-providers.json` | The catalog the server bundles. Generated from the above; a test fails if it is hand-edited. |
+| `ai-providers.json` | The catalog the server bundles. Generated from the above plus `ai-local-providers.json`; a test fails if it is hand-edited. |
+| `ai-local-providers.json` | Providers that are not on models.dev, such as Ollama. Merged after projection. |
 
 Cloud works the same way, from a private spec in twenty-infra, so a deployment
 catalog is always a projection rather than a second copy of the truth.

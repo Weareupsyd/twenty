@@ -7,6 +7,12 @@ describe('normalizeUgPhone', () => {
     expect(normalizeUgPhone('256772000000')).toBe('+256772000000');
     expect(normalizeUgPhone('+256 772 000000')).toBe('+256772000000');
     expect(normalizeUgPhone('00256772000000')).toBe('+256772000000');
+    expect(normalizeUgPhone('0701440613')).toBe('+256701440613');
+    expect(normalizeUgPhone('256701440613')).toBe('+256701440613');
+    expect(normalizeUgPhone('+256701440613')).toBe('+256701440613');
+    expect(normalizeUgPhone('701440613')).toBe('+256701440613');
+    expect(normalizeUgPhone('2560701440613')).toBe('+256701440613');
+    expect(normalizeUgPhone('0701 440 613')).toBe('+256701440613');
   });
 
   it('rejects invalid numbers', () => {

@@ -226,7 +226,8 @@ export class SdkProviderFactoryService {
     const provider = createOpenAICompatible({
       name: config.name ?? 'openai-compatible',
       baseURL: config.baseUrl,
-      ...(config.apiKey && { apiKey: config.apiKey }),
+      // Ollama accepts any bearer token; an empty key makes some gateways reject the call.
+      apiKey: config.apiKey || 'ollama',
     });
 
     return this.toProviderInstance(

@@ -39,6 +39,7 @@ const EVALUATION_MODELS_PATH = path.join(
 );
 const SELF_HOST_SPEC_PATH = path.join(AI_MODELS_DIR, 'ai-self-host-spec.json');
 const CATALOG_PATH = path.join(AI_MODELS_DIR, 'ai-providers.json');
+const LOCAL_PROVIDERS_PATH = path.join(AI_MODELS_DIR, 'ai-local-providers.json');
 const BENCHMARKS_PATH = path.join(AI_MODELS_DIR, 'ai-model-benchmarks.json');
 
 // oxlint-disable no-console
@@ -203,10 +204,17 @@ const main = async (): Promise<void> => {
   await writeJson(MODELS_PATH, catalog);
   // Self-host runs the same projection cloud does, from a spec that names the
   // five direct routes and lets each serve its whole vendor.
-  await writeJson(
-    CATALOG_PATH,
-    projectCatalog({ canonicalCatalog: catalog, spec: selfHostSpec }),
-  );
+  const localProviders = fs.existsSync(LOCAL_PROVIDERS_PATH)
+    ? (JSON.parse(fs.readFileSync(LOCAL_PROVIDERS_PATH, 'utf-8')) as Record<
+        string,
+        unknown
+      >)
+    : {};
+
+  await writeJson(CATALOG_PATH, {
+    ...projectCatalog({ canonicalCatalog: catalog, spec: selfHostSpec }),
+    ...localProviders,
+  });
   await writeJson(BENCHMARKS_PATH, {
     source: 'artificialanalysis.ai',
     measuredAt,

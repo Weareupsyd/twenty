@@ -2004,6 +2004,25 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
+    description:
+      'Ollama OpenAI-compatible base URL, for example http://ollama:11434/v1 or http://127.0.0.1:11434/v1. Leave empty to keep Ollama disabled.',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  OLLAMA_BASE_URL?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    isSensitive: true,
+    description:
+      'Optional API key for Ollama. Local Ollama accepts any value; "ollama" is used when this is empty.',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  OLLAMA_API_KEY?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
     isSensitive: true,
     description:
       'AI provider configurations. Custom providers are deep-merged on top of the built-in catalog (ai-providers.json). Use for custom endpoints, extra regions, or credentials set via admin panel.',

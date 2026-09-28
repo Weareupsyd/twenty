@@ -182,8 +182,28 @@ the container and database intact and inspect the first error.
 
 Look for the insurance objects and navigation: quotes, policies, payments,
 claims, vehicles, commissions, partner accounts, KYC and support tickets.
-Check the Protecta Bode settings entry as well. Protecta does not necessarily
-replace Twenty's homepage with a branded screen.
+Open Settings → WhatsApp bot to connect the Evolution API instance. The
+public calculator is at `/s/protecta/`. Protecta does not replace Twenty's
+homepage.
+
+The live page must be synced after a code change. On the VPS, from `protecta/`:
+
+```bash
+./start.sh
+```
+
+That republishes `/s/protecta/` with same-origin poster URLs. Until then the
+page still points images at `localhost` and the key visual looks broken.
+
+To use Ollama as a Twenty language model on this VPS, from `protecta/`:
+
+```bash
+./enable-ollama.sh --pull
+./enable-ollama.sh --apply
+```
+
+That keeps the Twenty database and volumes, starts Ollama, and points the CRM
+at it. Then open Settings → Admin panel → AI.
 
 If nothing appears, confirm the sync completed, the browser is on the same
 workspace as the deployment key, and your user has the appropriate permissions.

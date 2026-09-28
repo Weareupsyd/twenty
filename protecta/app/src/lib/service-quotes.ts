@@ -44,17 +44,38 @@ export const splitName = (
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
 };
 
+export const findPersonByPhone = (
+  db: DbClient,
+  phone: string,
+): Promise<RecordData | null> =>
+  db.findFirst(
+    'people',
+    { protectaPhone: { eq: phone } },
+    ['protectaPhone', 'protectaRole', 'name'],
+  );
+
+export const personDisplayName = (person: RecordData): string => {
+  const name = person.name;
+  if (typeof name === 'string') return name.trim();
+  if (name && typeof name === 'object') {
+    const parts = name as { firstName?: unknown; lastName?: unknown };
+    return [
+      String(parts.firstName ?? '').trim(),
+      String(parts.lastName ?? '').trim(),
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+};
+
 export const ensurePerson = async (
   db: DbClient,
   phone: string,
   name?: string,
   role = 'CUSTOMER',
 ): Promise<{ person: RecordData; isNew: boolean }> => {
-  const existing = await db.findFirst(
-    'people',
-    { protectaPhone: { eq: phone } },
-    ['protectaPhone', 'protectaRole', 'name'],
-  );
+  const existing = await findPersonByPhone(db, phone);
   if (existing) {
     return { person: existing, isNew: false };
   }

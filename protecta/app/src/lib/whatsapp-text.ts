@@ -75,5 +75,19 @@ export const renewalReminderMessage = (args: {
 export const otpMessage = (otp: string, purpose: string): string =>
   `${BRAND_HEADER}\nYour ${purpose} code is *${otp}*. It expires in 10 minutes.`;
 
+export const renewalQuoteMessage = (args: {
+  policyNo: string;
+  quoteRef: string;
+  premium: number;
+  shareUrl: string;
+}): string =>
+  [
+    BRAND_HEADER,
+    `Your renewal quote for policy ${args.policyNo} is ready.`,
+    `• Quote: ${args.quoteRef}`,
+    `• Premium: ${formatUgx(args.premium)}`,
+    `Pay here: ${args.shareUrl}`,
+  ].join('\n');
+
 export const opsAlertMessage = (title: string, lines: string[]): string =>
   [`🚨 *Protecta ops: ${title}*`, ...lines].join('\n');

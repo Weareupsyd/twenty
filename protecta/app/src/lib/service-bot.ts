@@ -10,10 +10,16 @@ import { publicBaseUrl } from 'src/lib/http';
 import { normalizeUgPhone } from 'src/lib/phones';
 import { type DbClient } from 'src/lib/records';
 import { createClaim } from 'src/lib/service-claims';
-import { findPoliciesByPhone, findPolicyByNo } from 'src/lib/service-policies';
+import {
+  findPoliciesByPhone,
+  findPolicyByNo,
+  renewPolicy,
+} from 'src/lib/service-policies';
 import {
   createQuote,
+  findPersonByPhone,
   findQuoteByRef,
+  personDisplayName,
   quoteShareUrl,
 } from 'src/lib/service-quotes';
 import { createTicket } from 'src/lib/service-tickets';
@@ -21,7 +27,10 @@ import { type StateStore } from 'src/lib/service-otp';
 import { pricingFromEnv } from 'src/lib/pricing';
 import { type InboundWhatsAppMessage } from 'src/lib/whatsapp-api';
 import { NOT_CONFIGURED, whatsAppSender } from 'src/lib/whatsapp-transport';
-import { quoteIssuedMessage } from 'src/lib/whatsapp-text';
+import {
+  quoteIssuedMessage,
+  renewalQuoteMessage,
+} from 'src/lib/whatsapp-text';
 
 export const executeBotAction = async (
   db: DbClient,
@@ -58,6 +67,38 @@ export const executeBotAction = async (
             )
             .join('\n')
         : 'No policies found for your WhatsApp number.';
+    }
+    case 'LIST_RENEWABLE_POLICIES': {
+      const rows = await findPoliciesByPhone(db, phone);
+      return rows.length
+        ? [
+            rows
+              .map(
+                (p) =>
+                  `${p.policyNo}: ${p.plate} — ${p.status}, until ${p.periodEnd}`,
+              )
+              .join('\n'),
+            '',
+            'Reply with the policy number you want to renew, or MENU to start over.',
+          ].join('\n')
+        : 'No policies found for your WhatsApp number. Send 2 to cover a new car.';
+    }
+    case 'RENEW_POLICY': {
+      const policy = await findPolicyByNo(db, action.policyNo);
+      const quote = policy
+        ? await findQuoteByRef(db, String(policy.quoteRef))
+        : null;
+      if (!policy || !quote || quote.policyholderPhone !== phone)
+        return 'Policy not found for your WhatsApp number.';
+      const { quote: renewal } = await renewPolicy(db, action.policyNo, {
+        channel: 'WHATSAPP',
+      });
+      return renewalQuoteMessage({
+        policyNo: String(policy.policyNo),
+        quoteRef: String(renewal.reference),
+        premium: Number(renewal.premium),
+        shareUrl: String(renewal.shareUrl),
+      });
     }
     case 'LOOKUP_QUOTE': {
       const quote = await findQuoteByRef(db, action.quoteRef);
@@ -126,10 +167,15 @@ export const processBotMessage = async (
         ? saved
         : startSession();
     const pricing = pricingFromEnv();
+    // The WhatsApp number is the customer's identity: when it is already
+    // registered, the conversation greets them and skips the name question.
+    const person = await findPersonByPhone(db, phone);
+    const customerName = person ? personDisplayName(person) : '';
     const turn = handleBotTurn(session, message.text, {
       minValue: pricing.minValue,
       maxValue: pricing.maxValue,
       rate: pricing.rate,
+      ...(customerName ? { customer: { name: customerName } } : {}),
     });
     const reply = turn.action
       ? await executeBotAction(db, phone, turn.action)

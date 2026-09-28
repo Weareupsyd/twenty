@@ -1,0 +1,118 @@
+import { defineObject, FieldType } from 'twenty-sdk/define';
+import {
+  SM_ERROR,
+  SM_EVENT_KEY,
+  SM_LANGUAGE,
+  SM_MESSAGE,
+  SM_OBJECT,
+  SM_PROVIDER_REF,
+  SM_RECIPIENT,
+  SM_REFERENCE,
+  SM_SENT_AT,
+  SM_STATUS,
+  SM_VARIABLES,
+} from 'src/constants/universal-identifiers';
+
+export const SMS_MESSAGE_UNIVERSAL_IDENTIFIER = SM_OBJECT;
+
+export default defineObject({
+  universalIdentifier: SMS_MESSAGE_UNIVERSAL_IDENTIFIER,
+  nameSingular: 'smsMessage',
+  namePlural: 'smsMessages',
+  labelSingular: 'Sms message',
+  labelPlural: 'Sms messages',
+  description: 'One row per SMS: event, recipient, rendered text and delivery status',
+  icon: 'IconMessage2',
+  labelIdentifierFieldMetadataUniversalIdentifier: SM_REFERENCE,
+  fields: [
+    {
+      universalIdentifier: SM_REFERENCE,
+      name: 'reference',
+      label: 'Reference',
+      type: FieldType.TEXT,
+      description: 'SMS reference shown in the CRM, e.g. SMS-004213',
+      isUnique: true,
+    },
+    {
+      universalIdentifier: SM_EVENT_KEY,
+      name: 'eventKey',
+      label: 'Event key',
+      type: FieldType.SELECT,
+      description: 'Event that triggered this message',
+      options: [
+        { value: 'quote_issued', label: 'Quote issued', position: 0, color: 'green' },
+        { value: 'policy_issued', label: 'Policy issued', position: 1, color: 'blue' },
+        { value: 'claim_created', label: 'Claim created', position: 2, color: 'orange' },
+        { value: 'renewal_quote', label: 'Renewal quote', position: 3, color: 'turquoise' },
+        { value: 'custom', label: 'Custom', position: 4, color: 'gray' },
+      ],
+    },
+    {
+      universalIdentifier: SM_LANGUAGE,
+      name: 'language',
+      label: 'Language',
+      type: FieldType.SELECT,
+      description: 'Language of the rendered message',
+      options: [
+        { value: 'en', label: 'English', position: 0, color: 'blue' },
+        { value: 'lg', label: 'Luganda', position: 1, color: 'green' },
+        { value: 'sw', label: 'Swahili', position: 2, color: 'orange' },
+        { value: 'run', label: 'Runyankole', position: 3, color: 'turquoise' },
+      ],
+    },
+    {
+      universalIdentifier: SM_RECIPIENT,
+      name: 'recipient',
+      label: 'Recipient',
+      type: FieldType.TEXT,
+      description: 'Destination phone number',
+    },
+    {
+      universalIdentifier: SM_MESSAGE,
+      name: 'message',
+      label: 'Message',
+      type: FieldType.TEXT,
+      description: 'Rendered message text actually sent',
+    },
+    {
+      universalIdentifier: SM_VARIABLES,
+      name: 'variables',
+      label: 'Variables',
+      type: FieldType.TEXT,
+      description: 'JSON snapshot of the template variables',
+    },
+    {
+      universalIdentifier: SM_STATUS,
+      name: 'status',
+      label: 'Status',
+      type: FieldType.SELECT,
+      description: 'Delivery status',
+      options: [
+        { value: 'PENDING', label: 'Pending', position: 0, color: 'gray' },
+        { value: 'SENT', label: 'Sent', position: 1, color: 'green' },
+        { value: 'FAILED', label: 'Failed', position: 2, color: 'red' },
+      ],
+    },
+    {
+      universalIdentifier: SM_ERROR,
+      name: 'error',
+      label: 'Error',
+      type: FieldType.TEXT,
+      description: 'Failure reason, empty on success',
+    },
+    {
+      universalIdentifier: SM_PROVIDER_REF,
+      name: 'providerRef',
+      label: 'Provider reference',
+      type: FieldType.TEXT,
+      description: 'EgoSMS message reference code',
+    },
+    {
+      universalIdentifier: SM_SENT_AT,
+      name: 'sentAt',
+      label: 'Sent at',
+      type: FieldType.DATE_TIME,
+      description: 'When the send was attempted',
+    },
+  ],
+});

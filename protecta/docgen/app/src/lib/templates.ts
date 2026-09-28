@@ -47,15 +47,24 @@ export const DEFAULT_POLICY_TEMPLATE = [
   'Generated {{issuedDate}} · Document ref {{reference}}',
 ].join('\n');
 
-export const findTemplateBody = async (
+export type TemplateFormat = 'TEXT' | 'HTML';
+
+export const DEFAULT_TEMPLATE_FORMAT: TemplateFormat = 'TEXT';
+
+export const findTemplate = async (
   db: DbClient,
   kind: string,
-): Promise<string> => {
+): Promise<{ body: string; format: TemplateFormat }> => {
   const template = await db.findFirst(
     'documentTemplates',
     { kind: { eq: kind } },
-    ['name', 'kind', 'body'],
+    ['name', 'kind', 'format', 'body'],
   );
   const body = typeof template?.body === 'string' ? template.body.trim() : '';
-  return body.length > 0 ? body : DEFAULT_POLICY_TEMPLATE;
+  const format: TemplateFormat =
+    String(template?.format ?? '').toUpperCase() === 'HTML' ? 'HTML' : 'TEXT';
+  return {
+    body: body.length > 0 ? body : DEFAULT_POLICY_TEMPLATE,
+    format: body.length > 0 ? format : DEFAULT_TEMPLATE_FORMAT,
+  };
 };

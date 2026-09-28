@@ -1,6 +1,6 @@
 import { assembleDocumentData, renderTemplate } from 'src/lib/render';
 import { type DbClient, type RecordData } from 'src/lib/records';
-import { findTemplateBody } from 'src/lib/templates';
+import { findTemplate } from 'src/lib/templates';
 
 export const DEFAULT_DOCUMENT_KIND = 'POLICY_CERTIFICATE';
 
@@ -73,7 +73,7 @@ export const fillGeneratedDocument = async (
   const reference = String(current.reference ?? '');
   const policyNo = String(current.policyNo ?? '').trim();
   const kind = String(current.kind ?? '') || DEFAULT_DOCUMENT_KIND;
-  const body = await findTemplateBody(db, kind);
+  const { body, format } = await findTemplate(db, kind);
   const { data, error } = await assembleDocumentData(db, {
     policyNo,
     reference,
@@ -89,6 +89,7 @@ export const fillGeneratedDocument = async (
 
   return db.update('generatedDocument', String(current.id), {
     content: renderTemplate(body, data),
+    format,
     status: 'GENERATED',
     error: '',
     generatedAt: new Date().toISOString(),
@@ -127,7 +128,7 @@ export const findGeneratedDocumentByRef = (
   db.findFirst(
     'generatedDocuments',
     { reference: { eq: reference } },
-    ['reference', 'kind', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
+    ['reference', 'kind', 'format', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
   );
 
 export const findLatestGeneratedDocument = (
@@ -137,5 +138,5 @@ export const findLatestGeneratedDocument = (
   db.findFirst(
     'generatedDocuments',
     { policyNo: { eq: policyNo }, status: { eq: 'GENERATED' } },
-    ['reference', 'kind', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
+    ['reference', 'kind', 'format', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
   );

@@ -184,25 +184,29 @@ EOF
   fi
 fi
 
-# --- Sync the Document Generator app -----------------------------------------
+# --- Sync the linked apps ----------------------------------------------------
 #
-# A standalone app linked to Protecta through workspace events: it generates
-# policy certificate documents (PDF + Word) when policies are issued.
+# Standalone apps linked to Protecta through workspace events and routes:
+# the Document Generator produces policy certificate documents (PDF + Word)
+# when policies are issued; the SMS Sender notifies customers on quote,
+# policy and claim events through EgoSMS, with per-language templates.
 
-DOCGEN_DIR="$SCRIPT_DIR/docgen/app"
+for LINKED_APP in docgen sms; do
+  LINKED_DIR="$SCRIPT_DIR/$LINKED_APP/app"
 
-if [[ -d "$DOCGEN_DIR" ]]; then
-  step "Syncing Document Generator app"
-  if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
-    info "skipping dependency install (SKIP_INSTALL=1)"
-  elif [[ ! -x "$DOCGEN_DIR/node_modules/.bin/twenty" ]]; then
-    (cd "$DOCGEN_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
-    info "installed with npm"
-  else
-    info "dependencies are up to date, skipping install"
+  if [[ -d "$LINKED_DIR" ]]; then
+    step "Syncing $LINKED_APP app"
+    if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
+      info "skipping dependency install (SKIP_INSTALL=1)"
+    elif [[ ! -x "$LINKED_DIR/node_modules/.bin/twenty" ]]; then
+      (cd "$LINKED_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
+      info "installed with npm"
+    else
+      info "dependencies are up to date, skipping install"
+    fi
+    "$TWENTY" apply "$LINKED_DIR"
   fi
-  "$TWENTY" apply "$DOCGEN_DIR"
-fi
+done
 
 # --- Sync the app ------------------------------------------------------------
 #
@@ -227,9 +231,11 @@ $(printf '\033[1;32m==> Ready\033[0m')
     Login:      tim@apple.dev / tim@apple.dev
 
     App:        protecta-bode (synced from $APP_DIR)
-    Docs app:   Document Generator (synced from $DOCGEN_DIR)
+    Docs app:   Document Generator (synced from $SCRIPT_DIR/docgen/app)
+    SMS app:    SMS Sender (synced from $SCRIPT_DIR/sms/app)
     Landing:    $SERVER_URL/s/protecta/
     Documents:  $SERVER_URL/s/docgen/documents/view?policyNo=<policy no>
+    SMS API:    POST $SERVER_URL/s/sms/send
     WhatsApp:   Settings → WhatsApp bot (Evolution API)
     Ollama:     ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     Stop:       $TWENTY docker:stop

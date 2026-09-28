@@ -7,6 +7,7 @@ import {
   requireContent,
 } from 'src/lib/doc-pages';
 import { renderDocx } from 'src/lib/docx';
+import { htmlToText } from 'src/lib/html';
 import { htmlResponse, renderDocPage } from 'src/lib/http';
 import { CoreDbClient } from 'src/lib/records';
 
@@ -22,7 +23,11 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   const document = await loadGeneratedDocument(db, event);
   const problem = requireContent(document);
   if (problem) return htmlResponse(problem, document ? 422 : 404);
-  const docx = await renderDocx(String(document!.content));
+  const isHtml = String(document!.format ?? 'TEXT').toUpperCase() === 'HTML';
+  const docxSource = isHtml
+    ? htmlToText(String(document!.content))
+    : String(document!.content);
+  const docx = await renderDocx(docxSource);
   const reference = String(document!.reference);
   const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64Of(docx)}`;
   const fileName = `document-${reference}.docx`;

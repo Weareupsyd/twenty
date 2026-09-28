@@ -61,6 +61,7 @@ not in source files. Application variables include pricing and `PUBLIC_BASE_URL`
 | MTN | `MOMO_ENV`, `MOMO_SUBSCRIPTION_KEY`, `MOMO_API_USER`, `MOMO_API_KEY` |
 | Airtel | `AIRTEL_ENV`, `AIRTEL_CLIENT_ID`, `AIRTEL_CLIENT_SECRET` |
 | Policy email | `EMAIL_PROVIDER=resend`, `RESEND_API_KEY`, `EMAIL_FROM`; customer must have a primary email in Twenty |
+| SMS (SMS Sender app) | `EGOSMS_USERNAME`, `EGOSMS_PASSWORD` (secret), `EGOSMS_SENDER_ID`, `SMS_DEFAULT_LANGUAGE` — set on the **SMS Sender** app, never in source |
 
 Secrets for different purposes must differ. An unset provider remains
 unconfigured; it does not simulate a payment or authenticate a customer.
@@ -76,6 +77,23 @@ it arrives. Documents are served at `/s/docgen/documents/view?policyNo=...`
 (PDF) and `/s/docgen/documents/docx?policyNo=...` (Word); the Protecta
 policy page links to them automatically. To skip the app, delete
 `protecta/docgen` or sync only `protecta/app` with the twenty CLI.
+
+## SMS Sender app (`protecta/sms`)
+
+`start.sh` also syncs the standalone **SMS Sender** app, which notifies
+customers over SMS through EgoSMS whenever a quote, policy or claim is
+created anywhere in the workspace. The text comes from per-event,
+per-language `Sms template` records (`{{placeholder}}` convention — see
+`sms/README.md`); no template means no send. Configure `EGOSMS_USERNAME`
+and `EGOSMS_PASSWORD` (secret) on the app before sending; sender id
+defaults to `Upsyd` (`EGOSMS_SENDER_ID`) and the fallback language is
+`en` (`SMS_DEFAULT_LANGUAGE`). Every send is logged as an `Sms message`
+record with a `SMS-XXXXXX` reference and delivery status. Other apps
+(Protecta Bode does this on policy issue) can trigger sends through
+`POST /s/sms/send` with `{ phone, eventKey, language?, variables?,
+message? }`; identical sends to the same recipient are suppressed, so
+event handlers and app triggers never double-text a customer. To skip the
+app, delete `protecta/sms` or sync only `protecta/app` with the twenty CLI.
 
 ## Smoke-test in a disposable workspace / provider sandbox
 

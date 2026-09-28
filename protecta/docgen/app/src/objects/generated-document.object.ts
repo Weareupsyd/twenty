@@ -2,6 +2,7 @@ import { defineObject, FieldType } from 'twenty-sdk/define';
 import {
   GD_CONTENT,
   GD_ERROR,
+  GD_FORMAT,
   GD_GENERATED_AT,
   GD_KIND,
   GD_OBJECT,
@@ -47,6 +48,19 @@ export default defineObject({
           position: 0,
           color: 'blue',
         },
+      ],
+    },
+    {
+      universalIdentifier: GD_FORMAT,
+      name: 'format',
+      type: FieldType.SELECT,
+      label: 'Format',
+      description: 'TEXT or HTML, taken from the template at generation time.',
+      icon: 'IconCode',
+      defaultValue: "'TEXT'",
+      options: [
+        { value: 'TEXT', label: 'Text', position: 0, color: 'blue' },
+        { value: 'HTML', label: 'HTML', position: 1, color: 'purple' },
       ],
     },
     {

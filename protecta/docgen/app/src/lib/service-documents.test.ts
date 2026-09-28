@@ -86,6 +86,25 @@ describe('createGeneratedDocument', () => {
     });
     expect(String(document.content)).toBe('CUSTOM PB-2026-004213 by Sarah Kato');
   });
+
+  it('stores the template format on the document', async () => {
+    const db = new MemoryDbClient();
+    await seedPolicy(db);
+    await db.create('documentTemplate', {
+      name: 'HTML certificate',
+      kind: 'POLICY_CERTIFICATE',
+      format: 'HTML',
+      body: '<h1>{{policyNo}}</h1><p>{{policyholderName}}</p>',
+    });
+    const document = await createGeneratedDocument(db, {
+      policyNo: 'PB-2026-004213',
+      makeRef: () => 'DOC-000006',
+    });
+    expect(document.format).toBe('HTML');
+    expect(String(document.content)).toBe(
+      '<h1>PB-2026-004213</h1><p>Sarah Kato</p>',
+    );
+  });
 });
 
 describe('fillGeneratedDocument', () => {

@@ -1,0 +1,30 @@
+{
+  "name": "protecta-sms",
+  "version": "1.0.0",
+  "description": "SMS Messaging for Twenty CRM: event-driven SMS via EgoSMS with multilingual templates, triggerable from the Protecta Bode app.",
+  "license": "AGPL-3.0",
+  "private": true,
+  "engines": {
+    "node": "^24.5.0",
+    "twenty": ">=2.43.0"
+  },
+  "keywords": [
+    "twenty-app"
+  ],
+  "scripts": {
+    "twenty": "twenty",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config vitest.unit.config.ts",
+    "test:watch": "vitest --config vitest.unit.config.ts",
+    "build": "node scripts/build.mjs",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "twenty-client-sdk": "2.43.0",
+    "twenty-sdk": "2.43.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0"
+  }
+}

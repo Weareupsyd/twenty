@@ -190,7 +190,11 @@ export const findPoliciesByPhone = async (
 export const renewPolicy = async (
   db: DbClient,
   policyNo: string,
-  options: { baseUrl?: string; rng?: () => number } = {},
+  options: {
+    baseUrl?: string;
+    rng?: () => number;
+    channel?: 'PORTAL' | 'WHATSAPP' | 'PARTNER_API' | 'PHONE';
+  } = {},
 ): Promise<{ quote: RecordData; policy: RecordData }> => {
   const policy = await findPolicyByNo(db, policyNo);
   if (!policy) {
@@ -205,7 +209,7 @@ export const renewPolicy = async (
     protectaRef: reference,
     reference,
     status: 'QUOTED',
-    channel: 'PHONE',
+    channel: options.channel ?? 'PHONE',
     productCode: process.env.PRODUCT_CODE ?? 'BODE-01',
     plate: policy.plate,
     vehicleMake: policy.vehicleMake ?? '',

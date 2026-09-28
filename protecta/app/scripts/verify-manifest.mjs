@@ -67,6 +67,23 @@ export const verifyManifest = (appPath) => {
     }
   }
 
+  // The server defaults an omitted settings-menu-item position to 0 and an
+  // omitted scope to WORKSPACE, and refuses two items of the same app sharing
+  // a position in a scope (SETTINGS_MENU_ITEM_POSITION_ALREADY_TAKEN). Mirror
+  // that rule here so the collision fails the build, not the sync.
+  const menuPositionOwners = new Map();
+  for (const item of manifest.settingsMenuItems ?? []) {
+    const position = item.position ?? 0;
+    const scope = item.scope ?? 'WORKSPACE';
+    const key = `${scope}:${position}`;
+    const other = menuPositionOwners.get(key);
+    assert(
+      !other,
+      `Settings menu items "${other?.title}" and "${item.title}" both use scope ${scope} position ${position}; give each a distinct position.`,
+    );
+    menuPositionOwners.set(key, item);
+  }
+
   const constants = readFileSync(
     path.join(appPath, 'src/constants/universal-identifiers.ts'),
     'utf8',
@@ -96,6 +113,6 @@ export const verifyManifest = (appPath) => {
   };
   scan(path.join(appPath, 'src'));
   console.log(
-    `Verified ${components.size} UI components, ${functions.size} functions, field settings and view field references.`,
+    `Verified ${components.size} UI components, ${functions.size} functions, field settings, view field references and settings menu positions.`,
   );
 };

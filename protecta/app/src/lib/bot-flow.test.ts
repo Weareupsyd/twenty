@@ -74,4 +74,59 @@ describe('bot menu', () => {
     turn = handleBotTurn(turn.next, 'Kampala');
     expect(turn.action?.kind).toBe('CREATE_CLAIM');
   });
+
+  it('greets a returning customer and skips the name question', () => {
+    const options = { customer: { name: 'Sarah Kato' } };
+    let turn = handleBotTurn(startSession(), '2', options);
+    expect(turn.next.state).toBe('BUY_INTENT');
+    expect(turn.reply).toContain('Welcome back, Sarah.');
+    expect(turn.reply).toContain('1. Cover another car');
+    expect(turn.reply).toContain('2. Renew a policy');
+    expect(turn.reply).not.toMatch(/\p{Extended_Pictographic}/u);
+
+    turn = handleBotTurn(turn.next, '1', options);
+    expect(turn.next.state).toBe('BUY_VALUE');
+    turn = handleBotTurn(turn.next, '5000000', options);
+    turn = handleBotTurn(turn.next, 'Toyota', options);
+    turn = handleBotTurn(turn.next, 'Premio', options);
+    turn = handleBotTurn(turn.next, '2018', options);
+    turn = handleBotTurn(turn.next, 'UAX 123C', options);
+    // The registered name is used and never asked for.
+    expect(turn.next.state).toBe('BUY_CONFIRM');
+    expect(turn.reply).toContain('Name: Sarah Kato');
+
+    turn = handleBotTurn(turn.next, 'YES', options);
+    expect(turn.action).toEqual({
+      kind: 'CREATE_QUOTE',
+      vehicleValue: 5_000_000,
+      plate: 'UAX 123C',
+      name: 'Sarah Kato',
+      make: 'Toyota',
+      model: 'Premio',
+      year: 2018,
+    });
+  });
+
+  it('lets a returning customer renew an existing policy', () => {
+    const options = { customer: { name: 'Sarah Kato' } };
+    let turn = handleBotTurn(startSession(), '2', options);
+    turn = handleBotTurn(turn.next, '2', options);
+    expect(turn.next.state).toBe('RENEW_PICK');
+    expect(turn.action).toEqual({ kind: 'LIST_RENEWABLE_POLICIES' });
+
+    turn = handleBotTurn(turn.next, 'pb-2026-000001', options);
+    expect(turn.next.state).toBe('IDLE');
+    expect(turn.action).toEqual({
+      kind: 'RENEW_POLICY',
+      policyNo: 'PB-2026-000001',
+    });
+  });
+
+  it('rejects anything but 1 or 2 at the returning-customer choice', () => {
+    const options = { customer: { name: 'Sarah Kato' } };
+    let turn = handleBotTurn(startSession(), '2', options);
+    turn = handleBotTurn(turn.next, 'banana', options);
+    expect(turn.next.state).toBe('BUY_INTENT');
+    expect(turn.reply).toContain('Reply 1 to cover another car or 2 to renew');
+  });
 });

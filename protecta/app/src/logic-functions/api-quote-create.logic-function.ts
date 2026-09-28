@@ -56,6 +56,9 @@ const handler = async (event: RoutePayload): Promise<Response> => {
         model: str(body.model) || undefined,
         year: body.year ? num(body.year) : undefined,
         channel: partner ? 'PARTNER_API' : 'PORTAL',
+        email: str(body.email) || undefined,
+        nin: str(body.idNo) || str(body.nin) || undefined,
+        consent: body.consent === true,
       },
       { pricing: pricingFromEnv(), baseUrl: publicBaseUrl() },
     );

@@ -4,6 +4,7 @@ export type BotState =
   | 'IDLE'
   | 'CALC_VALUE'
   | 'CALC_OFFER'
+  | 'BUY_INTENT'
   | 'BUY_VALUE'
   | 'BUY_MAKE'
   | 'BUY_MODEL'
@@ -15,6 +16,7 @@ export type BotState =
   | 'CLAIM_POLICY'
   | 'CLAIM_DESCRIPTION'
   | 'CLAIM_LOCATION'
+  | 'RENEW_PICK'
   | 'TICKET_TEXT';
 
 export type BotSession = {
@@ -42,7 +44,9 @@ export type BotAction =
     }
   | { kind: 'CREATE_TICKET'; text: string }
   | { kind: 'LOOKUP_POLICIES' }
-  | { kind: 'LOOKUP_QUOTE'; quoteRef: string };
+  | { kind: 'LOOKUP_QUOTE'; quoteRef: string }
+  | { kind: 'LIST_RENEWABLE_POLICIES' }
+  | { kind: 'RENEW_POLICY'; policyNo: string };
 
 export type BotTurn = {
   reply: string;
@@ -90,6 +94,34 @@ const parseMoney = (text: string): number | null => {
 const yes = (text: string): boolean =>
   ['yes', 'y', 'ok', 'proceed'].includes(text.trim().toLowerCase());
 
+const firstNameOf = (name: string): string =>
+  name.trim().split(/\s+/)[0] ?? '';
+
+const coverConfirmTurn = (
+  session: BotSession,
+  args: { plate: string; name: string },
+  rate: number,
+): BotTurn => {
+  const value = Number(session.data.vehicleValue);
+  const premium = Math.round(value * rate);
+  return {
+    reply: [
+      'Confirm your cover:',
+      `• Name: ${args.name}`,
+      `• Vehicle: ${session.data.year ?? ''} ${session.data.make ?? ''} ${session.data.model ?? ''}`.trim(),
+      `• Plate: ${args.plate}`,
+      `• Value: UGX ${value.toLocaleString('en-US')}`,
+      `• Premium: UGX ${premium.toLocaleString('en-US')}`,
+      '',
+      'Reply YES to confirm or NO to restart.',
+    ].join('\n'),
+    next: withState(session, 'BUY_CONFIRM', {
+      plate: args.plate,
+      name: args.name,
+    }),
+  };
+};
+
 const moneyReply = (value: number, rate: number): string => {
   const premium = Math.round(value * rate);
   const percent = `${(rate * 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
@@ -105,7 +137,7 @@ const moneyReply = (value: number, rate: number): string => {
 export const startSession = (): BotSession => emptySession();
 
 const menuTurn = (session: BotSession, intro?: string): BotTurn => ({
-  reply: `${intro ? `${intro}\n` : ''}🛡️ *Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
+  reply: `${intro ? `${intro}\n` : ''}*Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
   next: withState(session, 'IDLE', {}),
 });
 
@@ -140,16 +172,26 @@ const idleCommand = (text: string): string => {
 /**
  * Same jobs as the website: calculate a 1.5% premium, then onboard
  * (make, model, year, plate, name) and hand payment to the quote page.
+ *
+ * When `options.customer` is set (the WhatsApp number is already
+ * registered), onboarding greets the returning customer by name and
+ * skips the name question — and offers renewing an existing policy.
  */
 export const handleBotTurn = (
   session: BotSession,
   rawText: string,
-  options: { minValue?: number; maxValue?: number; rate?: number } = {},
+  options: {
+    minValue?: number;
+    maxValue?: number;
+    rate?: number;
+    customer?: { name: string };
+  } = {},
 ): BotTurn => {
   const text = rawText.trim();
   const minValue = options.minValue ?? 1_000_000;
   const maxValue = options.maxValue ?? 300_000_000;
   const rate = options.rate ?? 0.015;
+  const knownName = options.customer?.name.trim() ?? '';
 
   if (isMenuCommand(text)) {
     return menuTurn(session);
@@ -165,6 +207,19 @@ export const handleBotTurn = (
         };
       }
       if (command === '2') {
+        if (knownName) {
+          return {
+            reply: [
+              `Welcome back, ${firstNameOf(knownName)}.`,
+              '',
+              '1. Cover another car',
+              '2. Renew a policy',
+              '',
+              'Reply with a number.',
+            ].join('\n'),
+            next: withState(session, 'BUY_INTENT'),
+          };
+        }
         return {
           reply: 'Let’s get you covered. What is the market value of the vehicle in UGX?',
           next: withState(session, 'BUY_VALUE'),
@@ -230,6 +285,27 @@ export const handleBotTurn = (
       return menuTurn(session, 'Calculator closed.');
     }
 
+    case 'BUY_INTENT': {
+      const choice = text.trim();
+      if (choice === '1') {
+        return {
+          reply: 'Let’s get your next car covered. What is the market value of the vehicle in UGX?',
+          next: withState(session, 'BUY_VALUE'),
+        };
+      }
+      if (choice === '2') {
+        return {
+          reply: 'Looking up your policies…',
+          next: withState(session, 'RENEW_PICK'),
+          action: { kind: 'LIST_RENEWABLE_POLICIES' },
+        };
+      }
+      return {
+        reply: 'Reply 1 to cover another car or 2 to renew a policy.',
+        next: session,
+      };
+    }
+
     case 'BUY_VALUE': {
       const value = parseMoney(text);
       if (value === null || value < minValue || value > maxValue) {
@@ -286,9 +362,15 @@ export const handleBotTurn = (
           next: session,
         };
       }
+      const plate = normalizePlate(text);
+      // Returning customers are recognised by their WhatsApp number, so
+      // their registered name is used and the name question is skipped.
+      if (knownName) {
+        return coverConfirmTurn(session, { plate, name: knownName }, rate);
+      }
       return {
         reply: 'What is your full name?',
-        next: withState(session, 'BUY_NAME', { plate: normalizePlate(text) }),
+        next: withState(session, 'BUY_NAME', { plate }),
       };
     }
 
@@ -296,21 +378,11 @@ export const handleBotTurn = (
       if (text.replace(/\s/g, '').length < 3) {
         return { reply: 'Please send your full name.', next: session };
       }
-      const value = Number(session.data.vehicleValue);
-      const premium = Math.round(value * rate);
-      return {
-        reply: [
-          'Confirm your cover:',
-          `• Name: ${text}`,
-          `• Vehicle: ${session.data.year ?? ''} ${session.data.make ?? ''} ${session.data.model ?? ''}`.trim(),
-          `• Plate: ${session.data.plate}`,
-          `• Value: UGX ${value.toLocaleString('en-US')}`,
-          `• Premium: UGX ${premium.toLocaleString('en-US')}`,
-          '',
-          'Reply YES to confirm or NO to restart.',
-        ].join('\n'),
-        next: withState(session, 'BUY_CONFIRM', { name: text }),
-      };
+      return coverConfirmTurn(
+        session,
+        { plate: session.data.plate ?? '', name: text },
+        rate,
+      );
     }
 
     case 'BUY_CONFIRM': {
@@ -361,6 +433,18 @@ export const handleBotTurn = (
       return {
         reply: 'Send the 15-digit quote reference first.',
         next: session,
+      };
+    }
+
+    case 'RENEW_PICK': {
+      const policyNo = text.toUpperCase();
+      if (policyNo.length < 4) {
+        return { reply: 'Please send the full policy number.', next: session };
+      }
+      return {
+        reply: 'Renewing your policy…',
+        next: withState(session, 'IDLE', {}),
+        action: { kind: 'RENEW_POLICY', policyNo },
       };
     }
 

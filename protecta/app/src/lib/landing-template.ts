@@ -781,7 +781,7 @@ button,input,select{font:inherit;color:inherit}
     ].every(Boolean);
     $('#agreeWrap').classList.toggle('invalid', !agree.checked);
     if (!ok || !agree.checked) { ($('#detailsForm .invalid input') || agree).focus(); return; }
-    Object.assign(state, { name: nameIn.value.trim(), phone: normPhone(phoneIn.value), email: emailIn.value.trim(), idNo: idIn.value.trim().toUpperCase() });
+    Object.assign(state, { name: nameIn.value.trim(), phone: normPhone(phoneIn.value), email: emailIn.value.trim(), idNo: idIn.value.trim().toUpperCase(), consent: agree.checked });
     if (!state.method) { var n = network(state.phone); if (n) selectMethod(n); }
     if (!$('#payPhone').value) $('#payPhone').value = nationalUg(state.phone);
     createQuoteThen(function () { go('pay'); });
@@ -807,7 +807,9 @@ button,input,select{font:inherit;color:inherit}
       body: JSON.stringify({
         phone: state.phone, name: state.name, plate: state.plate,
         vehicleValue: state.value, make: state.make, model: state.model,
-        year: Number(state.year) || undefined
+        year: Number(state.year) || undefined,
+        email: state.email || undefined, idNo: state.idNo || undefined,
+        consent: state.consent === true
       })
     }).then(function (data) {
       state.quoteRef = data.quote.reference;

@@ -39,9 +39,11 @@ const selection = (
   const node: Record<string, boolean | Record<string, boolean>> = { id: true };
   for (const field of select) {
     node[field] =
-      field === 'name' && objectPlural === 'people'
+      objectPlural === 'people' && field === 'name'
         ? { firstName: true, lastName: true }
-        : true;
+        : objectPlural === 'people' && field === 'emails'
+          ? { primaryEmail: true }
+          : true;
   }
   return node;
 };

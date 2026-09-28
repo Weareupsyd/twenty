@@ -56,4 +56,15 @@ describe('landing page', () => {
     expect(check.plateOk('UAX 123C')).toBe(true);
     expect(check.emailOk('ada@example.com')).toBe(true);
   });
+
+  it('pushes the account details (email, ID number, consent) with the quote request', () => {
+    const html = renderLandingPage('/s/protecta', assets, '0312246500', 'tel:+256312246500');
+    // The details step must reach the Twenty backend: the quote request
+    // carries the email, the NIN/passport and the terms consent.
+    expect(html).toContain("api('/api/quotes'");
+    expect(html).toContain('email: state.email');
+    expect(html).toContain('idNo: state.idNo');
+    expect(html).toContain('consent: state.consent === true');
+    expect(html).toContain('consent: agree.checked');
+  });
 });

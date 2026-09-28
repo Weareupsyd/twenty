@@ -105,7 +105,7 @@ const moneyReply = (value: number, rate: number): string => {
 export const startSession = (): BotSession => emptySession();
 
 const menuTurn = (session: BotSession, intro?: string): BotTurn => ({
-  reply: `${intro ? `${intro}\n` : ''}🛡️ *Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
+  reply: `${intro ? `${intro}\n` : ''}*Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
   next: withState(session, 'IDLE', {}),
 });
 

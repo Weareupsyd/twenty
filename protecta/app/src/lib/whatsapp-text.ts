@@ -1,6 +1,6 @@
 import { formatUgx } from 'src/lib/money';
 
-export const BRAND_HEADER = '🛡️ *Protecta Bode*';
+export const BRAND_HEADER = '*Protecta Bode*';
 
 export const quoteIssuedMessage = (args: {
   name: string;

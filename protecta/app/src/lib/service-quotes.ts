@@ -21,6 +21,10 @@ export type CreateQuoteInput = {
   year?: number;
   channel?: QuoteChannel;
   productCode?: string;
+  /** Contact details from the public forms; stored on the person record. */
+  email?: string;
+  nin?: string;
+  consent?: boolean;
 };
 
 export type CreatedQuote = {
@@ -51,8 +55,46 @@ export const findPersonByPhone = (
   db.findFirst(
     'people',
     { protectaPhone: { eq: phone } },
-    ['protectaPhone', 'protectaRole', 'name'],
+    ['protectaPhone', 'protectaRole', 'protectaNin', 'protectaConsent', 'emails', 'name'],
   );
+
+export const personPrimaryEmail = (person: RecordData): string => {
+  const emails = person.emails;
+  if (typeof emails === 'string') return emails.trim();
+  if (emails && typeof emails === 'object') {
+    return String(
+      (emails as { primaryEmail?: unknown }).primaryEmail ?? '',
+    ).trim();
+  }
+  return '';
+};
+
+/**
+ * Persist contact details collected on the public forms onto the person
+ * record. Existing values are never overwritten — the details step only
+ * fills what the record is missing (e.g. an email captured on the landing
+ * page later becomes the policy delivery address).
+ */
+export const attachPersonContact = async (
+  db: DbClient,
+  person: RecordData,
+  contact: { email?: string; nin?: string; consent?: boolean },
+): Promise<RecordData> => {
+  const patch: RecordData = {};
+  const email = contact.email?.trim() ?? '';
+  const nin = contact.nin?.trim() ?? '';
+  if (email && !personPrimaryEmail(person)) {
+    patch.emails = { primaryEmail: email };
+  }
+  if (nin && !String(person.protectaNin ?? '').trim()) {
+    patch.protectaNin = nin;
+  }
+  if (contact.consent === true && person.protectaConsent !== true) {
+    patch.protectaConsent = true;
+  }
+  if (Object.keys(patch).length === 0) return person;
+  return db.update('person', String(person.id), patch);
+};
 
 export const personDisplayName = (person: RecordData): string => {
   const name = person.name;
@@ -155,7 +197,12 @@ export const createQuote = async (
   const reference = makeQuoteRef(options.rng);
   const baseUrl = options.baseUrl ?? process.env.PUBLIC_BASE_URL ?? '';
 
-  const { person, isNew } = await ensurePerson(db, phone, input.name);
+  const { person: linkedPerson, isNew } = await ensurePerson(db, phone, input.name);
+  const person = await attachPersonContact(db, linkedPerson, {
+    email: input.email,
+    nin: input.nin,
+    consent: input.consent,
+  });
   const vehicle = await ensureVehicle(db, {
     plate,
     phone,

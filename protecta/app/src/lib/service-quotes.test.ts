@@ -57,4 +57,67 @@ describe('createQuote', () => {
       createQuote(db, { phone: '0772000000', plate: 'UAX 1A', vehicleValue: 500 }, { pricing: DEFAULT_PRICING }),
     ).rejects.toThrow('at least');
   });
+
+  it('stores email, ID number and consent on the person record', async () => {
+    const db = setup();
+    const result = await createQuote(
+      db,
+      {
+        phone: '0772000000',
+        name: 'Jane Doe',
+        plate: 'UAX 123C',
+        vehicleValue: 10_000_000,
+        email: 'jane@example.com',
+        nin: 'CM90123456TYCQ',
+        consent: true,
+      },
+      { pricing: DEFAULT_PRICING },
+    );
+    expect(result.person.emails).toEqual({ primaryEmail: 'jane@example.com' });
+    expect(result.person.protectaNin).toBe('CM90123456TYCQ');
+    expect(result.person.protectaConsent).toBe(true);
+  });
+
+  it('fills missing contact details on a known person but never overwrites them', async () => {
+    const db = setup();
+    // First quote comes without contact details (e.g. the WhatsApp bot).
+    const first = await createQuote(
+      db,
+      { phone: '0772000000', plate: 'UAX 1A', vehicleValue: 5_000_000 },
+      { pricing: DEFAULT_PRICING },
+    );
+    expect(first.person.emails).toBeUndefined();
+
+    // The landing page later collects them — the gaps are filled.
+    const second = await createQuote(
+      db,
+      {
+        phone: '0772000000',
+        plate: 'UAX 1A',
+        vehicleValue: 5_000_000,
+        email: 'jane@example.com',
+        nin: 'CM90123456TYCQ',
+        consent: true,
+      },
+      { pricing: DEFAULT_PRICING },
+    );
+    expect(second.person.emails).toEqual({ primaryEmail: 'jane@example.com' });
+    expect(second.person.protectaNin).toBe('CM90123456TYCQ');
+    expect(second.person.protectaConsent).toBe(true);
+
+    // A repeat quote with different details never overwrites the stored ones.
+    const third = await createQuote(
+      db,
+      {
+        phone: '0772000000',
+        plate: 'UAX 2B',
+        vehicleValue: 6_000_000,
+        email: 'other@example.com',
+        nin: 'OTHER-ID-123',
+      },
+      { pricing: DEFAULT_PRICING },
+    );
+    expect(third.person.emails).toEqual({ primaryEmail: 'jane@example.com' });
+    expect(third.person.protectaNin).toBe('CM90123456TYCQ');
+  });
 });

@@ -20,6 +20,7 @@ import {
 } from 'src/lib/momo';
 import { normalizeUgPhone } from 'src/lib/phones';
 import { CoreDbClient } from 'src/lib/records';
+import { confirmAndIssue } from 'src/lib/confirm-pipeline';
 import { createPayment, normalizeProvider } from 'src/lib/service-payments';
 import { findQuoteByRef } from 'src/lib/service-quotes';
 
@@ -88,16 +89,32 @@ export const handlePaymentRequest = async (
     if (provider === 'mtn_momo') {
       const config = momoConfigFromEnv();
       if (!config) {
-        return jsonResponse(
-          {
-            ok: true,
-            payment,
-            providerPending: true,
-            instructions:
-              'Mobile-money is not configured yet. Our team will call you to complete this payment.',
-          },
-          201,
-        );
+        // Demo / sandbox: no MoMo credentials — simulate a successful payment
+        // so the portal shows a real policy number and the record appears in Twenty.
+        try {
+          const { policy } = await confirmAndIssue(db, payment, { baseUrl: publicBaseUrl() });
+          return jsonResponse(
+            {
+              ok: true,
+              payment: { ...payment, status: 'CONFIRMED' },
+              policy,
+              draft: true,
+              instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Your PDF is protected with your phone number (${payerPhone}) as password.`,
+            },
+            201,
+          );
+        } catch (e) {
+          console.error('demo confirm failed', e);
+          return jsonResponse(
+            {
+              ok: true,
+              payment,
+              draft: true,
+              instructions: `Payment request for ${formatUgx(Number(quote.premium))} received. Your cover is being processed. Reference ${String(payment.paymentRef)}.`,
+            },
+            201,
+          );
+        }
       }
       try {
         const token = await momoAccessToken(config);
@@ -134,16 +151,30 @@ export const handlePaymentRequest = async (
 
     const config = airtelConfigFromEnv();
     if (!config) {
-      return jsonResponse(
-        {
-          ok: true,
-          payment,
-          providerPending: true,
-          instructions:
-            'Airtel Money is not configured yet. Our team will call you to complete this payment.',
-        },
-        201,
-      );
+      try {
+        const { policy } = await confirmAndIssue(db, payment, { baseUrl: publicBaseUrl() });
+        return jsonResponse(
+          {
+            ok: true,
+            payment: { ...payment, status: 'CONFIRMED' },
+            policy,
+            draft: true,
+            instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Your PDF is protected with your phone number (${payerPhone}) as password.`,
+          },
+          201,
+        );
+      } catch (e) {
+        console.error('demo confirm failed', e);
+        return jsonResponse(
+          {
+            ok: true,
+            payment,
+            draft: true,
+            instructions: `Payment request for ${formatUgx(Number(quote.premium))} received. Your cover is being processed. Reference ${String(payment.paymentRef)}.`,
+          },
+          201,
+        );
+      }
     }
     try {
       const token = await airtelAccessToken(config);

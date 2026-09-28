@@ -3,6 +3,7 @@ import {
   INSURANCE_QUOTE,
   QUOTES_PIPELINE,
   Q_PLATE,
+  Q_POLICYHOLDER,
   Q_POLICYHOLDER_PHONE,
   Q_PREMIUM,
   Q_REFERENCE,
@@ -18,6 +19,7 @@ import {
   VIEW_QUOTES_PIPELINE_COL3,
   VIEW_QUOTES_PIPELINE_COL4,
   VIEW_QUOTES_PIPELINE_COL5,
+  VIEW_QUOTES_PIPELINE_COL6,
 } from 'src/constants/universal-identifiers';
 
 export default defineView({
@@ -41,5 +43,6 @@ export default defineView({
     { universalIdentifier: VIEW_QUOTES_PIPELINE_COL3, fieldMetadataUniversalIdentifier: Q_PREMIUM, position: 3, isVisible: true, size: 150 },
     { universalIdentifier: VIEW_QUOTES_PIPELINE_COL4, fieldMetadataUniversalIdentifier: Q_PLATE, position: 4, isVisible: true, size: 140 },
     { universalIdentifier: VIEW_QUOTES_PIPELINE_COL5, fieldMetadataUniversalIdentifier: Q_STATUS, position: 5, isVisible: true, size: 130 },
+    { universalIdentifier: VIEW_QUOTES_PIPELINE_COL6, fieldMetadataUniversalIdentifier: Q_POLICYHOLDER, position: 6, isVisible: true, size: 180 },
   ],
 });

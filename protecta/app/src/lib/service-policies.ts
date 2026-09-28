@@ -66,6 +66,11 @@ export const issuePolicy = async (
         quoteRef: quote.reference,
         status: 'ACTIVE',
         premiumUgx: quote.premium,
+        // The sum insured is fixed at issuance: later vehicle-value edits
+        // must not silently change an issued certificate.
+        ...(typeof quote.vehicleValue === 'number'
+          ? { sumInsuredUgx: quote.vehicleValue }
+          : {}),
         plate: quote.plate,
         vehicleMake: quote.vehicleMake ?? '',
         vehicleModel: quote.vehicleModel ?? '',

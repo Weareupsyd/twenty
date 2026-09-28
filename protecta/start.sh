@@ -713,6 +713,7 @@ $(printf '\033[1;32m==> Ready\033[0m')
     Ollama:     ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     API key:    ./create-api-key.sh (mint) / ./start.sh --new-api-key (rotate)
     Reseed:     ./start.sh --reseed (when the first-boot seed never finished)
+    One app:    ./twenty.sh app | docgen | sms (install, then apply just that app)
     Stop:       $TWENTY docker:stop
     Logs:       $TWENTY docker:logs -f
     Status:     $TWENTY docker:status

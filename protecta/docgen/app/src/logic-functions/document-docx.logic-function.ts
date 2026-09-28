@@ -27,8 +27,10 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   const docxSource = isHtml
     ? htmlToText(String(document!.content))
     : String(document!.content);
-  const docx = await renderDocx(docxSource);
   const reference = String(document!.reference);
+  const docx = await renderDocx(docxSource, {
+    footerText: `Policy ${String(document!.policyNo ?? '')} · Document ${reference}`,
+  });
   const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64Of(docx)}`;
   const fileName = `document-${reference}.docx`;
   const pdfHref = `/s/docgen/documents/view?ref=${encodeURIComponent(reference)}`;

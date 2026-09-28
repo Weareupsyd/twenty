@@ -31,6 +31,45 @@ describe('createQuote', () => {
     expect(found?.premium).toBe(150_000);
   });
 
+  it('keeps the schedule details on the vehicle record', async () => {
+    const db = setup();
+    const result = await createQuote(
+      db,
+      {
+        phone: '0772000000',
+        plate: 'UAX 123C',
+        vehicleValue: 10_000_000,
+        make: 'Toyota',
+        model: 'Premio',
+        bodyType: 'Saloon',
+        engineCc: 1800,
+        seatingCapacity: 5,
+      },
+      { pricing: DEFAULT_PRICING, rng: () => 0.3 },
+    );
+    expect(result.vehicle).toMatchObject({
+      bodyType: 'Saloon',
+      engineCc: 1800,
+      seatingCapacity: 5,
+    });
+
+    // A later quote for the same plate fills in what is still missing but
+    // leaves corrected values alone.
+    const again = await createQuote(
+      db,
+      {
+        phone: '0772000000',
+        plate: 'UAX 123C',
+        vehicleValue: 11_000_000,
+        bodyType: 'Saloon',
+        seatingCapacity: 7,
+      },
+      { pricing: DEFAULT_PRICING, rng: () => 0.4 },
+    );
+    expect(again.vehicle.seatingCapacity).toBe(5);
+    expect(again.vehicle.engineCc).toBe(1800);
+  });
+
   it('reuses the existing person on repeat quotes', async () => {
     const db = setup();
     const first = await createQuote(

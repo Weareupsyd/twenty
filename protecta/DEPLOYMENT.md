@@ -45,7 +45,12 @@
    rotates it; `./create-api-key.sh --check` explains a rejected key.
 4. Apply with `protecta/start.sh` (or `protecta/install.sh` for the full chain).
    Stop on any server-side migration error; do not reset Twenty to bypass a
-   validation error.
+   validation error. To sync a single app instead, use `protecta/twenty.sh`
+   (`./twenty.sh app`, `./twenty.sh docgen`, `./twenty.sh sms`): it runs that
+   app's own `node_modules/.bin/twenty` and installs it first when it is
+   missing. Do not use `npx twenty` — it downloads the unrelated `twenty`
+   package from the registry and fails with `could not determine executable to
+   run` instead of reporting the missing install.
 5. Refresh that workspace. Check Quotes, Policies, Payments, Claims, Vehicles,
    Commissions, Partner accounts, KYC and Support tickets. Open Protecta Bode in
    settings. Assign the Protecta support role deliberately; do not grant it to
@@ -80,13 +85,32 @@ unconfigured; it does not simulate a payment or authenticate a customer.
 
 `start.sh` also syncs the standalone **Document Generator** app, which is
 linked to Protecta through workspace events: when a policy is issued it
-generates the policy certificate document (PDF and Word) from a template
-(`{{placeholder}}` convention — see `docgen/README.md`). The original Word
-policy wording is not in the repo yet; recreate it as a template body when
-it arrives. Documents are served at `/s/docgen/documents/view?policyNo=...`
-(PDF) and `/s/docgen/documents/docx?policyNo=...` (Word); the Protecta
-policy page links to them automatically. To skip the app, delete
-`protecta/docgen` or sync only `protecta/app` with the twenty CLI.
+generates the **Liberty General Insurance Uganda Ltd "Motor Protecta Bode
+Policy"** document (PDF and Word) from the policy's own records
+(`{{placeholder}}` convention — see `docgen/README.md`). The wording from
+`Protecta bode Final.docx` ships inside the app (`src/lib/policy-template.ts`),
+so nothing has to be recreated by hand. Documents are served at
+`/s/docgen/documents/view?policyNo=...` (PDF) and
+`/s/docgen/documents/docx?policyNo=...` (Word); the Protecta policy page links
+to them automatically. To skip the app, delete `protecta/docgen` or sync only
+`protecta/app` (`./twenty.sh app`).
+
+Make the generated certificate complete:
+
+1. Optional but recommended — put an editable copy of the wording in the
+   workspace: `POST /s/docgen/templates/install` (add `?force=1` to restore the
+   built-in body). Without it the built-in template is used as-is.
+2. Fill the schedule details the CRM does not derive: on the **policy** — Sum
+   insured, Body type, Engine capacity, Seating capacity and the premium
+   breakdown (Training levy, Sticker fees, VAT, Stamp duty, Total premium); on
+   the **person** — Address and Business or profession; on the **vehicle** —
+   Body type, Engine capacity, Seating capacity. Protecta fills the sum insured
+   from the quote's vehicle value at issuance and keeps vehicle details as
+   quotes are created; anything still missing prints as "—" rather than a guess.
+3. Or set the breakdown once for the whole deployment in
+   **Settings → Document Generator**: `POLICY_TRAINING_LEVY_RATE`,
+   `POLICY_VAT_RATE`, `POLICY_STICKER_FEES_UGX`, `POLICY_STAMP_DUTY_UGX`
+   (0 = not set).
 
 ## SMS Sender app (`protecta/sms`)
 
@@ -103,7 +127,12 @@ record with a `SMS-XXXXXX` reference and delivery status. Other apps
 `POST /s/sms/send` with `{ phone, eventKey, language?, variables?,
 message? }`; identical sends to the same recipient are suppressed, so
 event handlers and app triggers never double-text a customer. To skip the
-app, delete `protecta/sms` or sync only `protecta/app` with the twenty CLI.
+app, delete `protecta/sms` or sync only `protecta/app` (`./twenty.sh app`).
+
+Sync either standalone app on its own with `./twenty.sh docgen` or
+`./twenty.sh sms`; never with a bare `npx twenty`, which resolves the name from
+the registry (unrelated `twenty` package, no executable) and reports
+`could not determine executable to run` when the app's dependencies are missing.
 
 ## Smoke-test in a disposable workspace / provider sandbox
 

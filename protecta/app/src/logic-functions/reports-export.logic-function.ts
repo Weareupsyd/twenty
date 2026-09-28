@@ -1,6 +1,6 @@
 import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
 import { Response } from 'twenty-sdk/logic-function';
-import { REPORTS_EXPORT } from 'src/constants/universal-identifiers';
+import { REPORT_EXPORT } from 'src/constants/universal-identifiers';
 import { htmlResponse } from 'src/lib/http';
 import { CoreDbClient } from 'src/lib/records';
 import {
@@ -60,7 +60,7 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   const db = new CoreDbClient();
   let rows: Record<string, unknown>[] = [];
   let columns: Column[] = [];
-  let sheet = type;
+  let sheet: string = type;
 
   const now = new Date().toISOString().slice(0,10);
 
@@ -346,7 +346,7 @@ const handler = async (event: RoutePayload): Promise<Response> => {
 };
 
 export default defineLogicFunction({
-  universalIdentifier: REPORTS_EXPORT,
+  universalIdentifier: REPORT_EXPORT,
   name: 'reports-export',
   timeoutSeconds: 30,
   handler,

@@ -8,7 +8,7 @@ export default defineNavigationMenuItem({
   universalIdentifier: NAV_REPORTS,
   position: 1,
   type: NavigationMenuItemType.LINK,
-  label: 'Reports (Excel)',
+  name: 'Reports (Excel)',
   icon: 'IconFileSpreadsheet',
   link: '/s/protecta/reports',
 });

@@ -12,6 +12,6 @@ export default defineNavigationMenuItem({
   position: 0,
   type: NavigationMenuItemType.PAGE_LAYOUT,
   pageLayoutUniversalIdentifier: PROTECTA_DASHBOARD,
-  label: 'Protecta Bode Ops',
+  name: 'Protecta Bode Ops',
   icon: 'IconDashboard',
 });

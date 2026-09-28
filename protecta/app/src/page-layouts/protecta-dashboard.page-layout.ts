@@ -390,7 +390,7 @@ export default definePageLayout({
           },
           configuration: {
             configurationType: 'RECORD_TABLE',
-            viewId: POLICIES_EXPIRING,
+            viewUniversalIdentifier: POLICIES_EXPIRING,
             recordLimit: 10,
             isUIEditable: false,
           },
@@ -409,7 +409,7 @@ export default definePageLayout({
           },
           configuration: {
             configurationType: 'RECORD_TABLE',
-            viewId: PAYMENTS_PENDING,
+            viewUniversalIdentifier: PAYMENTS_PENDING,
             recordLimit: 10,
             isUIEditable: false,
           },

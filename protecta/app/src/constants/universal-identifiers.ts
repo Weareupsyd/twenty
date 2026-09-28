@@ -499,3 +499,6 @@ export const PA_EMAIL = '529f585a-581c-4a69-a4fa-ec5e04c34882';
 export const PA_PHONE = 'ff536e73-4d05-4f83-8f46-d7321c39d297';
 export const PA_COMPANY_ID = '5d8d8cac-0b17-4bbe-b766-f021653f4532';
 export const STAFF_ACTION = '522a3510-1fb6-4319-94ad-a91506b72120';
+export const WHATSAPP_SETTINGS_GET = 'c4e8a1b2-6f3d-4a91-9e20-7b5d1c8a44e0';
+export const WHATSAPP_SETTINGS_SAVE = 'd7f2b6c1-8a40-4e15-b3c9-2f6e0d9a71b4';
+export const WHATSAPP_SETTINGS_MENU = 'e1a9c4d8-3b72-4f06-8d55-9c2a7e1b60f3';

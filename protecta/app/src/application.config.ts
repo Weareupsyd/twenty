@@ -132,9 +132,25 @@ export default defineApplication({
       isSecret: true,
       isRequired: true,
     },
+    EVOLUTION_API_URL: {
+      description:
+        'Evolution API base URL for the onboarded WhatsApp bot, for example http://127.0.0.1:8080. Prefer Settings → WhatsApp bot.',
+      isSecret: false,
+      isRequired: false,
+    },
+    EVOLUTION_INSTANCE: {
+      description: 'Evolution API instance name that already has the bot connected.',
+      isSecret: false,
+      isRequired: false,
+    },
+    EVOLUTION_API_KEY: {
+      description: 'Evolution API instance key. Sent as the apikey header.',
+      isSecret: true,
+      isRequired: false,
+    },
     WHATSAPP_TOKEN: {
       description:
-        'Meta WhatsApp Cloud API permanent token for the bot number.',
+        'Optional Meta WhatsApp Cloud API token. Leave empty when using Evolution API.',
       isSecret: true,
       isRequired: false,
     },

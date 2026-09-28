@@ -61,8 +61,8 @@ export const renderLandingPage = (
   --body:'Noto Sans',system-ui,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-text-size-adjust:100%}
-body{font-family:var(--body);color:var(--ink);background:var(--white);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+html{-webkit-text-size-adjust:100%;overflow-x:clip}
+body{font-family:var(--body);color:var(--ink);background:var(--white);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:clip}
 img{display:block;max-width:100%}
 button,input,select{font:inherit;color:inherit}
 [hidden]{display:none!important}
@@ -70,10 +70,22 @@ button,input,select{font:inherit;color:inherit}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ───────── Stage: the key visual IS the landing page ───────── */
-.stage{min-height:100svh}
-.kv{background:var(--white)}
-.kv-frame{position:relative;width:100%;aspect-ratio:1080/1258.56}
-.kv-frame img{width:100%;height:100%;object-fit:contain}
+.stage{min-height:100svh;max-width:100vw;overflow-x:clip}
+.kv{background:var(--white);min-width:0;overflow:hidden}
+.kv-frame{position:relative;width:100%;max-width:100%;aspect-ratio:1080/1258.56}
+.kv-frame img{width:100%;height:100%;max-width:100%;object-fit:contain;object-position:center bottom;font-size:0;color:transparent}
+.kv-frame img.is-broken{display:none}
+.kv-fallback{display:flex;flex-direction:column;min-height:100%;background:linear-gradient(180deg,#f4fbfe 0%,#ffffff 42%,#ffffff 88%,#0E1C4B 88%)}
+.kv-fallback[hidden]{display:none!important}
+.kv-fallback-inner{flex:1;display:flex;flex-direction:column;justify-content:center;padding:36px 28px 24px;text-align:center;color:var(--navy)}
+.kv-fallback-brand{font-weight:800;letter-spacing:.14em;font-size:13px}
+.kv-fallback-brand span{display:block;letter-spacing:0;font-weight:500;font-style:italic;font-size:14px;margin-top:2px}
+.kv-fallback h2{font-family:var(--display);font-weight:800;font-size:clamp(40px,5vw,64px);line-height:.95;margin:18px 0 8px}
+.kv-fallback h2 em{font-style:normal;color:var(--orange)}
+.kv-fallback-headline{font-family:var(--display);font-weight:800;font-size:clamp(26px,3vw,36px);line-height:1.05;margin:8px 0 12px}
+.kv-fallback p{font-size:15px}
+.kv-fallback a{color:var(--navy);font-weight:800;text-decoration:none}
+.kv-fallback-band{background:var(--navy-band);color:#d5deef;font-size:11px;line-height:1.35;text-align:center;padding:10px 16px}
 .kv-call{position:absolute;left:25.4%;top:83.6%;width:50.4%;height:6.2%;border-radius:10px}
 .kv-call:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 
@@ -84,10 +96,10 @@ button,input,select{font:inherit;color:inherit}
 @media (min-width:1024px) and (min-aspect-ratio:5/4){
   .stage{
     --kv-h:min(100svh, calc((100vw - var(--panel-min)) * var(--kv-ratio)));
-    display:grid;grid-template-columns:auto minmax(var(--panel-min),1fr);
+    display:grid;grid-template-columns:minmax(0,1.05fr) minmax(var(--panel-min),1fr);width:100%;
   }
-  .kv{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end}
-  .kv-frame{height:var(--kv-h);width:auto}
+  .kv{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end;justify-content:center}
+  .kv-frame{height:var(--kv-h);width:100%;max-height:100svh}
   html{scroll-padding-bottom:calc(var(--kv-h-root, 100svh) * 0.0515 + 24px)}
   .panel{min-height:100svh}
   .panel-inner{padding:48px clamp(24px,4vw,64px) 40px}
@@ -296,8 +308,19 @@ button,input,select{font:inherit;color:inherit}
              srcset="${a.kvJpg720} 720w, ${a.kvJpg1080} 1080w, ${a.kvJpg1600} 1600w"
              sizes="(min-width: 1024px) and (min-aspect-ratio: 5/4) 86svh, 100vw"
              width="1080" height="1259" fetchpriority="high" decoding="async"
-             alt="Liberty, In it with you. Protecta Bode. Cover Your Ride, Cover Your Life. For just 1.5% of your car's value, you enjoy car body, third party, and driver cover in case of an accident. Terms and Conditions apply. Call ${supportPhone} today. Protecta Bode is underwritten by Liberty General Insurance Uganda and regulated under the Insurance Regulatory Authority of Uganda, IRA, sandbox guidelines." />
+             alt="Protecta Bode"
+             onerror="this.classList.add('is-broken');var f=document.getElementById('kvFallback');if(f)f.hidden=false;" />
       </picture>
+      <div class="kv-fallback" id="kvFallback" hidden>
+        <div class="kv-fallback-inner">
+          <p class="kv-fallback-brand">LIBERTY <span>In it with you</span></p>
+          <h2>Protecta <em>Bode</em></h2>
+          <p class="kv-fallback-headline">Cover Your Ride<br>Cover Your Life</p>
+          <p>For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident. Terms and Conditions apply.</p>
+          <p><a href="${supportHref}">Call ${supportPhone} today</a></p>
+        </div>
+        <p class="kv-fallback-band">Protecta Bode is underwritten by Liberty General Insurance Uganda and regulated under the Insurance Regulatory Authority of Uganda, IRA, sandbox guidelines.</p>
+      </div>
       <a class="kv-call" href="${supportHref}" aria-label="Call ${supportPhone}"></a>
     </div>
   </section>
@@ -423,8 +446,9 @@ button,input,select{font:inherit;color:inherit}
                 </div>
                 <div class="f">
                   <label for="phone">Phone number</label>
-                  <div class="tel"><span>+256</span><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="7XX XXX XXX" required /></div>
-                  <span class="err">Enter a valid Ugandan number, e.g. 772 123 456.</span>
+                  <div class="tel"><span>+256</span><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="701 440 613" required /></div>
+                  <span class="hint">0701440613, 701440613 or 256701440613 all work.</span>
+                  <span class="err">Enter a valid Ugandan number, e.g. 0701440613 or 701 440 613.</span>
                 </div>
                 <div class="f">
                   <label for="email">Email address</label>
@@ -485,9 +509,9 @@ button,input,select{font:inherit;color:inherit}
               <div class="pay-panel" id="payMobile">
                 <div class="f">
                   <label for="payPhone"><span id="payNet">Mobile money</span> number</label>
-                  <div class="tel"><span>+256</span><input id="payPhone" type="tel" inputmode="tel" placeholder="7XX XXX XXX" /></div>
-                  <span class="hint">You’ll get a prompt on this phone to approve the payment.</span>
-                  <span class="err">Enter a valid mobile money number.</span>
+                  <div class="tel"><span>+256</span><input id="payPhone" type="tel" inputmode="tel" placeholder="701 440 613" /></div>
+                  <span class="hint">0701440613, 701440613 or 256701440613. You’ll get a prompt on this phone to approve the payment.</span>
+                  <span class="err">Enter a valid Ugandan mobile money number, e.g. 0701440613.</span>
                 </div>
               </div>
               <div class="pay-panel" id="payBank">
@@ -572,7 +596,23 @@ button,input,select{font:inherit;color:inherit}
   function $(s, r) { return (r || document).querySelector(s); }
   function $all(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function fmt(n) { return 'UGX ' + Math.round(n).toLocaleString('en-UG'); }
-  function digits(s) { return (s || '').replace(/\\D/g, ''); }
+  function digits(s) {
+    var out = '';
+    var raw = String(s || '');
+    for (var i = 0; i < raw.length; i++) {
+      var c = raw.charAt(i);
+      if (c >= '0' && c <= '9') out += c;
+    }
+    return out;
+  }
+  function nationalUg(s) {
+    var d = digits(s);
+    if (d.indexOf('00') === 0) d = d.slice(2);
+    if (d.indexOf('2560') === 0 && d.length === 13) d = '256' + d.slice(4);
+    if (d.indexOf('256') === 0 && d.length === 12) d = d.slice(3);
+    if (d.charAt(0) === '0' && d.length === 10) d = d.slice(1);
+    return d;
+  }
 
   var state = Object.assign({ value: DEFAULT_VALUE, step: 'calc' }, load());
   function premiumOf(v) { return Math.round(v * PRICING.rate); }
@@ -676,11 +716,29 @@ button,input,select{font:inherit;color:inherit}
 
   function field(el) { return el.closest('.f'); }
   function mark(el, ok) { var f = field(el); if (f) f.classList.toggle('invalid', !ok); return ok; }
-  function ugPhone(s) { return /^7\\d{8}$/.test(digits(s).replace(/^(256|0)/, '')); }
-  function normPhone(s) { return digits(s).replace(/^(256|0)/, ''); }
-  function prettyPhone(s) { var d = normPhone(s); return '+256 ' + d.slice(0,3) + ' ' + d.slice(3,6) + ' ' + d.slice(6); }
-  function network(s) { var p = normPhone(s).slice(0, 2); return ['76','77','78','79'].indexOf(p) >= 0 ? 'mtn' : (['70','74','75'].indexOf(p) >= 0 ? 'airtel' : null); }
-  function plateOk(s) { return /^[A-Z]{2,3}\\s?\\d{3,4}\\s?[A-Z]{0,2}$/.test(s.trim().toUpperCase()) && s.replace(/\\s/g, '').length >= 5; }
+  function ugPhone(s) { var d = nationalUg(s); return d.length === 9 && d.charAt(0) === '7'; }
+  function normPhone(s) { var d = nationalUg(s); return ugPhone(s) ? '+256' + d : ''; }
+  function prettyPhone(s) { var d = nationalUg(s); return d ? '+256 ' + d.slice(0,3) + ' ' + d.slice(3,6) + ' ' + d.slice(6) : ''; }
+  function network(s) { var p = nationalUg(s).slice(0, 2); return ['76','77','78','79'].indexOf(p) >= 0 ? 'mtn' : (['70','74','75'].indexOf(p) >= 0 ? 'airtel' : null); }
+  function plateOk(s) {
+    var plate = String(s || '').trim().toUpperCase();
+    var compact = '';
+    for (var i = 0; i < plate.length; i++) {
+      var c = plate.charAt(i);
+      if (c === ' ') continue;
+      var letter = c >= 'A' && c <= 'Z';
+      var digit = c >= '0' && c <= '9';
+      if (!letter && !digit) return false;
+      compact += c;
+    }
+    return compact.length >= 5 && compact.length <= 10;
+  }
+  function emailOk(s) {
+    var v = String(s || '').trim();
+    var at = v.indexOf('@');
+    var dot = v.lastIndexOf('.');
+    return at > 0 && dot > at + 1 && dot < v.length - 1 && v.indexOf(' ') < 0;
+  }
 
   $all('input,select').forEach(function (el) { el.addEventListener('input', function () { var f = field(el); if (f) f.classList.remove('invalid'); }); });
 
@@ -716,16 +774,16 @@ button,input,select{font:inherit;color:inherit}
   $('#detailsForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var ok = [
-      mark(nameIn, nameIn.value.trim().split(/\\s+/).length >= 2),
+      mark(nameIn, nameIn.value.trim().split(' ').filter(function (part) { return part.length > 0; }).length >= 2),
       mark(phoneIn, ugPhone(phoneIn.value)),
-      mark(emailIn, /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/.test(emailIn.value.trim())),
+      mark(emailIn, emailOk(emailIn.value)),
       mark(idIn, idIn.value.trim().length >= 6)
     ].every(Boolean);
     $('#agreeWrap').classList.toggle('invalid', !agree.checked);
     if (!ok || !agree.checked) { ($('#detailsForm .invalid input') || agree).focus(); return; }
     Object.assign(state, { name: nameIn.value.trim(), phone: normPhone(phoneIn.value), email: emailIn.value.trim(), idNo: idIn.value.trim().toUpperCase() });
     if (!state.method) { var n = network(state.phone); if (n) selectMethod(n); }
-    if (!$('#payPhone').value) $('#payPhone').value = state.phone;
+    if (!$('#payPhone').value) $('#payPhone').value = nationalUg(state.phone);
     createQuoteThen(function () { go('pay'); });
   });
 
@@ -899,7 +957,7 @@ button,input,select{font:inherit;color:inherit}
   if (state.year) yearSel.value = state.year;
   if (state.plate) plateIn.value = state.plate;
   if (state.name) nameIn.value = state.name;
-  if (state.phone) { phoneIn.value = state.phone; $('#payPhone').value = state.phone; }
+  if (state.phone) { phoneIn.value = nationalUg(state.phone); $('#payPhone').value = nationalUg(state.phone); }
   if (state.email) emailIn.value = state.email;
   if (state.idNo) idIn.value = state.idNo;
   if (state.method) selectMethod(state.method);

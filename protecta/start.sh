@@ -207,6 +207,9 @@ $(printf '\033[1;32m==> Ready\033[0m')
     Login:      tim@apple.dev / tim@apple.dev
 
     App:        protecta-bode (synced from $APP_DIR)
+    Landing:    $SERVER_URL/s/protecta/
+    WhatsApp:   Settings → WhatsApp bot (Evolution API)
+    Ollama:     ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     Stop:       $TWENTY docker:stop
     Logs:       $TWENTY docker:logs -f
     Status:     $TWENTY docker:status

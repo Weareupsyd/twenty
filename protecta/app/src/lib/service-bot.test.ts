@@ -9,7 +9,7 @@ describe('WhatsApp orchestration', () => {
     const db = new MemoryDbClient();
     const store = new MemoryState();
     const send = vi.fn(async () => {});
-    const texts = ['1', '10000000', 'UAX 123C', 'Jane Doe', 'YES'];
+    const texts = ['2', '10000000', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'];
     for (const [i, text] of texts.entries()) {
       await processBotMessage(
         db,
@@ -28,7 +28,7 @@ describe('WhatsApp orchestration', () => {
       { from: '0772000000', id: 'm-4', text: 'YES', timestamp: '' },
       { store, send },
     );
-    expect(send).toHaveBeenCalledTimes(5);
+    expect(send).toHaveBeenCalledTimes(8);
     expect(db.store.insuranceQuotes).toHaveLength(1);
   });
   it('retries a failed reply without creating a second support ticket', async () => {
@@ -37,7 +37,7 @@ describe('WhatsApp orchestration', () => {
     const send = vi.fn(async () => {});
     await processBotMessage(
       db,
-      { from: '0772000000', id: 'first', text: '5', timestamp: '' },
+      { from: '0772000000', id: 'first', text: '6', timestamp: '' },
       { store, send },
     );
     const message = {

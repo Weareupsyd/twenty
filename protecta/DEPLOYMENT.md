@@ -51,7 +51,9 @@ not in source files. Application variables include pricing and `PUBLIC_BASE_URL`
 | --- | --- |
 | Customer OTP/session | `SESSION_JWT_SECRET`: independent random secret, at least 32 characters; working WhatsApp delivery |
 | Partner tokens | `PARTNER_JWT_SECRET`: separate strong random secret |
-| WhatsApp outbound | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` |
+| WhatsApp bot (preferred) | Settings → WhatsApp bot. Evolution API base URL, instance name and API key. The bot already onboarded on Evolution is connected there; official Meta Cloud API is optional. |
+| WhatsApp outbound via Evolution env | `EVOLUTION_API_URL`, `EVOLUTION_INSTANCE`, `EVOLUTION_API_KEY` |
+| Optional Meta Cloud API | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` |
 | Meta webhook GET verification | `WHATSAPP_VERIFY`: value entered in the Meta webhook configuration |
 | Meta webhook POST authentication | `WHATSAPP_APP_SECRET`: Meta app secret, not the verification token |
 | Partner webhook delivery | `PARTNER_WEBHOOK_SECRET`, `PARTNER_WEBHOOK_ALLOWED_ORIGINS` (comma-separated exact HTTPS origins) and an active partner record's webhook URL |
@@ -76,7 +78,8 @@ unconfigured; it does not simulate a payment or authenticate a customer.
 - Request an OTP to a consented test number. Verify one correct code works only
   once, wrong codes lock out after five attempts, and failed delivery is not
   reported as success. Read the resulting policy list with the issued session.
-- Configure Meta's webhook at `/s/protecta/whatsapp/webhook`; test GET verification,
+- Open Settings → WhatsApp bot, paste the Evolution API URL, instance and key, then Save and connect. The webhook is `/s/protecta/whatsapp/webhook`. Send `menu`, `1` to calculate a premium (try 262500000) and `2` to onboard cover the same way as the website. Official Meta webhooks remain available if you set the Meta secrets instead.
+- Configure Meta's webhook at `/s/protecta/whatsapp/webhook` only if you are not using Evolution; test GET verification,
   signed inbound POSTs, and rejection of unsigned/tampered POSTs. Send `menu`,
   create a quote, list policies, record a claim and create a support ticket.
   The bot directs payment to the existing payment page rather than guessing a

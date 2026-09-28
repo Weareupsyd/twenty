@@ -18,11 +18,9 @@ import {
 } from 'src/lib/service-quotes';
 import { createTicket } from 'src/lib/service-tickets';
 import { type StateStore } from 'src/lib/service-otp';
-import {
-  sendWhatsAppText,
-  whatsappConfigFromEnv,
-  type InboundWhatsAppMessage,
-} from 'src/lib/whatsapp-api';
+import { pricingFromEnv } from 'src/lib/pricing';
+import { type InboundWhatsAppMessage } from 'src/lib/whatsapp-api';
+import { NOT_CONFIGURED, whatsAppSender } from 'src/lib/whatsapp-transport';
 import { quoteIssuedMessage } from 'src/lib/whatsapp-text';
 
 export const executeBotAction = async (
@@ -37,6 +35,9 @@ export const executeBotAction = async (
         name: action.name,
         plate: action.plate,
         vehicleValue: action.vehicleValue,
+        make: action.make,
+        model: action.model,
+        year: action.year,
         channel: 'WHATSAPP',
       });
       return quoteIssuedMessage({
@@ -116,20 +117,20 @@ export const processBotMessage = async (
   const sessionKey = `bot:session:${sha256Hex(phone)}`;
   let receipt = await store.get<Receipt>(receiptKey);
   if (receipt?.sent) return;
-  const config = whatsappConfigFromEnv();
-  const send =
-    options.send ??
-    (config
-      ? (to: string, text: string) => sendWhatsAppText(config, to, text)
-      : null);
-  if (!send) throw new Error('WhatsApp delivery is not configured.');
+  const send = options.send ?? (await whatsAppSender(store));
+  if (!send) throw new Error(NOT_CONFIGURED);
   if (!receipt) {
     const saved = await store.get<BotSession>(sessionKey);
     const session =
       saved && now - saved.updatedAt < 24 * 60 * 60 * 1000
         ? saved
         : startSession();
-    const turn = handleBotTurn(session, message.text);
+    const pricing = pricingFromEnv();
+    const turn = handleBotTurn(session, message.text, {
+      minValue: pricing.minValue,
+      maxValue: pricing.maxValue,
+      rate: pricing.rate,
+    });
     const reply = turn.action
       ? await executeBotAction(db, phone, turn.action)
       : turn.reply;

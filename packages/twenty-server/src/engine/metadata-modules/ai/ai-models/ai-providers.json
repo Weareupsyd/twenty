@@ -2431,5 +2431,68 @@
         "medianLatencyMs": 200
       }
     ]
+  },
+  "ollama": {
+    "npm": "@ai-sdk/openai-compatible",
+    "name": "ollama",
+    "label": "Ollama",
+    "baseUrl": "{{OLLAMA_BASE_URL}}",
+    "apiKey": "{{OLLAMA_API_KEY}}",
+    "models": [
+      {
+        "name": "llama3.2",
+        "label": "Llama 3.2",
+        "description": "Local model served by Ollama. Pull it with ollama pull llama3.2.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 128000,
+        "maxOutputTokens": 8192
+      },
+      {
+        "name": "llama3.1",
+        "label": "Llama 3.1",
+        "description": "Local model served by Ollama. Pull it with ollama pull llama3.1.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 128000,
+        "maxOutputTokens": 8192
+      },
+      {
+        "name": "qwen2.5",
+        "label": "Qwen 2.5",
+        "description": "Local model served by Ollama. Pull it with ollama pull qwen2.5.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 128000,
+        "maxOutputTokens": 8192
+      },
+      {
+        "name": "gemma2",
+        "label": "Gemma 2",
+        "description": "Local model served by Ollama. Pull it with ollama pull gemma2.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 8192,
+        "maxOutputTokens": 4096
+      },
+      {
+        "name": "mistral",
+        "label": "Mistral",
+        "description": "Local model served by Ollama. Pull it with ollama pull mistral.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 32768,
+        "maxOutputTokens": 8192
+      },
+      {
+        "name": "phi3",
+        "label": "Phi-3",
+        "description": "Local model served by Ollama. Pull it with ollama pull phi3.",
+        "inputCostPerMillionTokens": 0,
+        "outputCostPerMillionTokens": 0,
+        "contextWindowTokens": 128000,
+        "maxOutputTokens": 8192
+      }
+    ]
   }
 }

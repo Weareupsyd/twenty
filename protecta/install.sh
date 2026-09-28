@@ -11,6 +11,8 @@
 #   ./install.sh --skip-prereqs   don't touch Node/Docker (already provisioned)
 #   ./install.sh --no-verify      skip the post-install verification
 #   ./install.sh --branch <ref>   branch to clone when bootstrap is needed
+#   ./install.sh --reseed         re-run the Twenty dev seed before deploying
+#                                 (first boot, after "Seeding workspace data... Failed")
 #
 # It can also run itself from outside a checkout:
 #
@@ -29,7 +31,7 @@
 
 set -euo pipefail
 
-DEFAULT_BRANCH="arena/01a0e86f-twenty"
+DEFAULT_BRANCH="main"
 REPO_URL="${PROTECTA_REPO_URL:-https://github.com/Weareupsyd/twenty.git}"
 
 SCRIPT_PATH="${BASH_SOURCE[0]:-}"
@@ -57,6 +59,7 @@ SKIP_PREREQS=0
 SKIP_DOCKER_INSTALL="${SKIP_DOCKER_INSTALL:-0}"
 SKIP_NODE_INSTALL="${SKIP_NODE_INSTALL:-0}"
 VERIFY=1
+RESEED=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -71,11 +74,12 @@ while [[ $# -gt 0 ]]; do
     --skip-docker-install) SKIP_DOCKER_INSTALL=1; shift ;;
     --skip-node-install) SKIP_NODE_INSTALL=1; shift ;;
     --no-verify) VERIFY=0; shift ;;
+    --reseed) RESEED=1; shift ;;
     -h|--help)
       if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/install.sh" ]]; then
         awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$SCRIPT_DIR/install.sh"
       else
-        printf 'Protecta all-in-one installer\n\n  --port <n>          use another port\n  --watch             keep watching src/ after installing\n  --branch <ref>      branch to clone in bootstrap mode\n  --dir <path>        checkout to create/use in bootstrap mode\n  --skip-prereqs      do not provision Node/Docker\n  --no-verify         skip the post-install verification\n'
+        printf 'Protecta all-in-one installer\n\n  --port <n>          use another port\n  --watch             keep watching src/ after installing\n  --branch <ref>      branch to clone in bootstrap mode\n  --dir <path>        checkout to create/use in bootstrap mode\n  --skip-prereqs      do not provision Node/Docker\n  --no-verify         skip the post-install verification\n  --reseed            re-run the Twenty dev seed before deploying\n'
       fi
       exit 0
       ;;
@@ -312,6 +316,7 @@ fi
 START_ARGS=()
 if [[ -n "$PORT" ]]; then START_ARGS+=(--port "$PORT"); fi
 if (( WATCH )); then START_ARGS+=(--watch); fi
+if (( RESEED )); then START_ARGS+=(--reseed); fi
 
 step "Installing Protecta (server, API key, apps)"
 info "this runs start.sh: dependencies -> Twenty container -> API key -> app syncs"
@@ -334,7 +339,7 @@ detect_port() {
 }
 
 verify_installation() {
-  local port server_url rows missing=0 uid label registry
+  local port server_url rows missing=0 uid label registry workspace_state
   port="$(detect_port)"
 
   if [[ -n "$PORT" ]]; then
@@ -376,6 +381,22 @@ verify_installation() {
       done <<<"$registry"
     fi
     info_err "re-run ./start.sh to retry the sync; the workspace and database are untouched."
+
+    workspace_state="$(docker exec -e PGPASSWORD=twenty twenty-app-dev sh -c \
+      'psql -h localhost -U twenty -d default -tAc "$1"' _ \
+      "SELECT \"activationStatus\" FROM core.workspace WHERE id = '20202020-1c25-4d02-bf25-6aeccf7ea419' AND \"deletedAt\" IS NULL" \
+      2>/dev/null || true)"
+
+    if [[ "$workspace_state" =~ ^[A-Z_]+$ && "$workspace_state" != "ACTIVE" ]]; then
+      info_err "the seeded workspace is still in $workspace_state: the first-boot seed never finished,"
+      info_err "so there is nothing to sync into. Repair it and retry:"
+      info_err "  ./start.sh --reseed"
+    elif [[ -z "$workspace_state" ]]; then
+      info_err "the container did not report the seeded workspace: its first-boot seed may not have finished."
+      info_err "Repair it and retry the sync:"
+      info_err "  ./start.sh --reseed"
+    fi
+
     exit 1
   fi
 
@@ -412,6 +433,7 @@ $(printf '\033[1;32m==> Install complete\033[0m')
 
     Re-run/deploy changes:   ./start.sh
     Rotate the API key:      ./start.sh --new-api-key
+    Repair a failed seed:    ./start.sh --reseed
     Watch source changes:    ./start.sh --watch
     Enable local AI:         ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     Stop the server:         ${SCRIPT_DIR}/app/node_modules/.bin/twenty docker:stop

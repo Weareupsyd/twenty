@@ -37,6 +37,35 @@ case "$1" in
   info) exit 0 ;;
   --version) echo 'Docker version 29.0.0' ;;
   inspect) echo "${TEST_RUNNING:-true}" ;;
+  exec)
+    printf 'docker exec %s\n' "$*" >> "$COMMAND_LOG"
+    if [[ "$*" == *seed:dev* ]]; then
+      printf '%s\n' "${TEST_SEED_LOG:-[Nest] LOG DevSeederService finished}"
+      touch "${SEED_MARKER:-/dev/null}"
+      exit 0
+    fi
+    if [[ "$*" == *cache:flush* ]]; then exit 0; fi
+    if [[ "$*" == *workspaceMember* ]]; then
+      echo "${TEST_MEMBER_COUNT:-12}"
+      exit 0
+    fi
+    if [[ "$*" == *core.workspace* ]]; then
+      rows_file=""
+      if [[ -f "${SEED_MARKER:-/nonexistent}" ]]; then
+        rows_file="${TEST_WORKSPACE_ROWS_AFTER_FILE:-}"
+      else
+        rows_file="${TEST_WORKSPACE_ROWS_FILE:-}"
+      fi
+      if [[ -n "$rows_file" && -f "$rows_file" ]]; then
+        cat "$rows_file"
+      else
+        echo 'meta|1|||'
+        echo 'row|20202020-1c25-4d02-bf25-6aeccf7ea419|Apple|ACTIVE|workspace_test'
+      fi
+      exit 0
+    fi
+    exit 0
+    ;;
 esac
 MOCK
 cat > "$TMP/bin/curl" <<'MOCK'
@@ -95,12 +124,23 @@ chmod +x "$TMP/bin/"* "$TMP/protecta/app/node_modules/.bin/twenty" "$TMP/protect
 run() { bash "$TMP/protecta/start.sh" --port 3030 > "$TMP/output" 2>&1; }
 reset_env() {
   unset TWENTY_API_KEY TWENTY_API_KEY_FILE TEST_REJECT_KEYS TEST_HEALTHY TEST_RUNNING TEST_COLD \
-    TEST_NODE_MAJOR TEST_REMOTE_VALID SKIP_NODE_BOOTSTRAP PKG_MANAGER 2>/dev/null || true
+    TEST_NODE_MAJOR TEST_REMOTE_VALID SKIP_NODE_BOOTSTRAP PKG_MANAGER SEED_REPAIR \
+    TEST_WORKSPACE_ROWS_FILE TEST_WORKSPACE_ROWS_AFTER_FILE TEST_MEMBER_COUNT TEST_SEED_LOG \
+    2>/dev/null || true
   export SKIP_INSTALL=1
-  rm -f "$TMP/protecta/.twenty-api-key"
+  rm -f "$TMP/protecta/.twenty-api-key" "$SEED_MARKER"
   : > "$COMMAND_LOG"
   rm -f "$CURL_COUNT"
 }
+
+# Rows the mocked psql reports. The seeded workspace is healthy by default; the
+# broken variant reproduces a first-boot seed that never activated the workspace.
+export SEED_MARKER="$TMP/seeded"
+# A rejected key, shaped like a Twenty API key so its workspace can be read.
+STALE_KEY='eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIyMDIwMjAyMC05ZTNiLTQ2ZDQtYTU1Ni04OGI5ZGRjMmIwMzQiLCJ3b3Jrc3BhY2VJZCI6IjIwMjAyMDIwLTFjMjUtNGQwMi1iZjI1LTZhZWNjZjdlYTQxOSIsInR5cGUiOiJBQ0NFU1MifQ.signature'
+BROKEN_ROWS="$TMP/rows-broken"
+printf '%s\n' 'meta|1|||' \
+  'row|20202020-1c25-4d02-bf25-6aeccf7ea419|Apple|PENDING_CREATION|workspace_test' > "$BROKEN_ROWS"
 
 # 1. Healthy server, key from the environment --------------------------------
 reset_env
@@ -213,3 +253,65 @@ grep -q 'remote:use protecta-local' "$COMMAND_LOG"
 ! grep -q 'remote:add' "$COMMAND_LOG"
 grep -q '^apply ' "$COMMAND_LOG"
 echo 'PASS existing remote: reused without touching the API key'
+
+# 13. Rejected key on an instance whose first-boot seed never finished --------
+# The key is not the problem: the workspace it names was never created, so the
+# seed is re-run, a key is minted and the deployment continues.
+reset_env
+export TWENTY_API_KEY="$STALE_KEY" TEST_REJECT_KEYS="$STALE_KEY"
+export TEST_WORKSPACE_ROWS_FILE="$BROKEN_ROWS"
+run
+grep -q 'the key was issued for workspace 20202020-1c25-4d02-bf25-6aeccf7ea419' "$TMP/output"
+grep -q 'PENDING_CREATION' "$TMP/output"
+grep -q 'seed:dev' "$COMMAND_LOG"
+grep -q 'create-api-key --stdout' "$COMMAND_LOG"
+grep -q "remote:add .*--api-key $MINTED_TOKEN" "$COMMAND_LOG"
+grep -q '^apply ' "$COMMAND_LOG"
+grep -q 'the first-boot seed never finished' "$TMP/output"
+echo 'PASS rejected key + unfinished seed: re-seeds, mints a key and syncs'
+
+# 14. The same broken instance with SEED_REPAIR=0: report, do not touch it -----
+reset_env
+export TWENTY_API_KEY="$STALE_KEY" TEST_REJECT_KEYS="$STALE_KEY" SEED_REPAIR=0
+export TEST_WORKSPACE_ROWS_FILE="$BROKEN_ROWS"
+if run; then echo 'Expected failure with SEED_REPAIR=0'; exit 1; fi
+! grep -q 'seed:dev' "$COMMAND_LOG"
+! grep -q 'create-api-key' "$COMMAND_LOG"
+grep -q 'the first-boot seed never finished' "$TMP/output"
+grep -q './start.sh --reseed' "$TMP/output"
+echo 'PASS SEED_REPAIR=0: diagnoses the workspace without re-seeding'
+
+# 15. A repair that does not help stops the deployment -----------------------
+# The seed returns non-zero and the workspace is still PENDING_CREATION.
+reset_env
+export TWENTY_API_KEY="$STALE_KEY" TEST_REJECT_KEYS="$STALE_KEY"
+export TEST_WORKSPACE_ROWS_FILE="$BROKEN_ROWS" TEST_WORKSPACE_ROWS_AFTER_FILE="$BROKEN_ROWS"
+if run; then echo 'Expected failure when the seed cannot be repaired'; exit 1; fi
+grep -q 'seed:dev' "$COMMAND_LOG"
+! grep -q '^apply ' "$COMMAND_LOG"
+grep -q 'still in PENDING_CREATION' "$TMP/output"
+echo 'PASS failed repair: stops before syncing and keeps the diagnosis'
+
+# 16. --reseed re-runs the seed even when no key was supplied -----------------
+reset_env
+export TEST_WORKSPACE_ROWS_FILE="$BROKEN_ROWS"
+if ! bash "$TMP/protecta/start.sh" --port 3030 --reseed > "$TMP/output" 2>&1; then
+  cat "$TMP/output"
+  echo 'Expected --reseed to succeed'
+  exit 1
+fi
+grep -q 'seed:dev' "$COMMAND_LOG"
+grep -q 'the workspace is in place now' "$TMP/output"
+grep -q '^apply ' "$COMMAND_LOG"
+echo 'PASS --reseed: repairs the workspace and continues to the sync'
+
+# 17. No key on a broken instance: the seed runs before minting a key ---------
+reset_env
+export TEST_WORKSPACE_ROWS_FILE="$BROKEN_ROWS"
+run
+seed_line="$(grep -n 'seed:dev' "$COMMAND_LOG" | cut -d: -f1 | head -n 1)"
+mint_line="$(grep -n 'create-api-key --stdout' "$COMMAND_LOG" | cut -d: -f1 | head -n 1)"
+[[ -n "$seed_line" && -n "$mint_line" && "$seed_line" -lt "$mint_line" ]]
+grep -q "remote:add .*--api-key $MINTED_TOKEN" "$COMMAND_LOG"
+grep -q '^apply ' "$COMMAND_LOG"
+echo 'PASS no key + unfinished seed: re-seeds before minting'

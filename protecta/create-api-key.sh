@@ -138,7 +138,7 @@ probe_api_key() {
 }
 
 explain_probe_failure() {
-  local key_origin="$1"
+  local key_origin="$1" key="${2:-}"
 
   case "$PROBE_STATE" in
     rejected)
@@ -149,9 +149,13 @@ explain_probe_failure() {
   A Twenty API key only works on the instance that issued it. Usual causes:
     1. the key was created on a different Twenty (cloud, another VPS, another port);
     2. the key was created in another workspace of this instance;
-    3. the key was revoked or expired, or pasted incompletely.
+    3. the key was revoked or expired, or pasted incompletely;
+    4. the workspace was never seeded, so there is nothing to authenticate against.
 
 EOF
+      if [[ -n "$key" ]]; then
+        report_instance_side "$key"
+      fi
       ;;
     forbidden)
       cat >&2 <<EOF
@@ -205,9 +209,125 @@ container_state() {
 
 list_workspaces() {
   docker exec -e PGPASSWORD=twenty "$CONTAINER" sh -c \
-    'psql -h localhost -U twenty -d default -tAc "$1"' _ \
-    "SELECT id, coalesce(\"displayName\", '') FROM core.workspace WHERE \"deletedAt\" IS NULL ORDER BY \"createdAt\"" \
+    'psql -h localhost -U twenty -d default -tA -F "|" -c "$1"' _ \
+    "SELECT id, coalesce(\"displayName\", ''), \"activationStatus\" FROM core.workspace WHERE \"deletedAt\" IS NULL ORDER BY \"createdAt\"" \
     2>/dev/null
+}
+
+# One SQL statement inside the container; rows come back '|'-separated.
+container_sql() {
+  docker exec -e PGPASSWORD=twenty -w /app/packages/twenty-server "$CONTAINER" \
+    sh -c 'psql -h localhost -U twenty -d default -tA -F "|" -c "$1"' _ "$1" 2>/dev/null || true
+}
+
+# The workspace a key was issued for, read from the (unverified) JWT payload.
+# Prints nothing for a key that is not a decodable JWT.
+key_workspace_id() {
+  local key="$1" payload="" decoded=""
+
+  command -v base64 >/dev/null 2>&1 || return 1
+  [[ "$key" == *.*.* ]] || return 1
+
+  payload="${key#*.}"
+  payload="${payload%%.*}"
+  payload="${payload//-/+}"
+  payload="${payload//_//}"
+  case $(( ${#payload} % 4 )) in
+    2) payload="${payload}==" ;;
+    3) payload="${payload}=" ;;
+    1) return 1 ;;
+  esac
+
+  decoded="$(printf '%s' "$payload" | base64 -d 2>/dev/null)" || return 1
+  # One value out of one line, without `head`, which would trip pipefail.
+  decoded="$(sed -n 's/.*"workspaceId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' <<<"$decoded")"
+  [[ -n "$decoded" ]] || return 1
+
+  printf '%s\n' "${decoded%%$'\n'*}"
+  return 0
+}
+
+# Where the container's workspaces stand:
+#   ok       active workspace with members
+#   pending  the row exists but the first-boot seed never activated it
+#   partial  active but without members
+#   absent   no workspace at all
+#   unknown  the database could not be read
+SEED_STATE="unknown"
+SEED_DETAIL=""
+WORKSPACE_ROWS=""
+
+read_seed_state() {
+  local line id name status schema members rows
+
+  SEED_STATE="unknown"
+  SEED_DETAIL=""
+  WORKSPACE_ROWS=""
+  rows="$(container_sql "SELECT 'meta', count(*)::text, '', '', '' FROM core.workspace WHERE \"deletedAt\" IS NULL UNION ALL SELECT 'row', id, coalesce(\"displayName\", ''), \"activationStatus\", coalesce(\"databaseSchema\", '') FROM core.workspace WHERE \"deletedAt\" IS NULL ORDER BY 1, 2")"
+
+  if [[ -z "$rows" ]]; then
+    SEED_DETAIL="could not read core.workspace inside '$CONTAINER'"
+    return 0
+  fi
+
+  WORKSPACE_ROWS="$(sed -e '/^meta|/d' -e 's/^row|//' <<<"$rows")"
+  if [[ -z "$WORKSPACE_ROWS" ]]; then
+    SEED_STATE="absent"
+    SEED_DETAIL="no workspace was ever created in '$CONTAINER'"
+    return 0
+  fi
+
+  line="$(grep -m1 "^${DEV_WORKSPACE_ID}|" <<<"$WORKSPACE_ROWS" || true)"
+  [[ -n "$line" ]] || line="$(sed -n 1p <<<"$WORKSPACE_ROWS")"
+  IFS='|' read -r id name status schema <<<"$line"
+
+  if [[ -z "$status" ]]; then
+    SEED_DETAIL="the workspace list could not be read completely"
+  elif [[ "$status" != "ACTIVE" ]]; then
+    SEED_STATE="pending"
+    SEED_DETAIL="workspace ${name:-$id} is still in $status: the first-boot seed never finished"
+  else
+    members=""
+    if [[ -n "$schema" ]]; then
+      members="$(container_sql "SELECT count(*) FROM \"$schema\".\"workspaceMember\" WHERE \"deletedAt\" IS NULL")"
+    fi
+    if [[ -z "$members" ]]; then
+      SEED_DETAIL="workspace ${name:-$id} is active but its members could not be counted"
+    elif (( members == 0 )); then
+      SEED_STATE="partial"
+      SEED_DETAIL="workspace ${name:-$id} is active but holds no members"
+    else
+      SEED_STATE="ok"
+      SEED_DETAIL="workspace ${name:-$id} is active with $members member(s)"
+    fi
+  fi
+
+  return 0
+}
+
+# What the container holds, so a rejected key can be told apart from an
+# instance whose first-boot seed never finished.
+report_instance_side() {
+  local key="$1" id name status schema wanted
+
+  wanted="$(key_workspace_id "$key" || true)"
+  if [[ -n "$wanted" ]]; then
+    info "the key was issued for workspace $wanted"
+  fi
+
+  read_seed_state
+  if [[ -n "$WORKSPACE_ROWS" ]]; then
+    info "container '$CONTAINER' reports:"
+    while IFS='|' read -r id name status schema; do
+      [[ -n "$id" ]] || continue
+      info "  - ${name:-$id}  ${status:-unknown}"
+    done <<<"$WORKSPACE_ROWS"
+  fi
+  info "seed: $SEED_DETAIL"
+  if [[ "$SEED_STATE" == "pending" || "$SEED_STATE" == "partial" || "$SEED_STATE" == "absent" ]]; then
+    info "repair it with: ./start.sh --reseed"
+  fi
+  return 0
 }
 
 # The all-in-one dev image seeds this workspace on first boot.
@@ -260,11 +380,18 @@ if [[ "$MODE" == "list" ]]; then
   step "Workspaces in '$CONTAINER'"
   rows="$(list_workspaces || true)"
   if [[ -z "$rows" ]]; then
-    die "No workspaces found. The server may still be seeding; check docker logs --tail 200 $CONTAINER"
+    read_seed_state
+    die "No workspaces found in '$CONTAINER': $SEED_DETAIL
+  The first-boot seed never finished. Repair it, then mint the key again:
+    ./start.sh --reseed && ./create-api-key.sh"
   fi
-  while IFS='|' read -r id name; do
+  while IFS='|' read -r id name status; do
     [[ -n "$id" ]] || continue
-    info "${name:-(no name)}  $id"
+    if [[ -n "$status" && "$status" != "ACTIVE" ]]; then
+      info "${name:-(no name)}  $id  ($status, first-boot seed unfinished)"
+    else
+      info "${name:-(no name)}  $id"
+    fi
   done <<<"$rows"
   exit 0
 fi
@@ -294,7 +421,7 @@ if [[ "$MODE" == "check" ]]; then
     exit 0
   fi
 
-  explain_probe_failure "$KEY_ORIGIN"
+  explain_probe_failure "$KEY_ORIGIN" "$KEY"
   printf '\n\033[1;31m==> Key is not usable (%s)\033[0m\n' "$PROBE_STATE" >&2
   exit 1
 fi

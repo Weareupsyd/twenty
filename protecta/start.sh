@@ -161,7 +161,9 @@ EOF
       ;;
   esac
 
-  [[ -n "$key_source" ]] && info "key source: $key_source"
+  if [[ -n "$key_source" ]]; then
+    info "key source: $key_source"
+  fi
   return 0
 }
 

@@ -33,9 +33,16 @@ Twenty gives technical teams the building blocks for a custom CRM that meets com
 ### Protecta Bode (this fork)
 
 For the repaired Protecta app, follow the [Protecta setup guide](./protecta/README.md).
-It includes a fresh-checkout procedure that keeps your existing Twenty database,
-automatic Node 24 handling, and headless workspace API-key management
-(`protecta/create-api-key.sh`, `./start.sh --new-api-key`).
+The fastest path installs everything end to end, including Node 24, Docker, the
+workspace API key and all three apps:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/arena/01a0e86f-twenty/protecta/install.sh | bash
+```
+
+The guide also documents the fresh-checkout procedure that keeps your existing
+Twenty database, automatic Node 24 handling, and headless workspace API-key
+management (`protecta/create-api-key.sh`, `./start.sh --new-api-key`).
 The current repair is on `arena/01a0e86f-twenty` (repair branches are `arena/<id>-twenty`);
 use it until it is merged.
 See the [deployment checklist](./protecta/DEPLOYMENT.md) before connecting live providers.

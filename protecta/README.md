@@ -7,7 +7,53 @@ Protecta is a **Twenty app**, not a separate Docker container or a replacement
 for the Twenty homepage. `start.sh` builds and syncs `app/` into a Twenty
 workspace. A healthy Twenty server alone does **not** mean Protecta is installed.
 
+## One command on a fresh VPS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/arena/01a0e86f-twenty/protecta/install.sh | bash
+```
+
+Or, from a checkout you already have:
+
+```bash
+cd ~/twenty-fresh/protecta
+./install.sh
+```
+
+[`install.sh`](./install.sh) needs **git, curl and root (or sudo)** and then does the
+whole chain without asking anything:
+
+| Step | What it does |
+| --- | --- |
+| Source | When the script runs outside a checkout it clones `arena/01a0e86f-twenty` into `~/twenty-protecta` first; later runs update that checkout |
+| Node 24 | Uses the system Node when it is 24.5+, re-runs under Node 24 through `npx` when it is older, and downloads Node 24 to `~/.twenty-node24` when Node is missing entirely |
+| Docker | Installs it with the system package manager (`docker.io`, `docker`, `apk`, ...) when missing, then enables and starts the daemon |
+| Dependencies | `npm ci` for `app/`, `docgen/app` and `sms/app` |
+| Server | Starts Twenty in the `twenty-app-dev` container, including a slow first boot |
+| API key | Reuses `TWENTY_API_KEY` or `.twenty-api-key`, otherwise mints one inside the container and saves it (chmod 600, git-ignored) |
+| Apps | Syncs Document Generator, SMS Sender and Protecta Bode into the workspace |
+| Verification | Checks that all three apps are registered in the workspace and prints the result |
+
+| Flag | Meaning |
+| --- | --- |
+| `--port 3000` | Publish the server on another port (default 2020) |
+| `--watch` | Keep watching `app/src` and re-sync after the install |
+| `--branch <ref>` | Branch to clone in bootstrap mode (default `arena/01a0e86f-twenty`) |
+| `--dir <path>` | Checkout to create/use in bootstrap mode (default `~/twenty-protecta`) |
+| `--skip-prereqs` | Do not touch Node or Docker |
+| `--no-verify` | Skip the post-install verification |
+| `--help` | List the options |
+
+Re-running is safe: every step is idempotent, and existing data, containers and
+keys are reused. `sudo` is only used for installing Docker and starting its
+daemon. The sections below describe the same steps by hand, for when you want to
+control each one.
+
+
 ## Start fresh safely: replace source, keep your workspace
+
+If you only want the end result, use `./install.sh` above — the rest of this
+section is the same procedure step by step, with explanations.
 
 **Yes, you can clone fresh and rebuild. You do not need to delete the working
 Twenty container or its database.** Use a new source directory first; keep your
@@ -265,7 +311,9 @@ source trees.
 cd ~/twenty-fresh
 git pull --ff-only origin arena/01a0e86f-twenty
 cd protecta
-./start.sh
+./start.sh          # deploy the current source
+# or, to redo prerequisites and the verification as well:
+./install.sh
 ```
 
 If Git reports local changes/conflicts, stop and review them; do not use a hard
@@ -278,6 +326,7 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 
 | Task | Command from `protecta/` |
 | --- | --- |
+| Install or redo everything | `./install.sh` |
 | Rebuild and sync | `./start.sh` |
 | Sync and watch source changes | `./start.sh --watch` |
 | Use a custom port | `./start.sh --port 3000` |

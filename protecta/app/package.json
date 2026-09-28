@@ -26,7 +26,7 @@
     "test:watch": "vitest --config vitest.unit.config.ts",
     "build": "node scripts/build.mjs",
     "check": "npm run typecheck && npm test && npm run test:startup && npm run build",
-    "test:startup": "bash ../tests/start.test.sh && bash ../tests/create-api-key.test.sh && bash ../tests/install.test.sh && bash ../tests/twenty-cli.test.sh"
+    "test:startup": "bash ../tests/lockfiles.test.sh && bash ../tests/start.test.sh && bash ../tests/create-api-key.test.sh && bash ../tests/install.test.sh && bash ../tests/twenty-cli.test.sh"
   },
   "dependencies": {
     "@hugeicons/core-free-icons": "^3.3.0",

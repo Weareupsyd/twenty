@@ -37,6 +37,13 @@
    A source-folder backup does NOT back up Docker volumes or database records.
 2. Use Node 24.5+ (24.x). Run `npm ci` and `npm run check` in `protecta/app`
    (the `npx --yes --package=node@24` wrapper above only affects that command).
+   `npm ci` installs what `package-lock.json` pins, so a dependency added to
+   `package.json` without re-running `npm install` in that app aborts the
+   install (`Missing: ... from lock file`) and takes `install.sh` down with it.
+   `npm run check` includes `tests/lockfiles.test.sh`, which fails for that
+   before deployment; `start.sh`/`twenty.sh` repair such a lockfile with
+   `npm install` and warn. Do not commit source without the regenerated
+   lockfile.
 3. Use an API key from the exact workspace you want to install into. On this VPS
    `protecta/start.sh` mints one inside the running container
    (`protecta/create-api-key.sh`, saved to `protecta/.twenty-api-key`) when

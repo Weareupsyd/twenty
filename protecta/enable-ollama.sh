@@ -39,12 +39,37 @@ if ! docker ps -a --format '{{.Names}}' | grep -qx "$OLLAMA_CONTAINER"; then
     -v ollama-data:/root/.ollama \
     ollama/ollama:latest
 else
-  docker start "$OLLAMA_CONTAINER" >/dev/null
+  docker start "$OLLAMA_CONTAINER" >/dev/null || true
 fi
 
+# Wait for the Ollama daemon to be ready – the published image starts
+# `ollama serve` via ENTRYPOINT, but the API needs a second.
+wait_for_ollama() {
+  echo "Waiting for Ollama server to be ready…"
+  for _ in $(seq 1 60); do
+    if docker exec "$OLLAMA_CONTAINER" ollama list >/dev/null 2>&1; then
+      return 0
+    fi
+    # Fallback: probe the HTTP API from the host (port is published)
+    if curl -fsS --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "Ollama server did not become ready in time. Last logs:" >&2
+  docker logs --tail 50 "$OLLAMA_CONTAINER" >&2 || true
+  return 1
+}
+
 if (( PULL )); then
+  wait_for_ollama
   echo "Pulling $MODEL. This can take several minutes."
-  docker exec "$OLLAMA_CONTAINER" ollama pull "$MODEL"
+  # `ollama pull` inside the container needs the daemon; retry once if it races.
+  if ! docker exec "$OLLAMA_CONTAINER" ollama pull "$MODEL"; then
+    echo "First pull attempt failed, waiting 5s and retrying…" >&2
+    sleep 5
+    docker exec "$OLLAMA_CONTAINER" ollama pull "$MODEL"
+  fi
 fi
 
 # Container DNS is reliable; the default bridge does not resolve container names.

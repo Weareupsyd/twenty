@@ -2,6 +2,7 @@ import { confirmAndIssue } from 'src/lib/confirm-pipeline';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { advanceClaim } from 'src/lib/service-claims';
 import { decideKyc } from 'src/lib/service-kyc';
+import { issuePolicy } from 'src/lib/service-policies';
 import { renewPolicy } from 'src/lib/service-policies';
 import { deliverWhatsAppText } from 'src/lib/whatsapp-transport';
 import { quoteIssuedMessage } from 'src/lib/whatsapp-text';
@@ -31,6 +32,10 @@ export const runStaffAction = async (
         'shareUrl',
         'policyholderPhone',
       ],
+    },
+    'quote-convert': {
+      object: 'insuranceQuotes',
+      fields: ['reference', 'status'],
     },
   };
   const target = targets[action];
@@ -66,6 +71,20 @@ export const runStaffAction = async (
         }),
       );
       return { sent: true };
+    }
+    case 'quote-convert': {
+      if (String(record.status) === 'EXPIRED') throw new Error('Quote has expired.');
+      if (String(record.status) === 'ACCEPTED') {
+        const existing = await db.findFirst(
+          'insurancePolicies',
+          { quoteRef: { eq: String(record.reference) } },
+          ['policyNo', 'status'],
+        );
+        if (existing) return { policyNo: existing.policyNo, alreadyConverted: true };
+        throw new Error('Quote already accepted but no policy found.');
+      }
+      const { policy } = await issuePolicy(db, { quoteRef: String(record.reference) });
+      return { policyNo: policy.policyNo };
     }
     default:
       throw new Error('Unknown staff action.');

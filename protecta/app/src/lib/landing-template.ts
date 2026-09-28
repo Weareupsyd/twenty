@@ -70,8 +70,8 @@ button,input,select{font:inherit;color:inherit}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
 /* ───────── Stage: the key visual IS the landing page ───────── */
-.stage{min-height:100svh;max-width:100vw;overflow-x:clip}
-.kv{background:var(--white);min-width:0;overflow:hidden}
+.stage{min-height:100svh;max-width:100vw;overflow-x:clip;background:var(--sky)}
+.kv{background:var(--sky);min-width:0;overflow:hidden}
 .kv-frame{position:relative;width:100%;max-width:100%;aspect-ratio:1080/1258.56}
 .kv-frame img{width:100%;height:100%;max-width:100%;object-fit:contain;object-position:center bottom;font-size:0;color:transparent}
 .kv-frame img.is-broken{display:none}
@@ -89,32 +89,32 @@ button,input,select{font:inherit;color:inherit}
 .kv-call{position:absolute;left:25.4%;top:83.6%;width:50.4%;height:6.2%;border-radius:10px}
 .kv-call:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 
-.panel{background:var(--sky);display:flex;flex-direction:column}
-.panel-inner{width:100%;max-width:560px;margin:auto;padding:40px 20px 48px}
+.panel{background:var(--sky);display:flex;flex-direction:column;justify-content:center;min-height:100svh;overflow:hidden}
+.panel-inner{width:100%;max-width:560px;margin:auto;padding:20px 20px 24px;display:flex;flex-direction:column;justify-content:center;min-height:100svh}
 .panel-band{display:none}
 
 @media (min-width:1024px) and (min-aspect-ratio:5/4){
   .stage{
     --kv-h:min(100svh, calc((100vw - var(--panel-min)) * var(--kv-ratio)));
-    display:grid;grid-template-columns:minmax(0,1.05fr) minmax(var(--panel-min),1fr);width:100%;
+    display:grid;grid-template-columns:auto minmax(var(--panel-min),1fr);width:100%;gap:0;background:var(--sky);
   }
-  .kv{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end;justify-content:center}
-  .kv-frame{height:var(--kv-h);width:100%;max-height:100svh}
+  .kv{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end;justify-content:center;background:var(--sky)}
+  .kv-frame{height:var(--kv-h);width:auto;max-height:100svh}
   html{scroll-padding-bottom:calc(var(--kv-h-root, 100svh) * 0.0515 + 24px)}
   .panel{min-height:100svh}
-  .panel-inner{padding:48px clamp(24px,4vw,64px) 40px}
+  .panel-inner{padding:24px clamp(20px,3vw,48px) 24px}
   .panel-band{display:block;position:sticky;bottom:0;height:calc(var(--kv-h) * var(--band));background:var(--navy-band);flex:none}
 }
 
 /* ───────── Card ───────── */
-.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden}
-.card-body{padding:32px 28px}
-@media (max-width:420px){.card-body{padding:26px 18px}}
+.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden;max-height:calc(100svh - 32px);display:flex;flex-direction:column}
+.card-body{padding:22px 22px;overflow:auto}
+@media (max-width:420px){.card-body{padding:18px 16px}}
 
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
 .eyebrow svg{width:14px;height:16px}
-.title{font-family:var(--display);font-weight:800;color:var(--navy);font-size:clamp(26px,3.2vw,34px);line-height:1.12;letter-spacing:-.01em;margin:10px 0 10px}
-.lede{color:var(--ink);font-size:15.5px}
+.title{font-family:var(--display);font-weight:800;color:var(--navy);font-size:clamp(24px,2.8vw,30px);line-height:1.12;letter-spacing:-.01em;margin:6px 0 8px}
+.lede{color:var(--ink);font-size:14px}
 .lede b,.hl{color:var(--orange);font-weight:700}
 .fine{font-size:12.5px;color:var(--muted)}
 
@@ -125,9 +125,9 @@ button,input,select{font:inherit;color:inherit}
 .money span{font-family:var(--display);font-weight:700;font-size:20px;color:var(--navy)}
 .money input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:var(--display);font-weight:800;font-size:clamp(28px,4vw,38px);color:var(--navy);letter-spacing:-.01em}
 .money input::placeholder{color:#B7C3D6}
-.calc{margin-top:26px}
+.calc{margin-top:16px}
 
-.range{position:relative;height:28px;margin:18px 0 6px}
+.range{position:relative;height:28px;margin:12px 0 4px}
 .range-track,.range-fill{position:absolute;top:50%;height:6px;border-radius:6px;transform:translateY(-50%)}
 .range-track{left:0;right:0;background:var(--sky)}
 .range-fill{left:0;background:var(--navy);width:0}
@@ -139,12 +139,12 @@ button,input,select{font:inherit;color:inherit}
 .range input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--navy)}
 .range-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chip{border:1.5px solid var(--sky-line);background:var(--white);color:var(--navy);font-weight:600;font-size:13.5px;padding:6px 14px;border-radius:999px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
 .chip:hover{border-color:var(--navy)}
 .chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--white)}
 
-.result{margin-top:24px;background:var(--navy);color:var(--white);border-radius:14px;padding:20px 22px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
+.result{margin-top:16px;background:var(--navy);color:var(--white);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
 .result-label{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#C9D3EA;grid-column:1;grid-row:1;align-self:center}
 .result-amount{grid-column:1/-1;grid-row:2}
 .result-amount{font-family:var(--display);font-weight:800;font-size:clamp(30px,3.4vw,40px);line-height:1.05;letter-spacing:-.01em;white-space:nowrap}
@@ -154,7 +154,7 @@ button,input,select{font:inherit;color:inherit}
 .result-meta{grid-column:1/-1;font-size:13.5px;color:#C9D3EA;margin-top:6px}
 .result.is-empty .result-amount{color:#8C9AC0}
 
-.covers{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.covers{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .covers li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:14px 8px;border:1px solid var(--sky-line);border-radius:12px;background:var(--sky-soft);font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.25}
 .covers svg{width:30px;height:34px}
 @media (max-width:520px){
@@ -202,9 +202,8 @@ button,input,select{font:inherit;color:inherit}
 .step-title{font-family:var(--display);font-weight:800;font-size:24px;color:var(--navy);line-height:1.2;margin-bottom:4px}
 .step-sub{color:var(--muted);font-size:14.5px;margin-bottom:20px}
 
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
 .grid .full{grid-column:1/-1}
-@media (max-width:520px){.grid{grid-template-columns:1fr}}
 .f{display:flex;flex-direction:column;gap:6px}
 .f label{font-size:13px;font-weight:700;color:var(--navy)}
 .f input,.f select{width:100%;border:1.5px solid var(--sky-line);border-radius:10px;padding:12px 13px;background:var(--white);font-size:15.5px;transition:border-color .15s,box-shadow .15s}
@@ -349,6 +348,7 @@ button,input,select{font:inherit;color:inherit}
             <span class="eyebrow"><svg><use href="#shield-fill"/></svg>Premium calculator</span>
             <h1 class="title" id="calcTitle">Calculate your premium</h1>
             <p class="lede">For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident.</p>
+            <p class="fine" id="resumeRow" style="margin-top:10px">Already have a quote? <a href="#" id="resumeLink">Resume payment</a> · <a href="/s/protecta/quotes/resume">Find my quotes</a></p>
 
             <div class="calc">
               <label class="field-label" for="carValue">Your car’s value</label>
@@ -447,7 +447,6 @@ button,input,select{font:inherit;color:inherit}
                 <div class="f">
                   <label for="phone">Phone number</label>
                   <div class="tel"><span>+256</span><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="701 440 613" required /></div>
-                  <span class="hint">0701440613, 701440613 or 256701440613 all work.</span>
                   <span class="err">Enter a valid Ugandan number, e.g. 0701440613 or 701 440 613.</span>
                 </div>
                 <div class="f">
@@ -510,7 +509,7 @@ button,input,select{font:inherit;color:inherit}
                 <div class="f">
                   <label for="payPhone"><span id="payNet">Mobile money</span> number</label>
                   <div class="tel"><span>+256</span><input id="payPhone" type="tel" inputmode="tel" placeholder="701 440 613" /></div>
-                  <span class="hint">0701440613, 701440613 or 256701440613. You’ll get a prompt on this phone to approve the payment.</span>
+                  <span class="hint">You’ll get a prompt on this phone to approve the payment.</span>
                   <span class="err">Enter a valid Ugandan mobile money number, e.g. 0701440613.</span>
                 </div>
               </div>
@@ -615,6 +614,39 @@ button,input,select{font:inherit;color:inherit}
   }
 
   var state = Object.assign({ value: DEFAULT_VALUE, step: 'calc' }, load());
+  // Portal: allow return & complete payment — ?ref=QUOTE_REF deep-links to pay
+  (function () {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var ref = (params.get('ref') || params.get('resume') || '').trim().toUpperCase();
+      if (!ref) return;
+      // If we already have this quote loaded and paid, stay on done
+      if (state.quoteRef === ref && state.paid) return;
+      fetch(API + '/api/quotes/get?ref=' + encodeURIComponent(ref))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.quote) return;
+          var q = d.quote;
+          state.quoteRef = q.reference;
+          state.shareUrl = q.shareUrl;
+          state.serverPremium = q.premium;
+          state.value = Number(q.vehicleValue) || state.value;
+          state.plate = q.plate || state.plate;
+          state.make = q.vehicleMake || state.make;
+          state.model = q.vehicleModel || state.model;
+          state.quoteStatus = q.status;
+          // Try to keep policyholder info if present
+          if (q.policyholderPhone) state.phone = q.policyholderPhone;
+          state._qphone = state.phone; state._qplate = state.plate; state._qvalue = state.value;
+          save();
+          // Pre-fill premium display and go to pay (after details if needed)
+          try { setValue(state.value); } catch (e) {}
+          // Defer navigation until after initial go() below; mark intended step
+          state._resumeRef = ref;
+          state._resumeStatus = q.status;
+        }).catch(function () {});
+    } catch (e) {}
+  })();
   function premiumOf(v) { return Math.round(v * PRICING.rate); }
   function ratePct() { return (PRICING.rate * 100).toLocaleString('en-UG', { maximumFractionDigits: 2 }) + '%'; }
 
@@ -881,7 +913,19 @@ button,input,select{font:inherit;color:inherit}
       })
     }).then(function (data) {
       state.paymentRef = data.payment.paymentRef;
+      if (data.policy && data.policy.policyNo) state.policyNo = data.policy.policyNo;
       save();
+      if (data.draft) {
+        if (data.policy && data.policy.policyNo) { state.policyNo = data.policy.policyNo; state.paid = true; save(); }
+        $('#pendingText').textContent = data.instructions || 'Your payment is being processed. You will receive a confirmation shortly.';
+        setTimeout(function () {
+          $('#pending').classList.remove('show'); btn.disabled = false;
+          if (data.policy && data.policy.policyNo) state.paid = true;
+          else state.paid = true;
+          finish(); go('done');
+        }, 1400);
+        return;
+      }
       if (provider === 'bank') {
         $('#pending').classList.remove('show'); btn.disabled = false;
         state.paid = true; finish(); go('done');
@@ -941,6 +985,20 @@ button,input,select{font:inherit;color:inherit}
     $('#shareWa').href = 'https://wa.me/?text=' + encodeURIComponent(summary);
     $('#shareMail').href = 'mailto:' + encodeURIComponent(state.email || '') + '?subject=' + encodeURIComponent('My Protecta Bode cover · ' + (state.policyNo || state.quoteRef || '')) + '&body=' + encodeURIComponent(summary);
   }
+  var resumeLink = $('#resumeLink');
+  if (resumeLink) resumeLink.addEventListener('click', function (e) {
+    e.preventDefault();
+    var ref = prompt('Enter your quote reference (e.g. PB-1234-XXXXXX) or phone number:');
+    if (!ref) return;
+    ref = ref.trim();
+    // If it looks like a phone, go to resume portal; else go to portal with ref
+    var digits = ref.replace(/[^0-9]/g, '');
+    if (digits.length >= 9 && digits.length <= 13 && ref.indexOf('PB-') === -1) {
+      window.location.href = '/s/protecta/quotes/resume?phone=' + encodeURIComponent(ref);
+    } else {
+      window.location.href = API + '/?ref=' + encodeURIComponent(ref.toUpperCase());
+    }
+  });
   $('#restart').addEventListener('click', function () {
     try { sessionStorage.removeItem('pb'); } catch (e) {}
     ['#vehicleForm', '#detailsForm', '#payForm'].forEach(function (f) { $(f).reset(); });
@@ -966,6 +1024,21 @@ button,input,select{font:inherit;color:inherit}
   if (state.paid) finish();
   var resume = state.step || 'calc';
   if (resume === 'done' && !state.paid) resume = 'pay';
+  // If we deep-linked via ?ref=, prefer that navigation after a short delay
+  if (state._resumeRef) {
+    setTimeout(function () {
+      try {
+        if (state._resumeStatus === 'ACCEPTED') {
+          // Already paid — go to policy doc
+          window.location.href = '/s/protecta/policies/doc?ref=' + encodeURIComponent(state._resumeRef);
+          return;
+        }
+        if (state.name && state.phone && state.plate) go('pay');
+        else go('details');
+      } catch (e) { go('pay'); }
+      delete state._resumeRef; delete state._resumeStatus; save();
+    }, 600);
+  }
   go(resume, { silent: true });
 })();
 </script>

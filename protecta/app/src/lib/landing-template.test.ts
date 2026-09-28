@@ -35,6 +35,8 @@ describe('landing page', () => {
     const html = renderLandingPage('/s/protecta', assets, '0312246500', 'tel:+256312246500');
     expect(html).toContain('kvFallback');
     expect(html).toContain('overflow-x:clip');
+    expect(html).not.toContain('0701440613, 701440613 or 256701440613 all work.');
+    expect(html).not.toContain('0701440613, 701440613 or 256701440613.');
     expect(html).toContain('0701440613');
     const script = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</script>'));
     const helpers = [

@@ -523,3 +523,15 @@ export const P_STICKER_FEES = '6d4df9b5-9697-45cf-959c-d0da80b8bbcc';
 export const P_VAT = '101b9d40-82f6-4e19-8165-a11279703896';
 export const P_STAMP_DUTY = '6b69b2d5-4d07-4e10-b2a2-b5176ab646e3';
 export const P_TOTAL_PREMIUM = 'e6adb70f-7198-420e-a15d-0e1ddcdeb258';
+
+// Quote → policy conversion + on-demand policy PDF (added for UX: print & direct conversion)
+export const QUOTE_CONVERT = '5b00700c-75f8-4588-8d9c-a6c48bf1ed82';
+export const EFFECT_QUOTE_CONVERT = '9bd5755c-084f-4ebb-b3c7-2607be00f86d';
+export const STAFF_QUOTE_CONVERT = '78cdc32c-50f7-4b47-9184-4a107a2c4a37';
+export const POLICY_PDF = '5b60a534-b357-4031-9f87-b89419adbf25';
+export const EFFECT_POLICY_PDF = '3a2fd82d-a64a-4579-b5c3-2b6e95e84277';
+export const STAFF_POLICY_PDF = 'f08bf09c-d188-4b20-831d-8bc679d1157c';
+// Portal: resume quote → complete payment + kanban client name
+export const QUOTE_RESUME = 'df27dd13-f3a1-4074-8f14-d593179e7f20';
+export const VIEW_QUOTES_PIPELINE_COL6 = '0484f0c2-152c-4f78-a030-718f12db0868';
+

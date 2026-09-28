@@ -1,12 +1,12 @@
 import { defineSettingsMenuItem } from 'twenty-sdk/define';
 import {
-  STATUS_TAB,
+  FC_SETTINGS_TAB,
   WHATSAPP_SETTINGS_MENU,
 } from 'src/constants/universal-identifiers';
 
 export default defineSettingsMenuItem({
   universalIdentifier: WHATSAPP_SETTINGS_MENU,
-  frontComponentUniversalIdentifier: STATUS_TAB,
+  frontComponentUniversalIdentifier: FC_SETTINGS_TAB,
   title: 'WhatsApp bot',
   icon: 'IconMessage',
   // Must not share a position with protecta-settings (position 0): the sync

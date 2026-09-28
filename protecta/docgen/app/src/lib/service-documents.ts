@@ -1,4 +1,8 @@
-import { assembleDocumentData, renderTemplate } from 'src/lib/render';
+import {
+  assembleDocumentData,
+  renderTemplate,
+  type ScheduleConfig,
+} from 'src/lib/render';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { findTemplate } from 'src/lib/templates';
 
@@ -52,7 +56,12 @@ const setReferenceWithRetry = async (
 export const fillGeneratedDocument = async (
   db: DbClient,
   record: RecordData,
-  options: { makeRef?: () => string; maxRefAttempts?: number } = {},
+  options: {
+    makeRef?: () => string;
+    maxRefAttempts?: number;
+    /** Premium-breakdown defaults for the schedule (app settings). */
+    config?: ScheduleConfig;
+  } = {},
 ): Promise<RecordData> => {
   const hasContent =
     typeof record.content === 'string' && record.content.trim().length > 0;
@@ -77,6 +86,7 @@ export const fillGeneratedDocument = async (
   const { data, error } = await assembleDocumentData(db, {
     policyNo,
     reference,
+    config: options.config,
   });
 
   if (!data) {
@@ -108,6 +118,7 @@ export const createGeneratedDocument = async (
     kind?: string;
     makeRef?: () => string;
     maxRefAttempts?: number;
+    config?: ScheduleConfig;
   },
 ): Promise<RecordData> => {
   const created = await db.create('generatedDocument', {

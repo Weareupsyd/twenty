@@ -279,7 +279,11 @@ no longer required. Expect these stages:
 3. **Checking the workspace API key**, minting one if needed, then
    **authenticating remote 'protecta-local'**.
 4. Syncing the Document Generator and SMS apps, then **syncing the app into the
-   workspace**.
+   workspace**. Policy documents are generated from the Liberty "Motor Protecta
+   Bode Policy" wording shipped with the Document Generator; schedule values
+   come from the policy, policyholder and vehicle records (see
+   [DEPLOYMENT.md](./DEPLOYMENT.md) for the fields and the premium-breakdown
+   settings).
 5. **Ready**, with `protecta-bode` shown as synced.
 
 Do not assume installation succeeded until the sync finishes. If it fails, keep

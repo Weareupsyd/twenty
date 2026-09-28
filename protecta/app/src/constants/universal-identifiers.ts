@@ -507,3 +507,19 @@ export const STAFF_ACTION = '522a3510-1fb6-4319-94ad-a91506b72120';
 export const WHATSAPP_SETTINGS_GET = 'c4e8a1b2-6f3d-4a91-9e20-7b5d1c8a44e0';
 export const WHATSAPP_SETTINGS_SAVE = 'd7f2b6c1-8a40-4e15-b3c9-2f6e0d9a71b4';
 export const WHATSAPP_SETTINGS_MENU = 'e1a9c4d8-3b72-4f06-8d55-9c2a7e1b60f3';
+
+// Schedule fields for the Liberty Motor Protecta Bode policy document.
+export const PERSON_PROTECTA_ADDRESS = 'ca86831c-3fd2-482c-b0db-403af5ba9f4e';
+export const PERSON_PROTECTA_OCCUPATION = '11214699-816b-4422-800e-22d55d007320';
+export const V_BODY_TYPE = '32e3144e-dd2f-485c-a0b3-853a834960d2';
+export const V_ENGINE_CC = '433c0aa9-ca2c-4af1-b81e-1e2d32fda3ed';
+export const V_SEATING_CAPACITY = 'f1f83950-b4fc-421e-806b-c09a0e74adbc';
+export const P_SUM_INSURED = '9099cdb2-8d37-4d75-a09d-ac9773d894d5';
+export const P_BODY_TYPE = '67eec79e-e129-4044-a2c9-459804f46236';
+export const P_ENGINE_CC = '1d492a78-b4cc-4b52-8b5e-cb4236c83883';
+export const P_SEATING_CAPACITY = 'c91252bd-3699-4ff4-8985-12c60eee4d44';
+export const P_TRAINING_LEVY = 'cbc07c33-b843-49c2-a1d1-2116e538cd0f';
+export const P_STICKER_FEES = '6d4df9b5-9697-45cf-959c-d0da80b8bbcc';
+export const P_VAT = '101b9d40-82f6-4e19-8165-a11279703896';
+export const P_STAMP_DUTY = '6b69b2d5-4d07-4e10-b2a2-b5176ab646e3';
+export const P_TOTAL_PREMIUM = 'e6adb70f-7198-420e-a15d-0e1ddcdeb258';

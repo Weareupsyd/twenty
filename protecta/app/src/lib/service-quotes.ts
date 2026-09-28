@@ -19,6 +19,10 @@ export type CreateQuoteInput = {
   make?: string;
   model?: string;
   year?: number;
+  /** Schedule details for the policy document; kept on the vehicle record. */
+  bodyType?: string;
+  engineCc?: number;
+  seatingCapacity?: number;
   channel?: QuoteChannel;
   productCode?: string;
   /** Contact details from the public forms; stored on the person record. */
@@ -139,17 +143,39 @@ export const ensureVehicle = async (
     model?: string;
     year?: number;
     value?: number;
+    bodyType?: string;
+    engineCc?: number;
+    seatingCapacity?: number;
     ownerId?: string;
   },
 ): Promise<RecordData> => {
   const plate = normalizePlate(input.plate);
   const key = `${input.phone}:${plate}`;
+  const schedule = {
+    ...(input.bodyType ? { bodyType: input.bodyType } : {}),
+    ...(typeof input.engineCc === 'number' ? { engineCc: input.engineCc } : {}),
+    ...(typeof input.seatingCapacity === 'number'
+      ? { seatingCapacity: input.seatingCapacity }
+      : {}),
+    ...(typeof input.value === 'number' ? { valueUgx: input.value } : {}),
+    ...(input.model ? { model: input.model } : {}),
+  };
   const existing = await db.findFirst(
     'vehicles',
     { protectaRef: { eq: key } },
-    ['plate', 'protectaRef'],
+    ['plate', 'protectaRef', 'valueUgx', 'bodyType', 'engineCc', 'seatingCapacity'],
   );
   if (existing) {
+    // Fill in schedule details the record does not have yet, without
+    // overwriting values an operator already corrected.
+    const missing = Object.fromEntries(
+      Object.entries(schedule).filter(
+        ([field]) => existing[field] === null || existing[field] === undefined || existing[field] === '',
+      ),
+    );
+    if (Object.keys(missing).length > 0) {
+      return db.update('vehicle', String(existing.id), missing);
+    }
     return existing;
   }
   return db.create('vehicle', {
@@ -158,7 +184,7 @@ export const ensureVehicle = async (
     make: input.make ?? '',
     model: input.model ?? '',
     ...(typeof input.year === 'number' ? { year: input.year } : {}),
-    ...(typeof input.value === 'number' ? { valueUgx: input.value } : {}),
+    ...schedule,
     ownerPhone: input.phone,
     ...(input.ownerId ? { ownerId: input.ownerId } : {}),
   });
@@ -210,6 +236,9 @@ export const createQuote = async (
     model: input.model,
     year: input.year,
     value: input.vehicleValue,
+    bodyType: input.bodyType,
+    engineCc: input.engineCc,
+    seatingCapacity: input.seatingCapacity,
     ownerId: person.id as string | undefined,
   });
 

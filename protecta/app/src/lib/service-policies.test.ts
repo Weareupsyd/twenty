@@ -33,6 +33,22 @@ describe('issuePolicy', () => {
     expect(stored?.quoteRef).toBe(quote.reference);
   });
 
+  it('fixes the sum insured at issuance', async () => {
+    const db = new MemoryDbClient();
+    const { quote } = await seedQuote(db);
+    const { policy } = await issuePolicy(db, {
+      quoteRef: String(quote.reference),
+      pricing: DEFAULT_PRICING,
+      rng: () => 0.5,
+    });
+    expect(policy.sumInsuredUgx).toBe(10_000_000);
+
+    // A later vehicle-value edit must not move an issued certificate.
+    await db.update('insuranceQuote', String(quote.id), { vehicleValue: 99_000_000 });
+    const stored = await findPolicyByNo(db, String(policy.policyNo));
+    expect(stored?.sumInsuredUgx).toBe(10_000_000);
+  });
+
   it('refuses expired quotes', async () => {
     const db = new MemoryDbClient();
     const { quote } = await seedQuote(db);

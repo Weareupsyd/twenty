@@ -8,6 +8,7 @@ import generateOnPolicyCreated from 'src/logic-functions/generate-on-policy-crea
 import generateDocumentRoute from 'src/logic-functions/generate-document-route.logic-function';
 import documentView from 'src/logic-functions/document-view.logic-function';
 import documentDocx from 'src/logic-functions/document-docx.logic-function';
+import templatesInstall from 'src/logic-functions/templates-install.logic-function';
 
 const configOf = (logicFunction: unknown) =>
   (
@@ -51,6 +52,11 @@ describe('document generator triggers and routes', () => {
     expect(configOf(documentDocx).httpRouteTriggerSettings).toEqual({
       path: '/docgen/documents/docx',
       httpMethod: 'GET',
+      isAuthRequired: false,
+    });
+    expect(configOf(templatesInstall).httpRouteTriggerSettings).toEqual({
+      path: '/docgen/templates/install',
+      httpMethod: 'POST',
       isAuthRequired: false,
     });
   });

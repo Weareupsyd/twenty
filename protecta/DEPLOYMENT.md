@@ -85,13 +85,32 @@ unconfigured; it does not simulate a payment or authenticate a customer.
 
 `start.sh` also syncs the standalone **Document Generator** app, which is
 linked to Protecta through workspace events: when a policy is issued it
-generates the policy certificate document (PDF and Word) from a template
-(`{{placeholder}}` convention — see `docgen/README.md`). The original Word
-policy wording is not in the repo yet; recreate it as a template body when
-it arrives. Documents are served at `/s/docgen/documents/view?policyNo=...`
-(PDF) and `/s/docgen/documents/docx?policyNo=...` (Word); the Protecta
-policy page links to them automatically. To skip the app, delete
-`protecta/docgen` or sync only `protecta/app` (`./twenty.sh app`).
+generates the **Liberty General Insurance Uganda Ltd "Motor Protecta Bode
+Policy"** document (PDF and Word) from the policy's own records
+(`{{placeholder}}` convention — see `docgen/README.md`). The wording from
+`Protecta bode Final.docx` ships inside the app (`src/lib/policy-template.ts`),
+so nothing has to be recreated by hand. Documents are served at
+`/s/docgen/documents/view?policyNo=...` (PDF) and
+`/s/docgen/documents/docx?policyNo=...` (Word); the Protecta policy page links
+to them automatically. To skip the app, delete `protecta/docgen` or sync only
+`protecta/app` (`./twenty.sh app`).
+
+Make the generated certificate complete:
+
+1. Optional but recommended — put an editable copy of the wording in the
+   workspace: `POST /s/docgen/templates/install` (add `?force=1` to restore the
+   built-in body). Without it the built-in template is used as-is.
+2. Fill the schedule details the CRM does not derive: on the **policy** — Sum
+   insured, Body type, Engine capacity, Seating capacity and the premium
+   breakdown (Training levy, Sticker fees, VAT, Stamp duty, Total premium); on
+   the **person** — Address and Business or profession; on the **vehicle** —
+   Body type, Engine capacity, Seating capacity. Protecta fills the sum insured
+   from the quote's vehicle value at issuance and keeps vehicle details as
+   quotes are created; anything still missing prints as "—" rather than a guess.
+3. Or set the breakdown once for the whole deployment in
+   **Settings → Document Generator**: `POLICY_TRAINING_LEVY_RATE`,
+   `POLICY_VAT_RATE`, `POLICY_STICKER_FEES_UGX`, `POLICY_STAMP_DUTY_UGX`
+   (0 = not set).
 
 ## SMS Sender app (`protecta/sms`)
 

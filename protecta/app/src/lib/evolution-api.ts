@@ -72,6 +72,50 @@ export const sendEvolutionText = async (
   return { messageId: data?.key?.id ?? data?.messageId ?? null };
 };
 
+/**
+ * Send a file (e.g. the quote or invoice PDF) as a WhatsApp document.
+ * `base64` is the raw base64 payload; Evolution accepts url-or-base64 in
+ * `media` (see the shipped Evolution v2.3 Postman collection, Send Media).
+ */
+export const sendEvolutionDocument = async (
+  config: EvolutionConfig,
+  to: string,
+  doc: {
+    fileName: string;
+    caption: string;
+    base64: string;
+    mimeType?: string;
+  },
+): Promise<{ messageId: string | null }> => {
+  const number = to.replace(/^\+/, '');
+  const response = await fetch(
+    endpoint(config, `/message/sendMedia/${encodeURIComponent(config.instance)}`),
+    {
+      method: 'POST',
+      headers: evolutionHeaders(config),
+      body: JSON.stringify({
+        number,
+        mediatype: 'document',
+        mimetype: doc.mimeType ?? 'application/pdf',
+        fileName: doc.fileName,
+        caption: doc.caption.slice(0, 1000),
+        media: doc.base64,
+      }),
+    },
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `Evolution media send failed (${response.status}): ${detail.slice(0, 200)}`,
+    );
+  }
+  const data = (await response.json().catch(() => null)) as {
+    key?: { id?: string };
+    messageId?: string;
+  } | null;
+  return { messageId: data?.key?.id ?? data?.messageId ?? null };
+};
+
 export type EvolutionConnection = {
   ok: boolean;
   state: string;

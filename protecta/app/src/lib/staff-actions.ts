@@ -1,10 +1,14 @@
 import { confirmAndIssue } from 'src/lib/confirm-pipeline';
+import { quotePdfDocument } from 'src/lib/conversation-docs';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { advanceClaim } from 'src/lib/service-claims';
 import { decideKyc } from 'src/lib/service-kyc';
 import { issuePolicy } from 'src/lib/service-policies';
 import { renewPolicy } from 'src/lib/service-policies';
-import { deliverWhatsAppText } from 'src/lib/whatsapp-transport';
+import {
+  deliverWhatsAppText,
+  whatsAppDocSender,
+} from 'src/lib/whatsapp-transport';
 import { quoteIssuedMessage } from 'src/lib/whatsapp-text';
 
 export const runStaffAction = async (
@@ -31,6 +35,10 @@ export const runStaffAction = async (
         'validUntil',
         'shareUrl',
         'policyholderPhone',
+        'plate',
+        'vehicleMake',
+        'vehicleModel',
+        'vehicleValue',
       ],
     },
     'quote-convert': {
@@ -70,6 +78,16 @@ export const runStaffAction = async (
           shareUrl: String(record.shareUrl),
         }),
       );
+      // Text first, then the quote PDF: the customer sees both in the chat.
+      const sendDocument = await whatsAppDocSender();
+      if (sendDocument) {
+        try {
+          const doc = await quotePdfDocument(record, { name: 'Customer' });
+          await sendDocument(String(record.policyholderPhone), doc);
+        } catch (error) {
+          console.error('quote-send PDF attach failed', error);
+        }
+      }
       return { sent: true };
     }
     case 'quote-convert': {

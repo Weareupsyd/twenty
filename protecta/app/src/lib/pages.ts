@@ -27,7 +27,7 @@ const STYLE = `
   .field input, .field select, .field textarea { width: 100%; padding: 12px; border: 1px solid #d4dde6; border-radius: 10px; font-size: 15px; box-sizing: border-box; }
   .btn { width: 100%; margin-top: 8px; background: #0a7a3d; color: #fff; border: 0; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
   .btn-outline { background: #fff; color: #0a7a3d; border: 1px solid #0a7a3d; }
-  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .btn-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
   .btn-row .btn { margin-top: 0; }
   @media (max-width: 420px) { .btn-row { grid-template-columns: 1fr; } }
   .note { background: #f0f6ff; border: 1px solid #d6e6ff; border-radius: 10px; padding: 12px; font-size: 13px; margin-top: 16px; }
@@ -71,6 +71,7 @@ ${quote.status === 'QUOTED' ? `<a class="cta" href="/s/protecta/?ref=${encodeURI
 <div class="btn-row no-print">
   <button class="btn btn-outline" onclick="window.print()">🖨 Print quote</button>
   <a class="btn btn-outline" href="/s/protecta/policies/doc?ref=${escapeHtml(String(quote.reference))}" onclick="event.preventDefault(); window.open('/s/protecta/policies/doc?ref=${encodeURIComponent(String(quote.reference))}','_blank'); return false;" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">View as policy</a>
+  <a class="btn btn-outline" href="/s/protecta/quotes/pdf?ref=${escapeHtml(String(quote.reference))}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">Download PDF</a>
 </div>
 ${quote.status === 'QUOTED' ? `<div class="no-print" style="margin-top:10px"><button class="btn" id="convertBtn" onclick="convertQuote('${escapeHtml(String(quote.reference))}')">✓ Convert to policy</button><div id="convertAlert" class="alert"></div></div>` : ''}
 <p class="muted">Questions? WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')}.</p>

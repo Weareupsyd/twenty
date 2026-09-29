@@ -1,0 +1,76 @@
+# Caddyfile for Protecta Bode — https://protectabode.weareupsyd.com
+# Managed by protecta/install.sh --domain protectabode.weareupsyd.com --with-caddy
+# Caddy automatically provisions TLS via Let's Encrypt.
+# Twenty CRM must be running on localhost:2020 (or $PORT).
+
+{
+    email admin@weareupsyd.com
+    admin off
+}
+
+# ── Main Protecta Bode domain ──
+protectabode.weareupsyd.com {
+    # Twenty CRM (twenty-app-dev container)
+    reverse_proxy localhost:2020 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Allow embedding only from same origin (landing page uses same domain)
+        # -Allow-From is deprecated; use CSP frame-ancestors if needed
+    }
+
+    # Compress
+    encode gzip
+
+    # Logs
+    log {
+        output file /var/log/caddy/protectabode.log {
+            roll_size 50MiB
+            roll_keep 10
+        }
+        level INFO
+    }
+
+    # Health check endpoint (bypass logs)
+    @health path /healthz /s/protecta/health
+    handle @health {
+        reverse_proxy localhost:2020
+    }
+}
+
+# ── Evolution API subdomain (optional) ──
+# If you run Evolution API on localhost:8080, this exposes it as
+# https://evolution.protectabode.weareupsyd.com with auto TLS.
+evolution.protectabode.weareupsyd.com {
+    reverse_proxy localhost:8080 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    encode gzip
+    log {
+        output file /var/log/caddy/evolution.log
+        level INFO
+    }
+}
+
+# ── WWW redirect ──
+www.protectabode.weareupsyd.com {
+    redir https://protectabode.weareupsyd.com{uri} permanent
+}
+
+# ── Fallback for any other subdomain (optional) ──
+# Uncomment if you want to catch-all
+# *.protectabode.weareupsyd.com {
+#     redir https://protectabode.weareupsyd.com{uri} permanent
+# }

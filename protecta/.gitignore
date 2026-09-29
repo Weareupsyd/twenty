@@ -1,2 +1,8 @@
 # API keys minted by ./create-api-key.sh (never commit a token)
 .twenty-api-key
+# Evolution + Caddy
+.env.evolution
+caddy/certs/
+caddy/data/
+caddy/config/
+*.log

@@ -9,6 +9,22 @@ export const WHATSAPP_SETTINGS_KEY = 'whatsapp:settings';
 
 export type WhatsAppProvider = 'evolution' | 'meta';
 
+export type BotMenuItem = {
+  id: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+};
+
+export const DEFAULT_BOT_MENU: BotMenuItem[] = [
+  { id: '1', label: 'Calculate premium', description: 'Send the car value, get the premium', enabled: true },
+  { id: '2', label: 'Get cover (onboard)', description: 'Make, model, year, plate and name', enabled: true },
+  { id: '3', label: 'My policies', description: 'List policies by phone', enabled: true },
+  { id: '4', label: 'Pay for a quote', description: 'Pay with mobile money', enabled: true },
+  { id: '5', label: 'Report a claim', description: 'Needs policy number', enabled: true },
+  { id: '6', label: 'Talk to support', description: 'Create support ticket', enabled: true },
+];
+
 export type StoredWhatsAppSettings = {
   provider: WhatsAppProvider;
   evolutionBaseUrl?: string;
@@ -18,6 +34,8 @@ export type StoredWhatsAppSettings = {
   metaPhoneId?: string;
   metaAppSecret?: string;
   metaVerifyToken?: string;
+  botMenu?: BotMenuItem[];
+  botWelcomeMessage?: string;
 };
 
 export const loadStoredWhatsAppSettings = async (

@@ -8,15 +8,24 @@
 #
 #   ./install.sh                  install everything
 #   ./install.sh --port 3000      use another port
+#   ./install.sh --domain protectabode.weareupsyd.com --with-caddy --with-evolution
+#                                 production setup for https://protectabode.weareupsyd.com with Caddy TLS + Evolution webhook
 #   ./install.sh --skip-prereqs   don't touch Node/Docker (already provisioned)
 #   ./install.sh --no-verify      skip the post-install verification
 #   ./install.sh --branch <ref>   branch to clone when bootstrap is needed
 #   ./install.sh --reseed         re-run the Twenty dev seed before deploying
 #                                 (first boot, after "Seeding workspace data... Failed")
+#   ./install.sh --with-caddy     install Caddy and configure TLS for --domain (default: protectabode.weareupsyd.com)
+#   ./install.sh --with-evolution run Evolution API (WhatsApp gateway) via docker-compose.caddy.yml with default webhook
+#   ./install.sh --domain <domain> public domain for Caddy and PUBLIC_BASE_URL (default: protectabode.weareupsyd.com)
+#   ./install.sh --email <email>  email for Let's Encrypt (default: admin@weareupsyd.com)
+#   ./install.sh --evolution-domain <domain> Evolution subdomain (default: evolution.protectabode.weareupsyd.com)
+#   ./install.sh --webhook-url <url> Evolution webhook URL (default: https://DOMAIN/s/protecta/whatsapp/webhook)
 #
 # It can also run itself from outside a checkout:
 #
 #   curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/<branch>/protecta/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/<branch>/protecta/install.sh | bash -s -- --with-caddy --with-evolution --domain protectabode.weareupsyd.com
 #
 # In that case it clones the repository (default: ~/twenty-protecta) and
 # continues from there. Re-running install.sh is safe: every step is idempotent.
@@ -60,6 +69,12 @@ SKIP_DOCKER_INSTALL="${SKIP_DOCKER_INSTALL:-0}"
 SKIP_NODE_INSTALL="${SKIP_NODE_INSTALL:-0}"
 VERIFY=1
 RESEED=0
+DOMAIN="${DOMAIN:-protectabode.weareupsyd.com}"
+EMAIL="${EMAIL:-admin@weareupsyd.com}"
+WITH_CADDY="${WITH_CADDY:-0}"
+WITH_EVOLUTION="${WITH_EVOLUTION:-0}"
+EVOLUTION_DOMAIN="${EVOLUTION_DOMAIN:-evolution.protectabode.weareupsyd.com}"
+WEBHOOK_URL="${WEBHOOK_URL:-https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -70,6 +85,18 @@ while [[ $# -gt 0 ]]; do
     --branch=*) BRANCH="${1#*=}"; shift ;;
     --dir) TARGET_DIR="${2:?--dir needs a value}"; shift 2 ;;
     --dir=*) TARGET_DIR="${1#*=}"; shift ;;
+    --domain) DOMAIN="${2:?--domain needs a value}"; shift 2 ;;
+    --domain=*) DOMAIN="${1#*=}"; shift ;;
+    --email) EMAIL="${2:?--email needs a value}"; shift 2 ;;
+    --email=*) EMAIL="${1#*=}"; shift ;;
+    --evolution-domain) EVOLUTION_DOMAIN="${2:?--evolution-domain needs a value}"; shift 2 ;;
+    --evolution-domain=*) EVOLUTION_DOMAIN="${1#*=}"; shift ;;
+    --with-caddy) WITH_CADDY=1; shift ;;
+    --without-caddy) WITH_CADDY=0; shift ;;
+    --with-evolution) WITH_EVOLUTION=1; shift ;;
+    --without-evolution) WITH_EVOLUTION=0; shift ;;
+    --webhook-url) WEBHOOK_URL="${2:?--webhook-url needs a value}"; shift 2 ;;
+    --webhook-url=*) WEBHOOK_URL="${1#*=}"; shift ;;
     --skip-prereqs) SKIP_PREREQS=1; shift ;;
     --skip-docker-install) SKIP_DOCKER_INSTALL=1; shift ;;
     --skip-node-install) SKIP_NODE_INSTALL=1; shift ;;
@@ -79,7 +106,7 @@ while [[ $# -gt 0 ]]; do
       if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/install.sh" ]]; then
         awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "$SCRIPT_DIR/install.sh"
       else
-        printf 'Protecta all-in-one installer\n\n  --port <n>          use another port\n  --watch             keep watching src/ after installing\n  --branch <ref>      branch to clone in bootstrap mode\n  --dir <path>        checkout to create/use in bootstrap mode\n  --skip-prereqs      do not provision Node/Docker\n  --no-verify         skip the post-install verification\n  --reseed            re-run the Twenty dev seed before deploying\n'
+        printf 'Protecta all-in-one installer\n\n  --port <n>          use another port\n  --domain <domain>   public domain (default: protectabode.weareupsyd.com)\n  --email <email>     email for TLS certs\n  --with-caddy        install and configure Caddy reverse proxy for DOMAIN\n  --with-evolution    also run Evolution API (WhatsApp gateway) via docker compose\n  --evolution-domain  Evolution subdomain (default: evolution.protectabode.weareupsyd.com)\n  --webhook-url       Evolution webhook URL (default: https://DOMAIN/s/protecta/whatsapp/webhook)\n  --watch             keep watching src/ after installing\n  --branch <ref>      branch to clone in bootstrap mode\n  --dir <path>        checkout to create/use in bootstrap mode\n  --skip-prereqs      do not provision Node/Docker\n  --no-verify         skip the post-install verification\n  --reseed            re-run the Twenty dev seed before deploying\n'
       fi
       exit 0
       ;;
@@ -409,20 +436,124 @@ else
   step "Skipping verification (--no-verify)"
 fi
 
+# --- 4. Caddy + Evolution (optional, for protectabode.weareupsyd.com) ----------------
+
+setup_caddy_if_requested() {
+  if [[ "$WITH_CADDY" != "1" ]]; then
+    return 0
+  fi
+
+  step "Configuring Caddy reverse proxy for $DOMAIN → localhost:${PORT:-2020}"
+  if [[ -f "$SCRIPT_DIR/scripts/setup-caddy.sh" ]]; then
+    DOMAIN="$DOMAIN" PORT="${PORT:-$(detect_port)}" EMAIL="$EMAIL" EVOLUTION_DOMAIN="$EVOLUTION_DOMAIN" bash "$SCRIPT_DIR/scripts/setup-caddy.sh" || warn "Caddy setup reported problems; check /etc/caddy/Caddyfile and 'systemctl status caddy'"
+  else
+    warn "scripts/setup-caddy.sh not found, skipping Caddy setup"
+  fi
+
+  # Set PUBLIC_BASE_URL to the public domain so links in WhatsApp, emails, etc use https://DOMAIN
+  if [[ -f "$SCRIPT_DIR/scripts/set-public-url.sh" ]]; then
+    info "setting PUBLIC_BASE_URL to https://$DOMAIN"
+    PUBLIC_BASE_URL="https://$DOMAIN" SERVER_URL="http://localhost:${PORT:-$(detect_port)}" bash "$SCRIPT_DIR/scripts/set-public-url.sh" "https://$DOMAIN" || warn "Could not auto-set PUBLIC_BASE_URL, set it manually in Settings → Protecta Bode → Variables"
+  fi
+}
+
+setup_evolution_if_requested() {
+  if [[ "$WITH_EVOLUTION" != "1" ]]; then
+    return 0
+  fi
+
+  step "Setting up Evolution API (WhatsApp gateway) with default webhook https://$DOMAIN/s/protecta/whatsapp/webhook"
+
+  # Create .env file for docker-compose.caddy.yml if missing
+  ENV_FILE="$SCRIPT_DIR/.env.evolution"
+  if [[ ! -f "$ENV_FILE" ]]; then
+    cat > "$ENV_FILE" <<ENVEOF
+DOMAIN=$DOMAIN
+EVOLUTION_DOMAIN=$EVOLUTION_DOMAIN
+WEBHOOK_URL=https://$DOMAIN/s/protecta/whatsapp/webhook
+EVOLUTION_API_KEY=protecta-evolution-key-$(head -c 12 /dev/urandom | base64 | tr -dc 'a-zA-Z0-9' | head -c 16)
+ENVEOF
+    info "created $ENV_FILE with random EVOLUTION_API_KEY (chmod 600)"
+    chmod 600 "$ENV_FILE"
+  fi
+
+  # Load env
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE" 2>/dev/null || true
+  set +a
+
+  # Ensure Caddyfile exists
+  if [[ ! -f "$SCRIPT_DIR/Caddyfile" ]]; then
+    warn "Caddyfile not found in $SCRIPT_DIR, Caddy may not proxy $DOMAIN correctly"
+  fi
+
+  # Start Evolution + Caddy via docker compose if docker-compose.caddy.yml exists
+  if [[ -f "$SCRIPT_DIR/docker-compose.caddy.yml" ]]; then
+    if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then
+      info "starting Evolution API + Caddy via docker compose"
+      (cd "$SCRIPT_DIR" && DOMAIN="$DOMAIN" EVOLUTION_DOMAIN="$EVOLUTION_DOMAIN" WEBHOOK_URL="https://$DOMAIN/s/protecta/whatsapp/webhook" EVOLUTION_API_KEY="${EVOLUTION_API_KEY:-}" docker compose -f docker-compose.caddy.yml --env-file "$ENV_FILE" up -d) || warn "docker compose up failed for caddy/evolution"
+    elif command -v docker-compose >/dev/null 2>&1; then
+      info "starting Evolution API + Caddy via docker-compose"
+      (cd "$SCRIPT_DIR" && DOMAIN="$DOMAIN" EVOLUTION_DOMAIN="$EVOLUTION_DOMAIN" WEBHOOK_URL="https://$DOMAIN/s/protecta/whatsapp/webhook" EVOLUTION_API_KEY="${EVOLUTION_API_KEY:-}" docker-compose -f docker-compose.caddy.yml --env-file "$ENV_FILE" up -d) || warn "docker-compose up failed"
+    else
+      warn "docker compose not found, Evolution API not started. Install docker compose plugin and run: docker compose -f docker-compose.caddy.yml up -d"
+    fi
+  else
+    info "docker-compose.caddy.yml not found, skipping container start. To run Evolution manually:"
+    info "  docker run -d --name evolution-api -p 8080:8080 -e AUTHENTICATION_API_KEY=\$EVOLUTION_API_KEY -e WEBHOOK_GLOBAL_URL=https://$DOMAIN/s/protecta/whatsapp/webhook atendai/evolution-api"
+  fi
+
+  # Give Evolution a moment to start
+  sleep 3
+
+  # Auto-configure webhook if Evolution is reachable and API key is known
+  if [[ -n "${EVOLUTION_API_KEY:-}" ]]; then
+    if curl -fsS --max-time 5 "http://localhost:8080/" >/dev/null 2>&1 || curl -fsS --max-time 5 "http://localhost:8080/instance/fetchInstances" -H "apikey: $EVOLUTION_API_KEY" >/dev/null 2>&1; then
+      info "Evolution API reachable, setting default webhook to https://$DOMAIN/s/protecta/whatsapp/webhook"
+      EVOLUTION_API_URL="http://localhost:8080" EVOLUTION_INSTANCE="${EVOLUTION_INSTANCE:-protecta}" EVOLUTION_API_KEY="$EVOLUTION_API_KEY" WEBHOOK_URL="https://$DOMAIN/s/protecta/whatsapp/webhook" bash "$SCRIPT_DIR/scripts/setup-evolution-webhook.sh" || warn "Could not auto-set Evolution webhook, run manually: ./scripts/setup-evolution-webhook.sh --webhook https://$DOMAIN/s/protecta/whatsapp/webhook"
+    else
+      info "Evolution API not yet reachable on localhost:8080, webhook will need manual setup after it starts"
+    fi
+  fi
+
+  info "Evolution API setup: instance 'protecta' should be created via Evolution dashboard at http://localhost:8080 or https://$EVOLUTION_DOMAIN"
+  info "Then QR-scan with bot phone, then webhook https://$DOMAIN/s/protecta/whatsapp/webhook will receive messages"
+}
+
+if [[ "$WITH_CADDY" == "1" || "$WITH_EVOLUTION" == "1" ]]; then
+  # Ensure domain resolves? Warn if not
+  if ! getent hosts "$DOMAIN" >/dev/null 2>&1; then
+    warn "Domain $DOMAIN does not resolve from this host yet — ensure DNS A record points to this server's public IP before TLS will work"
+  fi
+fi
+
+setup_caddy_if_requested
+setup_evolution_if_requested
+
 # --- done --------------------------------------------------------------------
 
 PORT_SHOWN="${PORT:-$(detect_port)}"
 SERVER_URL="http://localhost:$PORT_SHOWN"
+PUBLIC_URL="https://$DOMAIN"
+if [[ "$WITH_CADDY" != "1" ]]; then
+  PUBLIC_URL="$SERVER_URL"
+fi
 
 cat <<EOF
 
 $(printf '\033[1;32m==> Install complete\033[0m')
 
     Workspace:   $SERVER_URL
+    Public URL:  $PUBLIC_URL
     Login:       tim@apple.dev / tim@apple.dev
-    Landing:     $SERVER_URL/s/protecta/
-    Documents:   $SERVER_URL/s/docgen/documents/view?policyNo=<policy no>
-    SMS API:     POST $SERVER_URL/s/sms/send
+    Landing:     $PUBLIC_URL/s/protecta/
+    Bot config:  $PUBLIC_URL/pages/aee67389-c855-41aa-b11b-7ac6784f1252  (main menu → WhatsApp bot)
+    Settings:    $PUBLIC_URL/settings/whatsapp-bot  (gear → WhatsApp bot)
+    Documents:   $PUBLIC_URL/s/docgen/documents/view?policyNo=<policy no>
+    SMS API:     POST $PUBLIC_URL/s/sms/send
+    Health:      $PUBLIC_URL/s/protecta/health
+    Webhook:     $PUBLIC_URL/s/protecta/whatsapp/webhook  ← default Evolution webhook
 
     Apps:        Protecta Bode (${SCRIPT_DIR}/app)
                  Document Generator (${SCRIPT_DIR}/docgen/app)
@@ -430,6 +561,10 @@ $(printf '\033[1;32m==> Install complete\033[0m')
 
     API key:     ${TWENTY_API_KEY_FILE:-$SCRIPT_DIR/.twenty-api-key} (chmod 600, git-ignored)
     Source:      $REPO_DIR
+    Caddyfile:   ${SCRIPT_DIR}/Caddyfile  (if --with-caddy)
+    Evolution:   docker-compose.caddy.yml + .env.evolution (if --with-evolution)
+                 Evolution dashboard: http://localhost:8080 or https://$EVOLUTION_DOMAIN
+                 Default webhook: https://$DOMAIN/s/protecta/whatsapp/webhook
 
     Re-run/deploy changes:   ./start.sh
     Rotate the API key:      ./start.sh --new-api-key
@@ -438,8 +573,16 @@ $(printf '\033[1;32m==> Install complete\033[0m')
     Enable local AI:         ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     Stop the server:         ${SCRIPT_DIR}/app/node_modules/.bin/twenty docker:stop
     Logs:                    docker logs -f twenty-app-dev
+    Caddy logs:              /var/log/caddy/protectabode.log and /var/log/caddy/evolution.log
+    Evolution logs:          docker logs -f evolution-api
+    Caddy reload:            sudo systemctl reload caddy or ./scripts/setup-caddy.sh --domain $DOMAIN
+
+    Evolution webhook setup:  ./scripts/setup-evolution-webhook.sh --webhook https://$DOMAIN/s/protecta/whatsapp/webhook
+    Set public URL:          ./scripts/set-public-url.sh https://$DOMAIN
 
     Note: the server is published on all interfaces, so $PORT_SHOWN is reachable
     from other machines once the host firewall allows it.
+    With --with-caddy, Caddy terminates TLS for $DOMAIN and proxies to localhost:$PORT_SHOWN.
+    Ensure DNS A record for $DOMAIN and $EVOLUTION_DOMAIN points to this server.
 
 EOF

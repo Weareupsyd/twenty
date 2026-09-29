@@ -7,15 +7,17 @@ import {
 } from 'src/lib/evolution-api';
 import { whatsappConfigFromEnv } from 'src/lib/whatsapp-api';
 import {
+  DEFAULT_BOT_MENU,
   loadStoredWhatsAppSettings,
   maskSecret,
   WHATSAPP_SETTINGS_KEY,
+  type BotMenuItem,
   type StoredWhatsAppSettings,
   type WhatsAppProvider,
 } from 'src/lib/whatsapp-settings';
 
 export const BOT_ROUTES = [
-  '1. Calculate premium — send the car value, get the 1.5% premium',
+  '1. Calculate premium — send the car value, get the premium',
   '2. Get cover — make, model, year, plate and name, same as the website',
   '3. My policies',
   '4. Pay for a quote',
@@ -38,6 +40,19 @@ export const isWebhookUrl = (value: string): boolean => {
   }
 };
 
+const normalizeBotMenu = (raw: unknown, fallback: BotMenuItem[]): BotMenuItem[] => {
+  if (!Array.isArray(raw)) return fallback;
+  return raw
+    .map((item: any) => ({
+      id: String(item.id ?? '').trim() || Math.random().toString(36).slice(2, 8),
+      label: String(item.label ?? '').trim().slice(0, 80),
+      description: String(item.description ?? '').trim().slice(0, 200),
+      enabled: item.enabled !== false,
+    }))
+    .filter((i: BotMenuItem) => i.label.length > 0)
+    .slice(0, 12);
+};
+
 export const whatsAppSettingsView = async (
   store: Pick<StateStore, 'get'>,
 ) => {
@@ -49,11 +64,25 @@ export const whatsAppSettingsView = async (
   const baseUrl = saved?.evolutionBaseUrl || envEvolution?.baseUrl || '';
   const instance = saved?.evolutionInstance || envEvolution?.instance || '';
   const apiKey = saved?.evolutionApiKey || envEvolution?.apiKey || '';
+  const botMenu = saved?.botMenu && saved.botMenu.length > 0 ? saved.botMenu : DEFAULT_BOT_MENU;
+  const welcomeMessage = saved?.botWelcomeMessage || 'Protecta Bode — Cover Your Ride, Cover Your Life';
+  const publicBaseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+  const evolutionWebhookEnv = (process.env.EVOLUTION_WEBHOOK_URL || process.env.WEBHOOK_GLOBAL_URL || '').replace(/\/$/, '');
+  const defaultWebhook = 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook';
+  const webhookFromPublicBase = publicBaseUrl ? `${publicBaseUrl}/s/protecta/whatsapp/webhook` : '';
+  const effectiveWebhook = evolutionWebhookEnv || webhookFromPublicBase || defaultWebhook;
   return {
     ok: true,
     provider,
     webhookPath: '/s/protecta/whatsapp/webhook',
+    webhookUrlDefault: defaultWebhook,
+    webhookUrlFromPublicBase,
+    webhookUrlEnv: evolutionWebhookEnv,
+    webhookUrlEffective: effectiveWebhook,
+    publicBaseUrl: publicBaseUrl || defaultWebhook.replace('/s/protecta/whatsapp/webhook', ''),
     botRoutes: BOT_ROUTES,
+    botMenu,
+    welcomeMessage,
     evolution: {
       baseUrl,
       instance,
@@ -83,6 +112,9 @@ export const saveWhatsAppSettings = async (
 }> => {
   const previous = await loadStoredWhatsAppSettings(store);
   const provider = clean(body.provider) === 'meta' ? 'meta' : 'evolution';
+  const botMenuRaw = (body as any).botMenu;
+  const welcomeRaw = clean((body as any).welcomeMessage);
+  const normalizedMenu = botMenuRaw ? normalizeBotMenu(botMenuRaw, previous?.botMenu || DEFAULT_BOT_MENU) : previous?.botMenu;
   const next: StoredWhatsAppSettings = {
     provider,
     evolutionBaseUrl: clean(body.baseUrl) || previous?.evolutionBaseUrl || '',
@@ -92,8 +124,12 @@ export const saveWhatsAppSettings = async (
     metaPhoneId: clean(body.metaPhoneId) || previous?.metaPhoneId || '',
     metaAppSecret: clean(body.metaAppSecret) || previous?.metaAppSecret || '',
     metaVerifyToken: clean(body.metaVerifyToken) || previous?.metaVerifyToken || '',
+    botMenu: normalizedMenu,
+    botWelcomeMessage: welcomeRaw || previous?.botWelcomeMessage || 'Protecta Bode — Cover Your Ride, Cover Your Life',
   };
-  if (provider === 'evolution' && (!next.evolutionBaseUrl || !next.evolutionInstance || !next.evolutionApiKey)) {
+  // Allow saving bot menu without requiring evolution credentials
+  const isOnlyBotMenuUpdate = Boolean(botMenuRaw || welcomeRaw) && !body.baseUrl && !body.instance && !body.apiKey && !body.connect;
+  if (!isOnlyBotMenuUpdate && provider === 'evolution' && (!next.evolutionBaseUrl || !next.evolutionInstance || !next.evolutionApiKey)) {
     const env = evolutionConfigFromEnv();
     if (!env) {
       return {
@@ -106,6 +142,9 @@ export const saveWhatsAppSettings = async (
     next.evolutionApiKey = next.evolutionApiKey || env.apiKey;
   }
   await store.set(WHATSAPP_SETTINGS_KEY, next);
+  if (isOnlyBotMenuUpdate) {
+    return { ok: true, saved: true };
+  }
   if (provider !== 'evolution' || body.connect !== true) {
     return { ok: true, saved: true };
   }

@@ -54,14 +54,28 @@ export type BotTurn = {
   action?: BotAction;
 };
 
-export const BOT_MENU = [
-  '1. Calculate premium',
-  '2. Get cover (onboard)',
-  '3. My policies',
-  '4. Pay for a quote',
-  '5. Report a claim',
-  '6. Talk to support',
-].join('\n');
+export const BOT_MENU_ITEMS = [
+  { id: '1', label: 'Calculate premium' },
+  { id: '2', label: 'Get cover (onboard)' },
+  { id: '3', label: 'My policies' },
+  { id: '4', label: 'Pay for a quote' },
+  { id: '5', label: 'Report a claim' },
+  { id: '6', label: 'Talk to support' },
+] as const;
+
+export const BOT_MENU = BOT_MENU_ITEMS.map((i) => `${i.id}. ${i.label}`).join('\n');
+
+export const buildBotMenu = (
+  customMenu?: { id: string; label: string; enabled?: boolean }[],
+  welcome?: string,
+): string => {
+  const items =
+    customMenu && customMenu.length > 0
+      ? customMenu.filter((m) => m.enabled !== false)
+      : BOT_MENU_ITEMS;
+  const lines = items.map((i) => `${i.id}. ${i.label}`).join('\n');
+  return welcome ? `${welcome}\n${lines}` : lines;
+};
 
 const emptySession = (): BotSession => ({
   state: 'IDLE',
@@ -136,8 +150,8 @@ const moneyReply = (value: number, rate: number): string => {
 
 export const startSession = (): BotSession => emptySession();
 
-const menuTurn = (session: BotSession, intro?: string): BotTurn => ({
-  reply: `${intro ? `${intro}\n` : ''}*Protecta Bode*\n${BOT_MENU}\n\nReply with a number.`,
+const menuTurn = (session: BotSession, intro?: string, customMenu?: { id: string; label: string; enabled?: boolean }[], welcome?: string): BotTurn => ({
+  reply: `${intro ? `${intro}\n` : ''}*${welcome || 'Protecta Bode'}*\n${buildBotMenu(customMenu, undefined)}\n\nReply with a number.`,
   next: withState(session, 'IDLE', {}),
 });
 
@@ -185,6 +199,8 @@ export const handleBotTurn = (
     maxValue?: number;
     rate?: number;
     customer?: { name: string };
+    botMenu?: { id: string; label: string; enabled?: boolean }[];
+    welcomeMessage?: string;
   } = {},
 ): BotTurn => {
   const text = rawText.trim();
@@ -194,7 +210,7 @@ export const handleBotTurn = (
   const knownName = options.customer?.name.trim() ?? '';
 
   if (isMenuCommand(text)) {
-    return menuTurn(session);
+    return menuTurn(session, undefined, options.botMenu, options.welcomeMessage);
   }
 
   switch (session.state) {
@@ -258,7 +274,7 @@ export const handleBotTurn = (
           action: { kind: 'LOOKUP_QUOTE', quoteRef: quoteLookup[1] },
         };
       }
-      return menuTurn(session, "I didn't get that.");
+      return menuTurn(session, "I didn't get that.", options.botMenu, options.welcomeMessage);
     }
 
     case 'CALC_VALUE': {
@@ -282,7 +298,7 @@ export const handleBotTurn = (
           next: withState(session, 'BUY_MAKE'),
         };
       }
-      return menuTurn(session, 'Calculator closed.');
+      return menuTurn(session, 'Calculator closed.', options.botMenu, options.welcomeMessage);
     }
 
     case 'BUY_INTENT': {
@@ -402,7 +418,7 @@ export const handleBotTurn = (
           },
         };
       }
-      return menuTurn(session, 'Restarted.');
+      return menuTurn(session, 'Restarted.', options.botMenu, options.welcomeMessage);
     }
 
     case 'PAY_PHONE': {
@@ -504,6 +520,6 @@ export const handleBotTurn = (
     }
 
     default:
-      return menuTurn(session, "Let's start over.");
+      return menuTurn(session, "Let's start over.", options.botMenu, options.welcomeMessage);
   }
 };

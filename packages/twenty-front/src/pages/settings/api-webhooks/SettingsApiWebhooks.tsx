@@ -21,6 +21,8 @@ import { getSettingsPath } from 'twenty-shared/utils';
 import { Section } from 'twenty-ui/components';
 import {
   IconApi,
+  IconBrandWhatsapp,
+  IconCopy,
   IconPlus,
   IconSparkle2,
   IconSparkles,
@@ -28,6 +30,7 @@ import {
 } from 'twenty-ui/icon';
 import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
 import { SETTINGS_API_WEBHOOKS_TABS } from '~/pages/settings/api-webhooks/constants/SettingsApiWebhooksTabs';
+import { Button } from 'twenty-ui/input';
 
 type TabKey =
   (typeof SETTINGS_API_WEBHOOKS_TABS.TABS_IDS)[keyof typeof SETTINGS_API_WEBHOOKS_TABS.TABS_IDS];
@@ -162,6 +165,64 @@ export const SettingsApiWebhooks = () => {
 
         {activeTab === SETTINGS_API_WEBHOOKS_TABS.TABS_IDS.WEBHOOKS && (
           <StyledTabContent>
+            <Section.Root>
+              <Section.Header
+                title={t`Protecta Bode — WhatsApp inbound webhook (Evolution API)`}
+                description={t`Default webhook that Evolution API must POST WhatsApp messages to. Seeded in Twenty CRM as EVOLUTION_WEBHOOK_URL + PUBLIC_BASE_URL.`}
+              />
+              <div
+                style={{
+                  border: `1px solid ${themeCssVariables.border.color.strong}`,
+                  borderRadius: 8,
+                  padding: themeCssVariables.spacing[4],
+                  background: themeCssVariables.background.secondary,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: themeCssVariables.spacing[3],
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IconBrandWhatsapp size={20} />
+                  <strong>Default (production):</strong>
+                  <code style={{ flex: 1, padding: '4px 8px', background: themeCssVariables.background.primary, borderRadius: 4, border: `1px solid ${themeCssVariables.border.color.strong}` }}>
+                    https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook
+                  </code>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    Icon={IconCopy}
+                    onClick={() => {
+                      navigator.clipboard.writeText('https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook');
+                    }}
+                    title={t`Copy`}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IconWebhook size={20} />
+                  <strong>Current host:</strong>
+                  <code style={{ flex: 1, padding: '4px 8px', background: themeCssVariables.background.primary, borderRadius: 4, border: `1px solid ${themeCssVariables.border.color.strong}` }}>
+                    {typeof window !== 'undefined' ? `${window.location.origin}/s/protecta/whatsapp/webhook` : '/s/protecta/whatsapp/webhook'}
+                  </code>
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    Icon={IconCopy}
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        navigator.clipboard.writeText(`${window.location.origin}/s/protecta/whatsapp/webhook`);
+                      }
+                    }}
+                    title={t`Copy`}
+                  />
+                </div>
+                <div style={{ fontSize: 13, color: themeCssVariables.font.color.secondary, lineHeight: 1.5 }}>
+                  <div><strong>Seeded in Twenty CRM:</strong> Application variable <code>EVOLUTION_WEBHOOK_URL</code> = <code>https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook</code> and <code>PUBLIC_BASE_URL</code> = <code>https://protectabode.weareupsyd.com</code> (see Settings → Apps → Protecta Bode → Variables). Also available via <code>/s/protecta/health</code> and <code>/s/protecta/settings/whatsapp</code>.</div>
+                  <div style={{ marginTop: 8 }}><strong>Evolution API setup:</strong> <code>POST /webhook/set/{'{instance}'}</code> with <code>{'{\"webhook\":{\"enabled\":true,\"url\":\"https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook\",\"events\":[\"MESSAGES_UPSERT\"]}}'}</code></div>
+                  <div style={{ marginTop: 8 }}><strong>Auto-configure:</strong> <code>./scripts/setup-evolution-webhook.sh --webhook https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook</code> or <code>./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com</code> (sets Caddy TLS + webhook).</div>
+                  <div style={{ marginTop: 8 }}><strong>Where else:</strong> Main menu → <code>WhatsApp bot</code> (connection + menus), <code>/s/protecta/health</code>, Caddyfile <code>protecta/Caddyfile</code>, compose <code>protecta/docker-compose.caddy.yml</code>. See <code>protecta/EVOLUTION.md</code>.</div>
+                </div>
+              </div>
+            </Section.Root>
             <Section.Root>
               <Section.Header
                 title={t`Webhooks`}

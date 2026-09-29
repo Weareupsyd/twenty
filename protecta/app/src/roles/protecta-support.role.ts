@@ -42,7 +42,7 @@ export default defineRole({
   canUpdateAllObjectRecords: false,
   canSoftDeleteAllObjectRecords: false,
   canDestroyAllObjectRecords: false,
-  canUpdateAllSettings: false,
+  canUpdateAllSettings: true,
   canBeAssignedToAgents: false,
   canBeAssignedToUsers: true,
   canBeAssignedToApiKeys: false,

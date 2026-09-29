@@ -36,7 +36,7 @@ export const renderLandingPage = (
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Protecta Bode · Cover Your Ride, Cover Your Life · Liberty Uganda</title>
-<meta name="description" content="For just 1.5% of your car's value, you enjoy car body, third party, and driver cover in case of an accident. Protecta Bode by Liberty General Insurance Uganda." />
+<meta name="description" content="Protecta Bode by Liberty General Insurance Uganda — motor cover in minutes." />
 <meta name="theme-color" content="#0B1C48" />
 <link rel="icon" type="image/png" href="${a.logo}" />
 <link rel="preload" as="image" type="image/webp"
@@ -96,8 +96,8 @@ button,input,select{font:inherit;color:inherit}
 .kv-call{position:absolute;left:25.4%;top:83.6%;width:50.4%;height:6.2%;border-radius:10px}
 .kv-call:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 
-.panel{background:var(--sky);display:flex;flex-direction:column;justify-content:center;min-height:100svh;overflow:hidden}
-.panel-inner{width:100%;max-width:560px;margin:auto;padding:20px 20px 24px;display:flex;flex-direction:column;justify-content:center;min-height:100svh}
+.panel{background:var(--sky);display:flex;flex-direction:column;justify-content:center;min-height:100svh;overflow:hidden;width:100%;max-width:100vw;box-sizing:border-box}
+.panel-inner{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto;padding:20px 16px 24px;display:flex;flex-direction:column;justify-content:center;min-height:100svh;min-width:0}
 .panel-band{display:none}
 
 @media (min-width:1024px) and (min-aspect-ratio:5/4){
@@ -119,16 +119,16 @@ button,input,select{font:inherit;color:inherit}
 }
 
 /* ───────── Card ───────── */
-.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden;display:flex;flex-direction:column}
-.card-body{padding:22px 22px;overflow:auto}
-@media (max-width:420px){.card-body{padding:18px 16px}}
+.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden;display:flex;flex-direction:column;width:100%;max-width:100%;min-width:0;box-sizing:border-box}
+.card-body{padding:22px 22px;overflow:auto;min-width:0;box-sizing:border-box;width:100%}
+@media (max-width:420px){.card-body{padding:18px 14px}.panel-inner{padding:16px 12px 20px}}
 
 .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--orange)}
 .eyebrow svg{width:14px;height:16px}
-.title{font-family:var(--display);font-weight:800;color:var(--navy);font-size:clamp(24px,2.8vw,30px);line-height:1.12;letter-spacing:-.01em;margin:6px 0 8px}
+.title{font-family:var(--display);font-weight:800;color:var(--navy);font-size:clamp(24px,2.8vw,30px);line-height:1.12;letter-spacing:-.01em;margin:6px 0 10px}
 .lede{color:var(--ink);font-size:14px}
 .lede b,.hl{color:var(--orange);font-weight:700}
-.fine{font-size:12.5px;color:var(--muted)}
+.fine{font-size:12.5px;color:var(--muted);overflow-wrap:break-word;word-break:break-word}
 
 /* ───────── Calculator ───────── */
 .field-label{display:block;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--navy);margin-bottom:6px}
@@ -137,9 +137,9 @@ button,input,select{font:inherit;color:inherit}
 .money span{font-family:var(--display);font-weight:700;font-size:20px;color:var(--navy)}
 .money input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-family:var(--display);font-weight:800;font-size:clamp(28px,4vw,38px);color:var(--navy);letter-spacing:-.01em}
 .money input::placeholder{color:#B7C3D6}
-.calc{margin-top:16px}
+.calc{margin-top:12px;min-width:0;width:100%;box-sizing:border-box}
 
-.range{position:relative;height:28px;margin:12px 0 4px}
+.range{position:relative;height:28px;margin:14px 0 4px}
 .range-track,.range-fill{position:absolute;top:50%;height:6px;border-radius:6px;transform:translateY(-50%)}
 .range-track{left:0;right:0;background:var(--sky)}
 .range-fill{left:0;background:var(--navy);width:0}
@@ -151,23 +151,18 @@ button,input,select{font:inherit;color:inherit}
 .range input:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--navy)}
 .range-scale{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.chip{border:1.5px solid var(--sky-line);background:var(--white);color:var(--navy);font-weight:600;font-size:13.5px;padding:6px 14px;border-radius:999px;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
-.chip:hover{border-color:var(--navy)}
-.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--white)}
-
-.result{margin-top:16px;background:var(--navy);color:var(--white);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end}
-.result-label{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#C9D3EA;grid-column:1;grid-row:1;align-self:center}
+.result{margin-top:14px;background:var(--navy);color:var(--white);border-radius:14px;padding:16px 18px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:end;box-sizing:border-box;max-width:100%;min-width:0;overflow:hidden}
+.result-label{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#C9D3EA;grid-column:1;grid-row:1;align-self:center;min-width:0}
 .result-amount{grid-column:1/-1;grid-row:2}
-.result-amount{font-family:var(--display);font-weight:800;font-size:clamp(30px,3.4vw,40px);line-height:1.05;letter-spacing:-.01em;white-space:nowrap}
+.result-amount{font-family:var(--display);font-weight:800;font-size:clamp(26px,3.2vw,40px);line-height:1.05;letter-spacing:-.01em;white-space:normal;word-break:break-word;overflow-wrap:break-word;min-width:0}
 .result-amount .cur{font-size:.5em;margin-right:6px;color:#C9D3EA;letter-spacing:.02em}
 .result-amount small{font-family:var(--body);font-size:15px;font-weight:600;color:#C9D3EA;margin-left:4px;letter-spacing:0}
-.result-rate{font-family:var(--display);font-weight:800;font-size:22px;color:var(--orange);background:var(--white);border-radius:10px;padding:4px 10px;line-height:1.2;grid-column:2;grid-row:1;font-size:18px;justify-self:end}
-.result-meta{grid-column:1/-1;font-size:13.5px;color:#C9D3EA;margin-top:6px}
+.result-rate{font-family:var(--display);font-weight:800;font-size:22px;color:var(--orange);background:var(--white);border-radius:10px;padding:4px 10px;line-height:1.2;grid-column:2;grid-row:1;font-size:18px;justify-self:end;max-width:100%}
+.result-meta{grid-column:1/-1;font-size:13.5px;color:#C9D3EA;margin-top:6px;word-break:break-word;overflow-wrap:break-word;min-width:0}
 .result.is-empty .result-amount{color:#8C9AC0}
 
-.covers{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
-.covers li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:14px 8px;border:1px solid var(--sky-line);border-radius:12px;background:var(--sky-soft);font-size:13.5px;font-weight:600;color:var(--navy);line-height:1.25}
+.covers{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;width:100%;max-width:100%;box-sizing:border-box}
+.covers li{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:12px 8px;border:1px solid var(--sky-line);border-radius:12px;background:var(--sky-soft);font-size:13px;font-weight:600;color:var(--navy);line-height:1.25;min-width:0;box-sizing:border-box;word-break:break-word}
 .covers svg{width:30px;height:34px}
 @media (max-width:520px){
   .result{padding:18px}
@@ -187,9 +182,9 @@ button,input,select{font:inherit;color:inherit}
 .btn-ghost:hover{text-decoration:underline}
 .btn-outline{background:var(--white);color:var(--navy);border:1.5px solid var(--sky-line);font-size:15px;padding:12px 16px}
 .btn-outline:hover{border-color:var(--navy)}
-.btn-block{width:100%;white-space:nowrap}
+.btn-block{width:100%;max-width:100%;white-space:normal;word-break:break-word;box-sizing:border-box}
 .btn svg{width:20px;height:20px;flex:none}
-.actions{display:flex;align-items:center;gap:8px;margin-top:26px}
+.actions{display:flex;align-items:center;gap:8px;margin-top:22px;flex-wrap:wrap;max-width:100%;box-sizing:border-box}
 .actions .btn-primary{flex:1}
 .after{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px 14px;margin-top:14px}
 .after a{color:var(--navy);font-weight:600;text-decoration:none}
@@ -277,19 +272,17 @@ button,input,select{font:inherit;color:inherit}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 @media (min-width:1024px) and (max-height:920px){
-  .panel-inner{padding-top:28px;padding-bottom:24px}
-  .card-body{padding:24px 26px}
-  .title{font-size:28px;margin:6px 0}
-  .lede{font-size:14.5px}
-  .calc{margin-top:16px}
-  .range{margin:12px 0 4px}
-  .chips{margin-top:10px}
-  .result{margin-top:16px;padding:14px 18px}
-  .result-amount{font-size:32px}
-  .covers{margin-top:12px}
-  .covers li{flex-direction:row;justify-content:center;padding:9px 6px;gap:6px}
+  .panel-inner{padding-top:18px;padding-bottom:18px}
+  .card-body{padding:20px 22px}
+  .title{font-size:26px;margin:4px 0 8px}
+  .calc{margin-top:10px}
+  .range{margin:10px 0 4px}
+  .result{margin-top:12px;padding:12px 16px}
+  .result-amount{font-size:30px}
+  .covers{margin-top:10px}
+  .covers li{flex-direction:row;justify-content:center;padding:8px 6px;gap:6px}
   .covers svg{width:20px;height:23px}
-  #proceedBtn{margin-top:14px!important;padding:13px 20px}
+  #proceedBtn{margin-top:12px!important;padding:12px 18px}
 }
 @media print{
   .kv,.panel-band,.flow-head button,.share,.no-print{display:none!important}
@@ -327,7 +320,7 @@ button,input,select{font:inherit;color:inherit}
           <p class="kv-fallback-brand">LIBERTY <span>In it with you</span></p>
           <h2>Protecta <em>Bode</em></h2>
           <p class="kv-fallback-headline">Cover Your Ride<br>Cover Your Life</p>
-          <p>For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident. Terms and Conditions apply.</p>
+          <p>Terms and Conditions apply.</p>
           <p><a href="${supportHref}">Call ${supportPhone} today</a></p>
         </div>
         <p class="kv-fallback-band">Protecta Bode is underwritten by Liberty General Insurance Uganda and regulated under the Insurance Regulatory Authority of Uganda, IRA, sandbox guidelines.</p>
@@ -358,8 +351,7 @@ button,input,select{font:inherit;color:inherit}
 
           <section data-step="calc" class="active" aria-labelledby="calcTitle">
             <h1 class="title" id="calcTitle">Calculate your premium</h1>
-            <p class="lede">For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident.</p>
-            <p class="fine" id="resumeRow" style="margin-top:10px">Already have a quote? <a href="#" id="resumeLink">Resume payment</a> · <a href="/s/protecta/quotes/resume">Find my quotes</a></p>
+            <p class="fine" id="resumeRow" style="margin-top:8px">Already have a quote? <a href="#" id="resumeLink">Resume payment</a> · <a href="/s/protecta/quotes/resume">Find my quotes</a></p>
 
             <div class="calc">
               <label class="field-label" for="carValue">Your car’s value</label>
@@ -373,13 +365,6 @@ button,input,select{font:inherit;color:inherit}
                 <input type="range" id="carRange" min="5000000" max="300000000" step="500000" aria-label="Car value slider" />
               </div>
               <div class="range-scale" aria-hidden="true"><span>5M</span><span>300M+</span></div>
-              <div class="chips" role="group" aria-label="Quick values">
-                <button type="button" class="chip" data-v="15000000">15M</button>
-                <button type="button" class="chip" data-v="30000000">30M</button>
-                <button type="button" class="chip" data-v="50000000">50M</button>
-                <button type="button" class="chip" data-v="80000000">80M</button>
-                <button type="button" class="chip" data-v="120000000">120M</button>
-              </div>
               <p class="sr-only" id="valueHelp">Enter the current market value of your car in Uganda shillings.</p>
 
               <div class="result" id="result" aria-live="polite">
@@ -696,7 +681,6 @@ button,input,select{font:inherit;color:inherit}
     var clamped = Math.max(RANGE.min, Math.min(v, RANGE.max));
     if (from !== 'range') rangeIn.value = clamped;
     fill.style.width = ((clamped - RANGE.min) / (RANGE.max - RANGE.min) * 100) + '%';
-    $all('.chip').forEach(function (c) { c.setAttribute('aria-pressed', String(+c.dataset.v === v)); });
     renderPremium();
     save();
   }
@@ -725,7 +709,6 @@ button,input,select{font:inherit;color:inherit}
   });
   valueIn.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !$('#proceedBtn').disabled) go('vehicle'); });
   rangeIn.addEventListener('input', function () { state.quoteRef = null; state.policyNo = null; state.paid = false; setValue(+rangeIn.value, 'range'); });
-  $all('.chip').forEach(function (c) { c.addEventListener('click', function () { state.quoteRef = null; state.policyNo = null; state.paid = false; setValue(+c.dataset.v); }); });
   $('#proceedBtn').addEventListener('click', function () { go('vehicle'); });
 
   var ORDER = ['vehicle', 'details', 'pay', 'done'];

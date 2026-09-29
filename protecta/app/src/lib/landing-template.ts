@@ -984,7 +984,7 @@ button,input,select{font:inherit;color:inherit}
   var resumeLink = $('#resumeLink');
   if (resumeLink) resumeLink.addEventListener('click', function (e) {
     e.preventDefault();
-    var ref = prompt('Enter your quote reference (e.g. PB-1234-XXXXXX) or phone number:');
+    var ref = prompt('Enter your 6-digit quote reference (e.g. 482913), policy number or phone number:');
     if (!ref) return;
     ref = ref.trim();
     // If it looks like a phone, go to resume portal; else go to portal with ref

@@ -61,13 +61,17 @@ export const executeBotAction = async (
     case 'LOOKUP_POLICIES': {
       const rows = await findPoliciesByPhone(db, phone);
       return rows.length
-        ? rows
-            .map(
-              (p) =>
-                `${p.policyNo}: ${p.plate} — ${p.status}, until ${p.periodEnd}`,
-            )
-            .join('\n')
-        : 'No policies found for your WhatsApp number.';
+        ? [
+            rows
+              .map(
+                (p) =>
+                  `${p.policyNo}: ${p.plate} — ${p.status}, until ${p.periodEnd}`,
+              )
+              .join('\n'),
+            '',
+            'Reply MENU for the main menu.',
+          ].join('\n')
+        : 'No policies found for your WhatsApp number.\n\nReply MENU for the main menu.';
     }
     case 'LIST_RENEWABLE_POLICIES': {
       const rows = await findPoliciesByPhone(db, phone);
@@ -82,7 +86,7 @@ export const executeBotAction = async (
             '',
             'Reply with the policy number you want to renew, or MENU to start over.',
           ].join('\n')
-        : 'No policies found for your WhatsApp number. Send 2 to cover a new car.';
+        : 'No policies found for your WhatsApp number.\n\nReply 2 to cover a new car, or MENU for the main menu.';
     }
     case 'RENEW_POLICY': {
       const policy = await findPolicyByNo(db, action.policyNo);
@@ -90,7 +94,7 @@ export const executeBotAction = async (
         ? await findQuoteByRef(db, String(policy.quoteRef))
         : null;
       if (!policy || !quote || quote.policyholderPhone !== phone)
-        return 'Policy not found for your WhatsApp number.';
+        return 'Policy not found for your WhatsApp number.\n\nReply MENU for the main menu.';
       const { quote: renewal } = await renewPolicy(db, action.policyNo, {
         channel: 'WHATSAPP',
       });
@@ -104,16 +108,16 @@ export const executeBotAction = async (
     case 'LOOKUP_QUOTE': {
       const quote = await findQuoteByRef(db, action.quoteRef);
       if (!quote || quote.policyholderPhone !== phone)
-        return 'Quote not found for your WhatsApp number.';
-      return `Quote ${quote.reference}: UGX ${quote.premium}. ${quoteShareUrl(publicBaseUrl(), action.quoteRef)}`;
+        return 'Quote not found for your WhatsApp number.\n\nReply MENU for the main menu.';
+      return `Quote ${quote.reference}: UGX ${quote.premium}. ${quoteShareUrl(publicBaseUrl(), action.quoteRef)}\n\nReply MENU for the main menu.`;
     }
     case 'INITIATE_PAYMENT': {
       const quote = await findQuoteByRef(db, action.quoteRef);
       if (!quote || quote.policyholderPhone !== phone)
-        return 'Quote not found for your WhatsApp number.';
+        return 'Quote not found for your WhatsApp number.\n\nReply MENU for the main menu.';
       // Ask the user to choose the provider on the quote's payment page; never
       // guess the network from a portable MSISDN or debit a number implicitly.
-      return `Choose MTN, Airtel or bank and approve payment here: ${quoteShareUrl(publicBaseUrl(), action.quoteRef)}`;
+      return `Choose MTN, Airtel or bank and approve payment here: ${quoteShareUrl(publicBaseUrl(), action.quoteRef)}\n\nReply MENU for the main menu.`;
     }
     case 'CREATE_CLAIM': {
       const policy = await findPolicyByNo(db, action.policyNo);
@@ -121,12 +125,12 @@ export const executeBotAction = async (
         ? await findQuoteByRef(db, String(policy.quoteRef))
         : null;
       if (!quote || quote.policyholderPhone !== phone)
-        return 'Policy not found for your WhatsApp number.';
+        return 'Policy not found for your WhatsApp number.\n\nReply MENU for the main menu.';
       const { claim } = await createClaim(db, {
         ...action,
         reporterPhone: phone,
       });
-      return `Claim ${claim.claimRef} recorded. Our team will contact you.`;
+      return `Claim ${claim.claimRef} recorded. Our team will contact you.\n\nReply MENU for the main menu.`;
     }
     case 'CREATE_TICKET': {
       const { ticket } = await createTicket(db, {
@@ -135,7 +139,7 @@ export const executeBotAction = async (
         description: action.text,
         channel: 'WHATSAPP',
       });
-      return `Support ticket ${ticket.ticketRef} recorded.`;
+      return `Support ticket ${ticket.ticketRef} recorded.\n\nReply MENU for the main menu.`;
     }
   }
 };

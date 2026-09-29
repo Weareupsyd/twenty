@@ -96,6 +96,13 @@ const withState = (
 const isMenuCommand = (text: string): boolean =>
   ['menu', 'hi', 'hello', 'start', '0'].includes(text.trim().toLowerCase());
 
+/**
+ * Appended to every question and correction, so a customer can always see
+ * how to get back to the main menu instead of having to guess the keyword.
+ */
+const withMenuHint = (prompt: string): string =>
+  `${prompt}\n\nReply MENU for the main menu.`;
+
 const parseMoney = (text: string): number | null => {
   const cleaned = text.replace(/[^0-9]/g, '');
   if (!cleaned) {
@@ -127,7 +134,7 @@ const coverConfirmTurn = (
       `• Value: UGX ${value.toLocaleString('en-US')}`,
       `• Premium: UGX ${premium.toLocaleString('en-US')}`,
       '',
-      'Reply YES to confirm or NO to restart.',
+      'Reply YES to confirm, NO to restart, or MENU.',
     ].join('\n'),
     next: withState(session, 'BUY_CONFIRM', {
       plate: args.plate,
@@ -218,7 +225,9 @@ export const handleBotTurn = (
       const command = idleCommand(text);
       if (command === '1') {
         return {
-          reply: `Premium calculator — same 1.5% as the website.\nWhat is the market value of the vehicle in UGX? (${(minValue / 1_000_000).toLocaleString('en-US')}M – ${(maxValue / 1_000_000).toLocaleString('en-US')}M)`,
+          reply: withMenuHint(
+            `Premium calculator — same 1.5% as the website.\nWhat is the market value of the vehicle in UGX? (${(minValue / 1_000_000).toLocaleString('en-US')}M – ${(maxValue / 1_000_000).toLocaleString('en-US')}M)`,
+          ),
           next: withState(session, 'CALC_VALUE'),
         };
       }
@@ -231,13 +240,15 @@ export const handleBotTurn = (
               '1. Cover another car',
               '2. Renew a policy',
               '',
-              'Reply with a number.',
+              'Reply with a number, or MENU.',
             ].join('\n'),
             next: withState(session, 'BUY_INTENT'),
           };
         }
         return {
-          reply: 'Let’s get you covered. What is the market value of the vehicle in UGX?',
+          reply: withMenuHint(
+            'Let’s get you covered. What is the market value of the vehicle in UGX?',
+          ),
           next: withState(session, 'BUY_VALUE'),
         };
       }
@@ -250,23 +261,26 @@ export const handleBotTurn = (
       }
       if (command === '4') {
         return {
-          reply: 'Send the quote reference (15 digits).',
+          reply: withMenuHint('Send your 6-digit quote reference.'),
           next: withState(session, 'PAY_PHONE'),
         };
       }
       if (command === '5') {
         return {
-          reply: 'Sorry to hear that. What is the policy number?',
+          reply: withMenuHint('Sorry to hear that. What is the policy number?'),
           next: withState(session, 'CLAIM_POLICY'),
         };
       }
       if (command === '6') {
         return {
-          reply: 'Describe your issue in one message and our team will respond.',
+          reply: withMenuHint(
+            'Describe your issue in one message and our team will respond.',
+          ),
           next: withState(session, 'TICKET_TEXT'),
         };
       }
-      const quoteLookup = text.match(/^(\d{15})$/);
+      // 6-digit references are the norm; legacy 15-digit quotes still work.
+      const quoteLookup = text.match(/^(\d{6}|\d{15})$/);
       if (quoteLookup) {
         return {
           reply: 'Looking up your quote…',
@@ -281,7 +295,9 @@ export const handleBotTurn = (
       const value = parseMoney(text);
       if (value === null || value < minValue || value > maxValue) {
         return {
-          reply: `Enter a value between UGX ${minValue.toLocaleString('en-US')} and UGX ${maxValue.toLocaleString('en-US')} (numbers only).`,
+          reply: withMenuHint(
+            `Enter a value between UGX ${minValue.toLocaleString('en-US')} and UGX ${maxValue.toLocaleString('en-US')} (numbers only).`,
+          ),
           next: session,
         };
       }
@@ -305,7 +321,9 @@ export const handleBotTurn = (
       const choice = text.trim();
       if (choice === '1') {
         return {
-          reply: 'Let’s get your next car covered. What is the market value of the vehicle in UGX?',
+          reply: withMenuHint(
+            'Let’s get your next car covered. What is the market value of the vehicle in UGX?',
+          ),
           next: withState(session, 'BUY_VALUE'),
         };
       }
@@ -317,7 +335,7 @@ export const handleBotTurn = (
         };
       }
       return {
-        reply: 'Reply 1 to cover another car or 2 to renew a policy.',
+        reply: 'Reply 1 to cover another car or 2 to renew a policy, or MENU.',
         next: session,
       };
     }
@@ -326,7 +344,9 @@ export const handleBotTurn = (
       const value = parseMoney(text);
       if (value === null || value < minValue || value > maxValue) {
         return {
-          reply: `Enter a value between UGX ${minValue.toLocaleString('en-US')} and UGX ${maxValue.toLocaleString('en-US')} (numbers only).`,
+          reply: withMenuHint(
+            `Enter a value between UGX ${minValue.toLocaleString('en-US')} and UGX ${maxValue.toLocaleString('en-US')} (numbers only).`,
+          ),
           next: session,
         };
       }
@@ -338,20 +358,23 @@ export const handleBotTurn = (
 
     case 'BUY_MAKE': {
       if (text.replace(/\s/g, '').length < 2) {
-        return { reply: 'Enter the make, e.g. Toyota.', next: session };
+        return {
+          reply: withMenuHint('Enter the make, e.g. Toyota.'),
+          next: session,
+        };
       }
       return {
-        reply: 'What is the model? (e.g. Premio)',
+        reply: withMenuHint('What is the model? (e.g. Premio)'),
         next: withState(session, 'BUY_MODEL', { make: text }),
       };
     }
 
     case 'BUY_MODEL': {
       if (text.length < 1) {
-        return { reply: 'Enter the model.', next: session };
+        return { reply: withMenuHint('Enter the model.'), next: session };
       }
       return {
-        reply: 'Year of manufacture? (e.g. 2018)',
+        reply: withMenuHint('Year of manufacture? (e.g. 2018)'),
         next: withState(session, 'BUY_YEAR', { model: text }),
       };
     }
@@ -361,12 +384,12 @@ export const handleBotTurn = (
       const maxYear = new Date().getFullYear() + 1;
       if (!Number.isInteger(year) || year < 1985 || year > maxYear) {
         return {
-          reply: `Enter a year between 1985 and ${maxYear}.`,
+          reply: withMenuHint(`Enter a year between 1985 and ${maxYear}.`),
           next: session,
         };
       }
       return {
-        reply: 'What is the number plate? (e.g. UAX 123C)',
+        reply: withMenuHint('What is the number plate? (e.g. UAX 123C)'),
         next: withState(session, 'BUY_PLATE', { year: String(year) }),
       };
     }
@@ -374,7 +397,9 @@ export const handleBotTurn = (
     case 'BUY_PLATE': {
       if (!isValidPlate(text)) {
         return {
-          reply: 'That plate looks invalid. Try again, e.g. UAX 123C.',
+          reply: withMenuHint(
+            'That plate looks invalid. Try again, e.g. UAX 123C.',
+          ),
           next: session,
         };
       }
@@ -385,14 +410,17 @@ export const handleBotTurn = (
         return coverConfirmTurn(session, { plate, name: knownName }, rate);
       }
       return {
-        reply: 'What is your full name?',
+        reply: withMenuHint('What is your full name?'),
         next: withState(session, 'BUY_NAME', { plate }),
       };
     }
 
     case 'BUY_NAME': {
       if (text.replace(/\s/g, '').length < 3) {
-        return { reply: 'Please send your full name.', next: session };
+        return {
+          reply: withMenuHint('Please send your full name.'),
+          next: session,
+        };
       }
       return coverConfirmTurn(
         session,
@@ -422,9 +450,11 @@ export const handleBotTurn = (
     }
 
     case 'PAY_PHONE': {
-      if (/^\d{15}$/.test(text)) {
+      if (/^(\d{6}|\d{15})$/.test(text)) {
         return {
-          reply: 'Which mobile-money number should we use? (e.g. 0701440613)',
+          reply: withMenuHint(
+            'Which mobile-money number should we use? (e.g. 0701440613)',
+          ),
           next: withState(session, 'PAY_PHONE', {
             quoteRef: text,
             step: 'phone',
@@ -435,7 +465,9 @@ export const handleBotTurn = (
         const phone = normalizeUgPhone(text);
         if (!phone) {
           return {
-            reply: 'That number looks invalid. Try 0701440613 or 256701440613.',
+            reply: withMenuHint(
+              'That number looks invalid. Try 0701440613 or 256701440613.',
+            ),
             next: session,
           };
         }
@@ -447,7 +479,7 @@ export const handleBotTurn = (
         };
       }
       return {
-        reply: 'Send the 15-digit quote reference first.',
+        reply: withMenuHint('Send the 6-digit quote reference first.'),
         next: session,
       };
     }
@@ -455,7 +487,10 @@ export const handleBotTurn = (
     case 'RENEW_PICK': {
       const policyNo = text.toUpperCase();
       if (policyNo.length < 4) {
-        return { reply: 'Please send the full policy number.', next: session };
+        return {
+          reply: withMenuHint('Please send the full policy number.'),
+          next: session,
+        };
       }
       return {
         reply: 'Renewing your policy…',
@@ -466,10 +501,13 @@ export const handleBotTurn = (
 
     case 'CLAIM_POLICY': {
       if (text.length < 4) {
-        return { reply: 'Please send the full policy number.', next: session };
+        return {
+          reply: withMenuHint('Please send the full policy number.'),
+          next: session,
+        };
       }
       return {
-        reply: 'Briefly describe what happened.',
+        reply: withMenuHint('Briefly describe what happened.'),
         next: withState(session, 'CLAIM_DESCRIPTION', {
           policyNo: text.toUpperCase(),
         }),
@@ -479,19 +517,24 @@ export const handleBotTurn = (
     case 'CLAIM_DESCRIPTION': {
       if (text.length < 8) {
         return {
-          reply: 'Please give a little more detail (at least a few words).',
+          reply: withMenuHint(
+            'Please give a little more detail (at least a few words).',
+          ),
           next: session,
         };
       }
       return {
-        reply: 'Where did it happen? (area / town)',
+        reply: withMenuHint('Where did it happen? (area / town)'),
         next: withState(session, 'CLAIM_LOCATION', { description: text }),
       };
     }
 
     case 'CLAIM_LOCATION': {
       if (text.length < 2) {
-        return { reply: 'Please send the location.', next: session };
+        return {
+          reply: withMenuHint('Please send the location.'),
+          next: session,
+        };
       }
       return {
         reply: 'Recording your claim…',
@@ -508,7 +551,9 @@ export const handleBotTurn = (
     case 'TICKET_TEXT': {
       if (text.length < 5) {
         return {
-          reply: 'Please describe the issue in a bit more detail.',
+          reply: withMenuHint(
+            'Please describe the issue in a bit more detail.',
+          ),
           next: session,
         };
       }

@@ -1,3 +1,5 @@
+import { createWithUniqueRef } from 'src/lib/generate-ref';
+import { publicBaseUrl } from 'src/lib/http';
 import {
   policyPeriod,
   pricingFromEnv,
@@ -269,24 +271,26 @@ export const renewPolicy = async (
   const quote = policy.quoteRef
     ? await findQuoteByRef(db, String(policy.quoteRef))
     : null;
-  const reference = makeQuoteRef(options.rng);
-  const baseUrl = options.baseUrl ?? process.env.PUBLIC_BASE_URL ?? '';
-  const created = await db.create('insuranceQuote', {
-    protectaRef: reference,
-    reference,
-    status: 'QUOTED',
-    channel: options.channel ?? 'PHONE',
-    productCode: process.env.PRODUCT_CODE ?? 'BODE-01',
-    plate: policy.plate,
-    vehicleMake: policy.vehicleMake ?? '',
-    vehicleModel: policy.vehicleModel ?? '',
-    vehicleValue: quote?.vehicleValue ?? 0,
-    premium: policy.premiumUgx,
-    policyholderPhone: quote?.policyholderPhone ?? '',
-    shareUrl: baseUrl ? quoteShareUrl(baseUrl, reference) : '',
-    validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10),
+  const baseUrl = options.baseUrl || publicBaseUrl();
+  const created = await createWithUniqueRef(() => {
+    const reference = makeQuoteRef(options.rng);
+    return db.create('insuranceQuote', {
+      protectaRef: reference,
+      reference,
+      status: 'QUOTED',
+      channel: options.channel ?? 'PHONE',
+      productCode: process.env.PRODUCT_CODE ?? 'BODE-01',
+      plate: policy.plate,
+      vehicleMake: policy.vehicleMake ?? '',
+      vehicleModel: policy.vehicleModel ?? '',
+      vehicleValue: quote?.vehicleValue ?? 0,
+      premium: policy.premiumUgx,
+      policyholderPhone: quote?.policyholderPhone ?? '',
+      shareUrl: quoteShareUrl(baseUrl, reference),
+      validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
+    });
   });
   return { quote: created, policy };
 };

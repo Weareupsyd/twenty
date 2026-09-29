@@ -1,3 +1,4 @@
+import { createWithUniqueRef } from 'src/lib/generate-ref';
 import { normalizeUgPhone } from 'src/lib/phones';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { makePaymentRef } from 'src/lib/refs';
@@ -37,17 +38,20 @@ export const createPayment = async (
   if (!Number.isFinite(input.amountUgx) || input.amountUgx <= 0) {
     throw new Error('Payment amount must be positive.');
   }
-  const paymentRef = makePaymentRef(input.rng);
-  return db.create('insurancePayment', {
-    protectaRef: paymentRef,
-    paymentRef,
-    quoteRef: input.quoteRef,
-    provider: input.provider,
-    providerRef: input.providerRef ?? '',
-    payerPhone: phone,
-    amountUgx: input.amountUgx,
-    status: 'PENDING',
-    quoteId: input.quoteId,
+  // Unique PAY-xxxxxx reference: redraw on the rare collision.
+  return createWithUniqueRef(() => {
+    const paymentRef = makePaymentRef(input.rng);
+    return db.create('insurancePayment', {
+      protectaRef: paymentRef,
+      paymentRef,
+      quoteRef: input.quoteRef,
+      provider: input.provider,
+      providerRef: input.providerRef ?? '',
+      payerPhone: phone,
+      amountUgx: input.amountUgx,
+      status: 'PENDING',
+      quoteId: input.quoteId,
+    });
   });
 };
 

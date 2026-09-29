@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillMissingRef } from 'src/lib/generate-ref';
+import { createWithUniqueRef, fillMissingRef } from 'src/lib/generate-ref';
 import { MemoryDbClient } from 'src/lib/records';
 
 const claimConfig = {
@@ -94,5 +94,42 @@ describe('fillMissingRef', () => {
       ),
     ).rejects.toThrow('unique violation');
     expect(calls).toBe(2);
+  });
+});
+
+describe('createWithUniqueRef', () => {
+  it('returns the first successful attempt', async () => {
+    let calls = 0;
+    const result = await createWithUniqueRef(async () => {
+      calls += 1;
+      return `ref-${calls}`;
+    });
+    expect(result).toBe('ref-1');
+    expect(calls).toBe(1);
+  });
+
+  it('runs the closure again after a unique-constraint rejection', async () => {
+    let calls = 0;
+    const result = await createWithUniqueRef(async () => {
+      calls += 1;
+      if (calls < 3) throw new Error('unique violation');
+      return 'PAY-482913';
+    });
+    expect(result).toBe('PAY-482913');
+    expect(calls).toBe(3);
+  });
+
+  it('surfaces the last error after the attempt budget', async () => {
+    let calls = 0;
+    await expect(
+      createWithUniqueRef(
+        async () => {
+          calls += 1;
+          throw new Error('unique violation');
+        },
+        { maxAttempts: 3 },
+      ),
+    ).rejects.toThrow('unique violation');
+    expect(calls).toBe(3);
   });
 });

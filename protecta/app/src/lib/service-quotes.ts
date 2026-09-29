@@ -1,3 +1,5 @@
+import { createWithUniqueRef } from 'src/lib/generate-ref';
+import { publicBaseUrl } from 'src/lib/http';
 import { normalizePlate, normalizeUgPhone } from 'src/lib/phones';
 import {
   computePremium,
@@ -220,8 +222,7 @@ export const createQuote = async (
   }
 
   const premium = computePremium(input.vehicleValue, pricing.rate);
-  const reference = makeQuoteRef(options.rng);
-  const baseUrl = options.baseUrl ?? process.env.PUBLIC_BASE_URL ?? '';
+  const baseUrl = options.baseUrl || publicBaseUrl();
 
   const { person: linkedPerson, isNew } = await ensurePerson(db, phone, input.name);
   const person = await attachPersonContact(db, linkedPerson, {
@@ -242,25 +243,30 @@ export const createQuote = async (
     ownerId: person.id as string | undefined,
   });
 
-  const quote = await db.create('insuranceQuote', {
-    protectaRef: reference,
-    reference,
-    status: 'QUOTED',
-    channel: input.channel ?? 'PORTAL',
-    productCode:
-      input.productCode ??
-      options.productCode ??
-      process.env.PRODUCT_CODE ??
-      'BODE-01',
-    plate,
-    vehicleMake: input.make ?? '',
-    vehicleModel: input.model ?? '',
-    vehicleValue: input.vehicleValue,
-    premium,
-    policyholderPhone: phone,
-    shareUrl: baseUrl ? quoteShareUrl(baseUrl, reference) : '',
-    validUntil: quoteValidUntil(),
-    policyholderId: person.id,
+  // The 6-digit reference is unique per quote; draw a fresh one when it
+  // collides with an existing record instead of failing the quote.
+  const quote = await createWithUniqueRef(() => {
+    const reference = makeQuoteRef(options.rng);
+    return db.create('insuranceQuote', {
+      protectaRef: reference,
+      reference,
+      status: 'QUOTED',
+      channel: input.channel ?? 'PORTAL',
+      productCode:
+        input.productCode ??
+        options.productCode ??
+        process.env.PRODUCT_CODE ??
+        'BODE-01',
+      plate,
+      vehicleMake: input.make ?? '',
+      vehicleModel: input.model ?? '',
+      vehicleValue: input.vehicleValue,
+      premium,
+      policyholderPhone: phone,
+      shareUrl: quoteShareUrl(baseUrl, reference),
+      validUntil: quoteValidUntil(),
+      policyholderId: person.id,
+    });
   });
 
   void vehicle;

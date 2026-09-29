@@ -262,7 +262,7 @@ button,input,select{font:inherit;color:inherit}
 .ref{display:inline-block;margin:18px 0 6px;padding:12px 20px;border:1.5px dashed var(--orange);border-radius:12px}
 .ref span{display:block;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .ref strong{font-family:var(--display);font-weight:800;font-size:22px;color:var(--navy);letter-spacing:.04em}
-.share{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}
+.share{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:20px}
 .share .btn{font-size:14px;padding:12px 8px}
 @media (max-width:420px){.share{grid-template-columns:1fr}}
 
@@ -613,7 +613,6 @@ button,input,select{font:inherit;color:inherit}
             <div class="share">
               <a class="btn btn-outline" id="shareWa" target="_blank" rel="noopener">${waSvg}WhatsApp</a>
               <a class="btn btn-outline" id="shareMail">${mail01Svg}Email</a>
-              <button type="button" class="btn btn-outline" onclick="window.print()">Save / print</button>
             </div>
             <button type="button" class="btn btn-ghost" id="restart" style="margin-top:10px">Start a new quote</button>
             <div class="after fine" style="justify-content:center"><span>Questions?</span><a href="${supportHref}">Call ${supportPhone}</a></div>

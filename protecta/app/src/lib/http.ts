@@ -52,8 +52,18 @@ export const num = (value: unknown, fallback = 0): number => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+/**
+ * Public origin for links customers open outside the app (WhatsApp, email).
+ * Links in a WhatsApp message must be absolute, so an unset PUBLIC_BASE_URL
+ * falls back to the production domain instead of emitting a relative path
+ * nobody can tap.
+ */
+const DEFAULT_PUBLIC_BASE_URL = 'https://protectabode.weareupsyd.com';
+
 export const publicBaseUrl = (): string =>
-  (process.env.PUBLIC_BASE_URL ?? '').replace(/\/$/, '');
+  (
+    (process.env.PUBLIC_BASE_URL ?? '').trim() || DEFAULT_PUBLIC_BASE_URL
+  ).replace(/\/$/, '');
 
 export const requireEnv = (name: string): string => {
   const value = process.env[name];

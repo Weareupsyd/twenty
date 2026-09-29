@@ -11,11 +11,11 @@ export const quoteIssuedMessage = (args: {
 }): string =>
   [
     BRAND_HEADER,
-    `Hi ${args.name}, your motor quote is ready ✅`,
+    `Hi ${args.name}, your motor quote is ready.`,
     `• Quote: ${args.quoteRef}`,
     `• Premium: ${formatUgx(args.premium)}`,
     `• Valid until: ${args.validUntil}`,
-    `View & pay: ${args.shareUrl}`,
+    `View and pay: ${args.shareUrl}`,
   ].join('\n');
 
 export const paymentConfirmedMessage = (args: {
@@ -25,7 +25,7 @@ export const paymentConfirmedMessage = (args: {
 }): string =>
   [
     BRAND_HEADER,
-    'Payment confirmed ✅',
+    'Payment confirmed.',
     `• Quote: ${args.quoteRef}`,
     `• Amount: ${formatUgx(args.amount)}`,
     `• Policy: ${args.policyNo}`,
@@ -40,7 +40,7 @@ export const policyIssuedMessage = (args: {
 }): string =>
   [
     BRAND_HEADER,
-    'Your policy is active ✅',
+    'Your policy is active.',
     `• Policy: ${args.policyNo}`,
     `• Plate: ${args.plate}`,
     `• Cover until: ${args.periodEnd}`,
@@ -69,7 +69,7 @@ export const renewalReminderMessage = (args: {
     BRAND_HEADER,
     `Policy ${args.policyNo} (${args.plate}) expires on ${args.periodEnd}.`,
     `Renewal quote ${args.quoteRef}: ${formatUgx(args.premium)}.`,
-    'Reply 3 and send the quote ref to pay.',
+    'Reply 4 and send the quote ref to pay.',
   ].join('\n');
 
 export const otpMessage = (otp: string, purpose: string): string =>
@@ -90,4 +90,4 @@ export const renewalQuoteMessage = (args: {
   ].join('\n');
 
 export const opsAlertMessage = (title: string, lines: string[]): string =>
-  [`🚨 *Protecta ops: ${title}*`, ...lines].join('\n');
+  [`*Protecta ops: ${title}*`, ...lines].join('\n');

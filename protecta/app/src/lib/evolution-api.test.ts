@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   evolutionWebhookAuthorized,
   isEvolutionPayload,
   parseEvolutionInbound,
+  sendEvolutionDocument,
 } from 'src/lib/evolution-api';
 import { routeEvent } from 'src/test-utils/route-event';
 
@@ -49,5 +50,64 @@ describe('Evolution inbound', () => {
     expect(evolutionWebhookAuthorized({ apikey: 'evo-key' }, {}, config)).toBe(true);
     expect(evolutionWebhookAuthorized({}, payload, config)).toBe(true);
     expect(evolutionWebhookAuthorized(routeEvent().headers, { apikey: 'nope' }, config)).toBe(false);
+  });
+});
+
+describe('Evolution document send', () => {
+  const config = {
+    baseUrl: 'http://evolution.local',
+    instance: 'protecta',
+    apiKey: 'evo-key',
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('POSTs the document as media with base64 payload', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ key: { id: 'EVO-DOC-1' } }),
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    const doc = {
+      fileName: 'Protecta-Quote-482913.pdf',
+      caption: 'Protecta Bode quote 482913: UGX 150,000 premium.',
+      base64: Buffer.from('%PDF-fake').toString('base64'),
+    };
+    const result = await sendEvolutionDocument(config, '+256772000000', doc);
+    expect(result).toEqual({ messageId: 'EVO-DOC-1' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('/message/sendMedia/protecta');
+    expect(init.method).toBe('POST');
+    const body = JSON.parse(String(init.body));
+    expect(body).toMatchObject({
+      number: '256772000000',
+      mediatype: 'document',
+      mimetype: 'application/pdf',
+      fileName: doc.fileName,
+      caption: doc.caption,
+      media: doc.base64,
+    });
+  });
+
+  it('reports the upstream status when the send fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'boom' }),
+        text: async () => 'boom',
+      })),
+    );
+    await expect(
+      sendEvolutionDocument(config, '256772000000', {
+        fileName: 'x.pdf',
+        caption: 'x',
+        base64: 'eA==',
+      }),
+    ).rejects.toThrow(/Evolution media send failed \(500\)/);
   });
 });

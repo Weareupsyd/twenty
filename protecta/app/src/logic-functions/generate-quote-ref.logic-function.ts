@@ -27,7 +27,7 @@ export default defineLogicFunction({
   universalIdentifier: GENERATE_QUOTE_REF,
   name: 'generate-quote-ref',
   description:
-    'Assigns a quote reference (15 digits) when a quote is created without one, e.g. from the CRM UI.',
+    'Assigns a quote reference (6 digits) when a quote is created without one, e.g. from the CRM UI.',
   timeoutSeconds: 10,
   handler,
   databaseEventTriggerSettings: {

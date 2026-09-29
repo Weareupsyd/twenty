@@ -21,7 +21,7 @@ describe('createQuote', () => {
     );
 
     expect(result.premium).toBe(150_000);
-    expect(result.quote.reference).toMatch(/^\d{15}$/);
+    expect(result.quote.reference).toMatch(/^\d{6}$/);
     expect(result.quote.status).toBe('QUOTED');
     expect(result.quote.channel).toBe('WHATSAPP');
     expect(result.quote.shareUrl).toContain('https://crm.example.com/s/protecta/quotes/view');

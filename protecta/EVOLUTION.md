@@ -111,6 +111,14 @@ Managed by `scripts/setup-caddy.sh` and `install.sh --with-caddy`.
 Main domain `protectabode.weareupsyd.com` reverse proxies to `localhost:2020` (Twenty).
 Evolution subdomain `evolution.protectabode.weareupsyd.com` proxies to `localhost:8080`.
 
+The bare domain (`/`) and any legacy `/admin` URL redirect to the public
+Protecta Bode site at `/s/protecta/`, so the domain never opens the CRM
+sign-in or another app's admin panel. Staff sign in at `/welcome`; the CRM
+admin panel is `/settings/admin-panel` after signing in. Everything else
+(`/s/...`, `/objects/...`, `/settings/...`, `/healthz`, APIs) proxies to
+Twenty unchanged. Re-run `./scripts/setup-caddy.sh` on an existing install to
+pick up routing changes (`start.sh` does not touch Caddy).
+
 Caddy auto-provisions TLS via Let's Encrypt. Ensure DNS:
 
 ```

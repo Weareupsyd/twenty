@@ -10,6 +10,14 @@
 
 # ── Main Protecta Bode domain ──
 protectabode.weareupsyd.com {
+    # The bare domain and any legacy /admin URL open the public Protecta Bode
+    # site — not the CRM sign-in and not a foreign admin panel. Staff sign in
+    # at /welcome; the CRM admin panel is /settings/admin-panel once signed in.
+    @openHome path / /admin /admin/*
+    handle @openHome {
+        redir /s/protecta/ permanent
+    }
+
     # Twenty CRM (twenty-app-dev container)
     reverse_proxy localhost:2020 {
         header_up Host {host}

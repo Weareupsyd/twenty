@@ -62,9 +62,52 @@ describe('bot menu', () => {
     });
   });
 
-  it('looks up 15-digit refs directly', () => {
+  it('pays with a short 6-digit quote reference too', () => {
+    let turn = handleBotTurn(startSession(), '4');
+    expect(turn.reply).toContain('6-digit quote reference');
+    turn = handleBotTurn(turn.next, '482913');
+    expect(turn.next.data.quoteRef).toBe('482913');
+    turn = handleBotTurn(turn.next, '0701440613');
+    expect(turn.action).toMatchObject({
+      kind: 'INITIATE_PAYMENT',
+      quoteRef: '482913',
+      phone: '+256701440613',
+    });
+  });
+
+  it('looks up 6-digit refs directly', () => {
+    const turn = handleBotTurn(startSession(), '482913');
+    expect(turn.action).toEqual({ kind: 'LOOKUP_QUOTE', quoteRef: '482913' });
+  });
+
+  it('looks up legacy 15-digit refs directly', () => {
     const turn = handleBotTurn(startSession(), '123456789012345');
     expect(turn.action).toEqual({ kind: 'LOOKUP_QUOTE', quoteRef: '123456789012345' });
+  });
+
+  it('tells the customer how to return to the main menu at every question', () => {
+    const menuHint = 'Reply MENU for the main menu.';
+    let turn = handleBotTurn(startSession(), '1');
+    expect(turn.reply).toContain(menuHint);
+
+    turn = handleBotTurn(turn.next, 'not-a-number');
+    expect(turn.reply).toContain(menuHint);
+
+    turn = handleBotTurn(startSession(), '4');
+    expect(turn.reply).toContain(menuHint);
+
+    turn = handleBotTurn(startSession(), '5');
+    expect(turn.reply).toContain(menuHint);
+
+    turn = handleBotTurn(startSession(), '6');
+    expect(turn.reply).toContain(menuHint);
+
+    // Free-text steps accept the MENU keyword even though the answer
+    // itself is prose.
+    turn = handleBotTurn(startSession(), '6');
+    turn = handleBotTurn(turn.next, 'MENU');
+    expect(turn.next.state).toBe('IDLE');
+    expect(turn.reply).toContain('1. Calculate premium');
   });
 
   it('walks the claim flow', () => {

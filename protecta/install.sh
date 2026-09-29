@@ -583,6 +583,8 @@ $(printf '\033[1;32m==> Install complete\033[0m')
     Note: the server is published on all interfaces, so $PORT_SHOWN is reachable
     from other machines once the host firewall allows it.
     With --with-caddy, Caddy terminates TLS for $DOMAIN and proxies to localhost:$PORT_SHOWN.
+    With Caddy, $DOMAIN/ and $DOMAIN/admin redirect to /s/protecta/ (the public
+    Protecta Bode site); staff CRM sign-in is at $DOMAIN/welcome.
     Ensure DNS A record for $DOMAIN and $EVOLUTION_DOMAIN points to this server.
 
 EOF

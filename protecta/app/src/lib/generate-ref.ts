@@ -50,3 +50,25 @@ export const fillMissingRef = async (
   }
   throw lastError;
 };
+
+/**
+ * Run a record-creation closure whose generated reference is subject to a
+ * unique constraint (quote references and payment references are 6 digits,
+ * so collisions are rare but real). The closure must draw a fresh reference
+ * on every attempt; on failure it is simply run again until it succeeds.
+ */
+export const createWithUniqueRef = async <T>(
+  createAttempt: () => Promise<T>,
+  options: { maxAttempts?: number } = {},
+): Promise<T> => {
+  const maxAttempts = options.maxAttempts ?? 4;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return await createAttempt();
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError;
+};

@@ -43,6 +43,82 @@ export const sendWhatsAppText = async (
   return { messageId: data?.messages?.[0]?.id ?? null };
 };
 
+/**
+ * Send a file as a WhatsApp document through the Meta Cloud API:
+ * upload the bytes to /media first, then send the resulting media id.
+ */
+export const sendWhatsAppDocument = async (
+  config: WhatsAppConfig,
+  to: string,
+  doc: {
+    fileName: string;
+    caption: string;
+    base64: string;
+    mimeType?: string;
+  },
+): Promise<{ messageId: string | null }> => {
+  const number = to.replace(/^\+/, '');
+  const mimeType = doc.mimeType ?? 'application/pdf';
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('type', 'document');
+  form.append(
+    'file',
+    new Blob([Buffer.from(doc.base64, 'base64')], { type: mimeType }),
+    doc.fileName,
+  );
+  const upload = await fetch(
+    `https://graph.facebook.com/v21.0/${config.phoneId}/media`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.token}` },
+      body: form,
+    },
+  );
+  if (!upload.ok) {
+    const detail = await upload.text().catch(() => '');
+    throw new Error(
+      `WhatsApp media upload failed (${upload.status}): ${detail.slice(0, 200)}`,
+    );
+  }
+  const uploaded = (await upload.json().catch(() => null)) as {
+    id?: string;
+  } | null;
+  if (!uploaded?.id) {
+    throw new Error('WhatsApp media upload returned no media id.');
+  }
+  const response = await fetch(
+    `https://graph.facebook.com/v21.0/${config.phoneId}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: number,
+        type: 'document',
+        document: {
+          id: uploaded.id,
+          filename: doc.fileName,
+          caption: doc.caption.slice(0, 1000),
+        },
+      }),
+    },
+  );
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(
+      `WhatsApp document send failed (${response.status}): ${detail.slice(0, 200)}`,
+    );
+  }
+  const data = (await response.json().catch(() => null)) as {
+    messages?: { id?: string }[];
+  } | null;
+  return { messageId: data?.messages?.[0]?.id ?? null };
+};
+
 export type InboundWhatsAppMessage = {
   from: string;
   text: string;

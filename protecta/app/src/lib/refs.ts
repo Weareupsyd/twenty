@@ -10,8 +10,12 @@ const digits = (
   return out;
 };
 
-/** 15-digit zero-padded numeric quote reference (legacy-compatible). */
-export const makeQuoteRef = (rng?: () => number): string => digits(15, rng);
+/**
+ * 6-digit zero-padded numeric quote reference — short enough for a
+ * customer to read back over WhatsApp. Legacy 15-digit references are
+ * still accepted everywhere a reference is typed in.
+ */
+export const makeQuoteRef = (rng?: () => number): string => digits(6, rng);
 
 export const makePolicyNo = (rng?: () => number): string =>
   `PB-${new Date().getUTCFullYear()}-${digits(6, rng)}`;
@@ -22,8 +26,9 @@ export const makeClaimRef = (rng?: () => number): string =>
 export const makeTicketRef = (rng?: () => number): string =>
   `TCK-${digits(6, rng)}`;
 
+/** Short memorable payment reference, e.g. PAY-482913. */
 export const makePaymentRef = (rng?: () => number): string =>
-  `PAY-${digits(10, rng)}`;
+  `PAY-${digits(6, rng)}`;
 
 export const makeDeliveryId = (rng?: () => number): string =>
   `DLV-${Date.now().toString(36)}-${digits(6, rng)}`;

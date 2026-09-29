@@ -1,7 +1,7 @@
 import { normalizeUgPhone } from 'src/lib/phones';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { makeClaimRef } from 'src/lib/refs';
-import { findPolicyByNo } from 'src/lib/service-policies';
+import { findPoliciesByPhone, findPolicyByNo } from 'src/lib/service-policies';
 
 const ADVANCE_MAP: Record<string, string> = {
   REPORTED: 'ASSIGNED',
@@ -15,7 +15,7 @@ export const nextClaimStatus = (status: string): string | null =>
 export const createClaim = async (
   db: DbClient,
   input: {
-    policyNo: string;
+    policyNo?: string;
     description: string;
     location?: string;
     reporterPhone: string;
@@ -23,19 +23,38 @@ export const createClaim = async (
     rng?: () => number;
   },
 ): Promise<{ claim: RecordData; policy: RecordData }> => {
-  const policy = await findPolicyByNo(db, input.policyNo.trim().toUpperCase());
-  if (!policy) {
-    throw new Error(`Policy ${input.policyNo} not found.`);
-  }
-  if (policy.status !== 'ACTIVE') {
-    throw new Error(`Policy ${input.policyNo} is not active.`);
-  }
   const phone = normalizeUgPhone(input.reporterPhone);
   if (!phone) {
     throw new Error('A valid reporter phone number is required.');
   }
   if (input.description.trim().length < 8) {
     throw new Error('Please describe what happened in a few words.');
+  }
+
+  const policyNo = (input.policyNo ?? '').trim().toUpperCase();
+
+  // A supplied policy number is matched exactly. Only when no policy number is
+  // given (e.g. from the public landing page) do we match by reporter phone.
+  let policy: RecordData | null = null;
+  if (policyNo) {
+    policy = await findPolicyByNo(db, policyNo);
+  } else {
+    const candidates = await findPoliciesByPhone(db, phone);
+    policy =
+      candidates.find((candidate) => String(candidate.status) === 'ACTIVE') ??
+      candidates[0] ??
+      null;
+  }
+
+  if (!policy) {
+    throw new Error(
+      policyNo
+        ? `Policy ${policyNo} not found.`
+        : 'No policy found for this phone number. Use the number you gave at purchase.',
+    );
+  }
+  if (policy.status !== 'ACTIVE') {
+    throw new Error(`Policy ${policy.policyNo ?? policyNo} is not active.`);
   }
   const claimRef = makeClaimRef(input.rng);
   const claim = await db.create('insuranceClaim', {

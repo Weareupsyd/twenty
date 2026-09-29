@@ -20,7 +20,7 @@ button{margin-top:22px;width:100%;background:#CA6E2B;color:#fff;border:0;border-
 <body><div class="wrap"><div class="card">
 <h1 style="margin:0">Report a claim</h1>
 <p style="color:#56607F">Tell us what happened and our assessors will take it from there.</p>
-<label>Policy number</label><input id="pol" value="${policy.replace(/[<>"&]/g, '')}" placeholder="PB-P-2026-…">
+<label>Policy number (optional — we match by phone)</label><input id="pol" value="${policy.replace(/[<>"&]/g, '')}" placeholder="PB-P-2026-…">
 <label>Your phone (WhatsApp)</label><input id="phone" inputmode="tel" placeholder="0772 000 000">
 <label>Date of incident</label><input id="date" type="date">
 <label>Location</label><input id="loc" placeholder="e.g. Jinja Rd, Kampala">
@@ -36,7 +36,7 @@ out.style.display='block';out.style.background='#EEF3FF';out.style.color='#071B4
 fetch('/s/protecta/api/claims',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
 policyNo:q('pol'),reporterPhone:q('phone'),incidentDate:q('date')||undefined,location:q('loc')||undefined,description:q('desc')})})
 .then(function(r){return r.json()}).then(function(d){
-if(d.ok){out.style.background='#E6F6EC';out.style.color='#14532D';out.textContent='Claim received — reference '+d.claim.claimRef+'. Track it at /s/protecta/claims/view?ref='+d.claim.claimRef;}
+if(d.ok){out.style.background='#E6F6EC';out.style.color='#14532D';out.textContent='Claim received — reference '+d.claim.claimRef+' for policy '+d.claim.policyNo+'. Track it at /s/protecta/claims/view?ref='+d.claim.claimRef;}
 else{out.style.background='#FDECEC';out.style.color='#7A1C1C';out.textContent=d.error||'Something went wrong.';}
 }).catch(function(){out.style.background='#FDECEC';out.style.color='#7A1C1C';out.textContent='Network error. Please try again.';});
 };

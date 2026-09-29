@@ -18,6 +18,8 @@ export type LandingAssets = {
 // while the React front-component `landing-share` renders the same icon via <HugeiconsIcon icon={Mail01Icon} />.
 const mail01Svg = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2 6L8.91302 9.91697C11.4616 11.361 12.5384 11.361 15.087 9.91697L22 6"></path><path d="M2.01577 13.4756C2.08114 16.5412 2.11383 18.0739 3.24496 19.2094C4.37608 20.3448 5.95033 20.3843 9.09883 20.4634C11.0393 20.5122 12.9607 20.5122 14.9012 20.4634C18.0497 20.3843 19.6239 20.3448 20.7551 19.2094C21.8862 18.0739 21.9189 16.5412 21.9842 13.4756C22.0053 12.4899 22.0053 11.5101 21.9842 10.5244C21.9189 7.45886 21.8862 5.92609 20.7551 4.79066C19.6239 3.65523 18.0497 3.61568 14.9012 3.53657C12.9607 3.48781 11.0393 3.48781 9.09882 3.53656C5.95033 3.61566 4.37608 3.65521 3.24495 4.79065C2.11382 5.92608 2.08114 7.45885 2.01576 10.5244C1.99474 11.5101 1.99475 12.4899 2.01577 13.4756Z"></path></svg>`;
 
+const waSvg = `<svg width="20" height="20" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-82.7 184.6-184.5 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.5 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-2 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>`;
+
 /**
  * Protecta Bode landing page + premium calculator, design preserved as-is.
  * Only the data layer is rewired: pricing comes from calc-config, quotes and
@@ -101,18 +103,23 @@ button,input,select{font:inherit;color:inherit}
 @media (min-width:1024px) and (min-aspect-ratio:5/4){
   .stage{
     --kv-h:min(100svh, calc((100vw - var(--panel-min)) * var(--kv-ratio)));
-    display:grid;grid-template-columns:auto minmax(var(--panel-min),1fr);width:100%;gap:0;background:var(--sky);
+    display:grid;grid-template-columns:auto minmax(var(--panel-min),1fr);width:100%;gap:0;height:100svh;overflow:hidden;background:var(--sky);
   }
   .kv{position:sticky;top:0;height:100svh;display:flex;align-items:flex-end;justify-content:center;background:var(--sky)}
   .kv-frame{height:var(--kv-h);width:auto;max-height:100svh}
-  html{scroll-padding-bottom:calc(var(--kv-h-root, 100svh) * 0.0515 + 24px)}
-  .panel{min-height:100svh}
-  .panel-inner{padding:24px clamp(20px,3vw,48px) 24px}
-  .panel-band{display:block;position:sticky;bottom:0;height:calc(var(--kv-h) * var(--band));background:var(--navy-band);flex:none}
+  html{scroll-padding-bottom:calc(var(--kv-h) * var(--band) + 24px)}
+  /* Panel fills exactly one viewport; the navy band sits flush at the bottom,
+     joined with the blue footer of the key visual and never moves. */
+  .panel{height:100svh;min-height:0;justify-content:flex-start;overflow:hidden}
+  .panel-inner{flex:1;min-height:0;max-width:560px;width:100%;margin:0 auto;padding:18px clamp(20px,3vw,48px);display:flex;flex-direction:column;justify-content:center}
+  .card{flex:1;min-height:0;max-height:none}
+  .card-body{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;overflow:auto;scrollbar-width:none;-ms-overflow-style:none}
+  .card-body::-webkit-scrollbar{display:none}
+  .panel-band{display:block;flex:none;height:calc(var(--kv-h) * var(--band));background:var(--navy-band)}
 }
 
 /* ───────── Card ───────── */
-.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden;max-height:calc(100svh - 32px);display:flex;flex-direction:column}
+.card{background:var(--white);border:1px solid var(--sky-line);border-radius:var(--radius);box-shadow:0 18px 40px -24px rgba(11,28,72,.35);overflow:hidden;display:flex;flex-direction:column}
 .card-body{padding:22px 22px;overflow:auto}
 @media (max-width:420px){.card-body{padding:18px 16px}}
 
@@ -350,7 +357,6 @@ button,input,select{font:inherit;color:inherit}
           </ol>
 
           <section data-step="calc" class="active" aria-labelledby="calcTitle">
-            <span class="eyebrow"><svg><use href="#shield-fill"/></svg>Premium calculator</span>
             <h1 class="title" id="calcTitle">Calculate your premium</h1>
             <p class="lede">For just <b>1.5%</b> of your car’s value, you enjoy car body, third party, and driver cover in case of an accident.</p>
             <p class="fine" id="resumeRow" style="margin-top:10px">Already have a quote? <a href="#" id="resumeLink">Resume payment</a> · <a href="/s/protecta/quotes/resume">Find my quotes</a></p>
@@ -392,6 +398,7 @@ button,input,select{font:inherit;color:inherit}
               <button type="button" class="btn btn-primary btn-block" id="proceedBtn" style="margin-top:22px" disabled>
                 Proceed with this cover <svg><use href="#arrow"/></svg>
               </button>
+              <a class="btn btn-outline btn-block" href="/s/protecta/claims/new" style="margin-top:12px">Report a claim</a>
               <div class="after fine">
                 <span>Terms and Conditions apply</span>
                 <a href="${supportHref}">Call ${supportPhone}</a>
@@ -547,9 +554,9 @@ button,input,select{font:inherit;color:inherit}
             <p class="lede" id="doneText">Thank you. Your Protecta Bode cover is being issued.</p>
             <div class="ref"><span>Reference number</span><strong id="refNo">PB-0000-000000</strong></div>
             <p class="fine">A copy of your policy will be sent to <b id="doneEmail" style="color:var(--navy)">your email</b>.</p>
-            <!-- Frontend page uses <HugeiconsIcon icon={Mail01Icon} /> for email and <HugeiconsIcon icon={Mail01Icon} /> for whatsapp (Mail01Icon from @hugeicons/core-free-icons via @hugeicons/react) -->
+            <!-- Frontend page inlines the Mail01Icon (email) and a WhatsApp glyph; the React landing-share front component renders the same via Hugeicons. -->
             <div class="share">
-              <a class="btn btn-outline" id="shareWa" target="_blank" rel="noopener">${mail01Svg}WhatsApp</a>
+              <a class="btn btn-outline" id="shareWa" target="_blank" rel="noopener">${waSvg}WhatsApp</a>
               <a class="btn btn-outline" id="shareMail">${mail01Svg}Email</a>
               <button type="button" class="btn btn-outline" onclick="window.print()">Save / print</button>
             </div>

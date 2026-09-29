@@ -39,6 +39,18 @@ describe('claims', () => {
     expect(settled.status).toBe('SETTLED');
   });
 
+  it('matches the active policy by the reporter phone when no policy number is supplied', async () => {
+    const db = new MemoryDbClient();
+    const { policy } = await seedPolicy(db);
+    const result = await createClaim(db, {
+      description: 'Damage from a road collision',
+      reporterPhone: '0772000000',
+      rng: () => 0.6,
+    });
+    expect(result.claim.policyNo).toBe(policy.policyNo);
+    expect(result.policy.id).toBe(policy.id);
+  });
+
   it('requires an active policy', async () => {
     const db = new MemoryDbClient();
     await expect(

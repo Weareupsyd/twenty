@@ -15,6 +15,7 @@ export const API_PAYMENT_GET = 'e29442ef-a4fe-4cf0-b08d-1139e7ad247f';
 export const API_QUOTE_CREATE = 'bb7f9b22-2c27-4b75-930d-f15a47af0d7c';
 export const API_QUOTE_GET = '1a83e5ef-516b-435e-99c8-8c38fa0dfa3e';
 export const API_TICKET_CREATE = 'dfc563eb-a04f-4ae9-9bad-5a5cc799a297';
+export const AUTO_CREATE_POLICY_COMMISSION = 'd24502df-7641-46f1-b47b-3d3e78c2c06f';
 export const BOT_CONVERSATION = '618979b7-7373-4530-b92a-deb6456c00b7';
 export const BOT_INBOUND = 'a349b365-e515-4c33-83da-6ea32434ccc0';
 export const BOT_SEND = '232e1b56-cbb2-4125-ad32-be36f8b80140';
@@ -523,6 +524,10 @@ export const P_STICKER_FEES = '6d4df9b5-9697-45cf-959c-d0da80b8bbcc';
 export const P_VAT = '101b9d40-82f6-4e19-8165-a11279703896';
 export const P_STAMP_DUTY = '6b69b2d5-4d07-4e10-b2a2-b5176ab646e3';
 export const P_TOTAL_PREMIUM = 'e6adb70f-7198-420e-a15d-0e1ddcdeb258';
+export const P_AGENT = '1cd821ed-814b-4b12-ba0e-4812790ee738';
+export const PERSON_AGENT_POLICIES = '55283414-2d87-4028-9ed5-4739890fa955';
+export const PERSON_COMMISSION_RATE = 'f59af6f5-9ea1-4d7d-a9f0-f992cae00f20';
+export const CREATE_POLICY_COMMISSION_ON_UPDATE = '372d75ff-f180-46d3-ae33-dc96cae6492a';
 
 // Quote → policy conversion + on-demand policy PDF (added for UX: print & direct conversion)
 export const QUOTE_CONVERT = '5b00700c-75f8-4588-8d9c-a6c48bf1ed82';
@@ -555,6 +560,7 @@ export const PROTECTA_DASHBOARD_W_POLICIES_TREND = 'b0479d46-91e4-4a1f-9de2-1aa5
 export const PROTECTA_DASHBOARD_W_COMMISSIONS = 'c4c19c79-1788-4a92-942a-bb1e3c43fc60';
 export const PROTECTA_DASHBOARD_W_CLAIMS_RESERVE = '14be0d52-b60c-4c71-a2bf-4b61ddfee01e';
 export const NAV_DASHBOARD = 'beac094d-39a7-477a-9b96-c1c0b5cb3fcd';
+export const NAV_DASHBOARDS_FOLDER = 'a1f0d3e2-7b6c-4e9a-9c8b-2d4e6f8a0b1c';
 export const REPORTS_INDEX = '8d483cb9-a692-4432-a124-30ac56f6c074';
 export const REPORT_EXPORT = '31435ab9-1782-46fa-bb97-6b12e442b105';
 export const PROTECTA_REPORTS_PAGE_LAYOUT = '499e0092-8a12-460c-b45c-4aa7f9c5cb89';

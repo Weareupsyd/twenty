@@ -99,8 +99,8 @@ export default defineApplication({
       universalIdentifier: PUBLIC_BASE_URL,
       label: 'Public base URL',
       description:
-        'Public Twenty URL used to build quote, policy and payment links (for example https://crm.example.com). Leave empty to use relative links.',
-      value: '',
+        'Public Twenty URL used to build quote, policy and payment links. For production: https://protectabode.weareupsyd.com. Leave empty to use relative links.',
+      value: 'https://protectabode.weareupsyd.com',
       isSecret: false,
     },
     REQUIRE_KYC_PURCHASE: {

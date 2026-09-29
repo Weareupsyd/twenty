@@ -1,0 +1,83 @@
+# docker-compose.caddy.yml — optional stack for Protecta Bode with Caddy + Evolution API
+# Usage:
+#   docker compose -f docker-compose.caddy.yml up -d
+#   ./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com
+#
+# This file does NOT replace twenty-app-dev; Twenty still runs via `twenty docker:start`.
+# It adds Caddy (reverse proxy + auto TLS) and Evolution API (WhatsApp gateway).
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2019:2019" # admin API (optional, localhost only)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - /var/log/caddy:/var/log/caddy
+      - ./caddy/certs:/certs:ro # optional custom certs
+    environment:
+      - DOMAIN=${DOMAIN:-protectabode.weareupsyd.com}
+    network_mode: host # so it can reach localhost:2020 and localhost:8080
+    # Alternatively, use bridge and point to host.docker.internal:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+  evolution-api:
+    image: atendai/evolution-api:latest
+    container_name: evolution-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Server
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      - SERVER_URL=https://${EVOLUTION_DOMAIN:-evolution.protectabode.weareupsyd.com}
+      # Auth — CHANGE THIS in .env or via EVOLUTION_API_KEY env
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-protecta-evolution-key-change-me}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      # QR
+      - QRCODE_LIMIT=30
+      - QRCODE_COLOR=#0B1C48
+      # Webhook — default that makes bot talk to Twenty CRM
+      # This is the URL Evolution will POST inbound WhatsApp messages to
+      - WEBHOOK_GLOBAL_URL=${WEBHOOK_URL:-https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook}
+      - WEBHOOK_GLOBAL_ENABLED=${WEBHOOK_ENABLED:-true}
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=${WEBHOOK_BY_EVENTS:-false}
+      # Store
+      - CACHE_REDIS_ENABLED=false
+      - CACHE_REDIS_URI=redis://redis:6379
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - DATABASE_ENABLED=false
+      # Optional: use Postgres for Evolution persistence (uncomment)
+      # - DATABASE_ENABLED=true
+      # - DATABASE_CONNECTION_URI=postgresql://user:pass@postgres:5432/evolution
+      # - DATABASE_CONNECTION_CLIENT_NAME=evolution
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    # If you want Evolution to share Twenty's network:
+    # networks:
+    #   - twenty
+
+volumes:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+  evolution_instances:
+    driver: local
+  evolution_store:
+    driver: local
+
+# networks:
+#   twenty:
+#     external: true
+#     name: twenty_default

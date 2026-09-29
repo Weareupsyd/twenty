@@ -9,6 +9,19 @@ const handler = async (_event: RoutePayload): Promise<Response> =>
     ok: true,
     app: 'protecta-bode',
     time: new Date().toISOString(),
+    publicBaseUrl: process.env.PUBLIC_BASE_URL || 'https://protectabode.weareupsyd.com',
+    webhook: {
+      default: 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
+      local: '/s/protecta/whatsapp/webhook',
+      full: `${process.env.PUBLIC_BASE_URL || 'https://protectabode.weareupsyd.com'}/s/protecta/whatsapp/webhook`,
+      evolutionGlobal: process.env.WEBHOOK_GLOBAL_URL || 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
+    },
+    caddy: {
+      domain: 'protectabode.weareupsyd.com',
+      evolutionDomain: 'evolution.protectabode.weareupsyd.com',
+      config: 'protecta/Caddyfile',
+      compose: 'protecta/docker-compose.caddy.yml',
+    },
     whatsapp: Boolean(
       evolutionConfigFromEnv() ||
         (process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID),

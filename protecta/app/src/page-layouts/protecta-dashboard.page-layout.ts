@@ -52,7 +52,8 @@ import { PAYMENTS_PENDING } from 'src/constants/universal-identifiers';
 export default definePageLayout({
   universalIdentifier: PROTECTA_DASHBOARD,
   name: 'Protecta Bode Ops',
-  type: 'DASHBOARD',
+  // Standalone pages are the page-layout type that can be linked in app navigation.
+  type: 'STANDALONE_PAGE',
   tabs: [
     {
       universalIdentifier: PROTECTA_DASHBOARD_TAB_OVERVIEW,

@@ -1,14 +1,28 @@
-import { type PDFFont, type PDFPage, rgb } from 'pdf-lib';
+import { type PDFDocument, type PDFFont, type PDFImage, type PDFPage, rgb } from 'pdf-lib';
+import { PROTECTA_LOGO_PNG_BASE64 } from 'src/lib/brand-logo';
 
 export const PAGE_W = 595.28; // A4
 export const PAGE_H = 841.89;
 export const MARGIN = 50;
 
-export const NAVY = rgb(0.04, 0.12, 0.28);
-export const ORANGE = rgb(0.8, 0.43, 0.16);
-export const MUTED = rgb(0.33, 0.42, 0.55);
-export const HAIRLINE = rgb(0.85, 0.88, 0.92);
-export const INK = rgb(0.04, 0.12, 0.28);
+// Documents are plain black on white: no colour, no filled boxes.
+const BLACK = rgb(0, 0, 0);
+export const NAVY = BLACK;
+export const ORANGE = BLACK;
+export const MUTED = BLACK;
+export const HAIRLINE = BLACK;
+export const INK = BLACK;
+
+/** Embeds the Protecta Bode logo; returns undefined if it cannot be read. */
+export const embedBrandLogo = async (
+  doc: PDFDocument,
+): Promise<PDFImage | undefined> => {
+  try {
+    return await doc.embedPng(Buffer.from(PROTECTA_LOGO_PNG_BASE64, 'base64'));
+  } catch {
+    return undefined;
+  }
+};
 
 /**
  * pdf-lib's standard fonts only encode WinAnsi; customer-supplied text
@@ -85,32 +99,39 @@ export const createSheet = (
   page: PDFPage,
   fonts: { font: PDFFont; bold: PDFFont },
   headerRight: string,
+  logo?: PDFImage,
 ): Sheet => {
   const { font, bold } = fonts;
   const drawHeader = () => {
-    page.drawRectangle({
-      x: 0,
-      y: PAGE_H - 70,
-      width: PAGE_W,
-      height: 70,
-      color: NAVY,
+    const top = PAGE_H - MARGIN + 14;
+    if (logo) {
+      const h = 46;
+      const w = (logo.width / logo.height) * h;
+      page.drawImage(logo, { x: MARGIN, y: top - h, width: w, height: h });
+    } else {
+      page.drawText('Protecta Bode', { x: MARGIN, y: top - 20, size: 16, font: bold, color: BLACK });
+    }
+    const label = winAnsi(headerRight);
+    const size = 11;
+    page.drawText(label, {
+      x: PAGE_W - MARGIN - bold.widthOfTextAtSize(label, size),
+      y: top - 20,
+      size,
+      font: bold,
+      color: BLACK,
     });
-    page.drawText('LIBERTY', { x: MARGIN, y: PAGE_H - 32, size: 13, font: bold, color: rgb(1, 1, 1) });
-    page.drawText('In it with you', { x: MARGIN, y: PAGE_H - 46, size: 8, font, color: rgb(0.82, 0.86, 0.92) });
-    page.drawText('Protecta Bode', { x: PAGE_W - MARGIN - 120, y: PAGE_H - 32, size: 13, font: bold, color: ORANGE });
-    page.drawText(winAnsi(headerRight), {
-      x: PAGE_W - MARGIN - 120,
-      y: PAGE_H - 46,
-      size: 8,
-      font,
-      color: rgb(0.82, 0.86, 0.92),
+    page.drawLine({
+      start: { x: MARGIN, y: top - 58 },
+      end: { x: PAGE_W - MARGIN, y: top - 58 },
+      thickness: 0.8,
+      color: BLACK,
     });
   };
   drawHeader();
 
   const sheet: Sheet = {
     page,
-    y: PAGE_H - 92,
+    y: PAGE_H - MARGIN - 70,
     draw(text, size = 10, fontUsed = font, color = INK, indent = 0) {
       const lines = wrap(winAnsi(text), fontUsed, size, PAGE_W - MARGIN * 2 - indent);
       for (const line of lines) {
@@ -142,7 +163,7 @@ export const createSheet = (
       sheet.page.drawLine({
         start: { x: MARGIN, y: sheet.y + 4 },
         end: { x: PAGE_W - MARGIN, y: sheet.y + 4 },
-        thickness: 0.5,
+        thickness: 0.3,
         color: HAIRLINE,
       });
       sheet.y -= 4;

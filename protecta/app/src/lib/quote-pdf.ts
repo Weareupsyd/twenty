@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { formatUgx } from 'src/lib/money';
-import { brandFooter, createSheet, NAVY, ORANGE } from 'src/lib/pdf-draw';
+import { brandFooter, createSheet, embedBrandLogo, NAVY, ORANGE } from 'src/lib/pdf-draw';
 import { type RecordData } from 'src/lib/records';
 
 /**
@@ -15,7 +15,7 @@ export const generateQuotePdf = async (
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const page = doc.addPage();
-  const sheet = createSheet(page, { font, bold }, 'Motor quote');
+  const sheet = createSheet(page, { font, bold }, 'Motor quote', await embedBrandLogo(doc));
 
   const ref = String(quote.reference ?? '');
   const status = String(quote.status ?? 'QUOTED');

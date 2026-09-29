@@ -16,6 +16,7 @@ export const API_QUOTE_CREATE = 'bb7f9b22-2c27-4b75-930d-f15a47af0d7c';
 export const API_QUOTE_GET = '1a83e5ef-516b-435e-99c8-8c38fa0dfa3e';
 export const API_TICKET_CREATE = 'dfc563eb-a04f-4ae9-9bad-5a5cc799a297';
 export const AUTO_CREATE_POLICY_COMMISSION = 'd24502df-7641-46f1-b47b-3d3e78c2c06f';
+export const DELIVER_POLICY_DOCUMENT = '7c1e9a52-3f4b-4d8e-9a61-2b5f0c7d8e13';
 export const BOT_CONVERSATION = '618979b7-7373-4530-b92a-deb6456c00b7';
 export const BOT_INBOUND = 'a349b365-e515-4c33-83da-6ea32434ccc0';
 export const BOT_SEND = '232e1b56-cbb2-4125-ad32-be36f8b80140';
@@ -582,3 +583,9 @@ export const WHATSAPP_BOT_PAGE_LAYOUT = 'aee67389-c855-41aa-b11b-7ac6784f1252';
 export const WHATSAPP_BOT_TAB = 'b60463ac-93bf-4e2c-affa-c9a48af97417';
 export const WHATSAPP_BOT_WIDGET = '6295c118-6079-4371-9a95-3c695824cc12';
 export const NAV_WHATSAPP_BOT = '7995f85d-25ce-4a2d-a1e1-6218f0ef3a72';
+
+// Policy record: Documents tab (generated policy document + regenerate).
+export const LAY_TAB_POLICY_DOCS = '5b0f6d2e-8c47-4a19-b3e2-91d7a4c6f058';
+export const LAY_W_POLICY_DOCS = 'c8e3a1f4-2d6b-4f7a-9e05-7b1d3c9a4e62';
+export const FC_POLICY_DOCUMENTS = 'e41a7c93-5f28-4b6d-8a1e-0c9b2d7f3a54';
+export const TERMS_PAGE = '9d2b6f41-7a3c-4e85-b0d9-6c1f8e2a5b37';

@@ -21,7 +21,7 @@ const handler = async (event: RoutePayload): Promise<Response> => {
   }
 
   const quotes: any[] = [];
-  if (rawRef) {
+  if (rawRef && !rawPhone) {
     const quote = await findQuoteByRef(db, rawRef);
     if (!quote) {
       return htmlResponse(
@@ -30,22 +30,31 @@ const handler = async (event: RoutePayload): Promise<Response> => {
       );
     }
     quotes.push(quote);
+  } else if (rawPhone && !phone) {
+    return htmlResponse(
+      renderResumePage({
+        quotes: [],
+        phone: rawPhone,
+        ref: '',
+        policyMap: {},
+        notice: `${rawPhone} is not a valid Ugandan number. Use a format like 0701 440 613.`,
+      }),
+    );
   } else if (phone) {
+    // Quotes may have been saved as +256…, 256… or 07…; match all of them.
+    const national = phone.slice(4);
+    const variants = Array.from(new Set([phone, `256${national}`, `0${national}`, national, rawPhone]));
     const found = await db.findMany(
       'insuranceQuotes',
-      { filter: { policyholderPhone: { eq: phone } }, first: 50 },
+      {
+        filter: { policyholderPhone: { in: variants } },
+        orderBy: [{ createdAt: 'DescNullsLast' }],
+        first: 50,
+      },
       ['reference', 'status', 'plate', 'vehicleMake', 'vehicleModel', 'vehicleValue', 'premium', 'policyholderPhone', 'validUntil'],
     );
-    // Also try rawPhone fallback if normalize changed format
-    const fallback = phone !== rawPhone
-      ? await db.findMany(
-          'insuranceQuotes',
-          { filter: { policyholderPhone: { eq: rawPhone } }, first: 50 },
-          ['reference', 'status', 'plate', 'vehicleMake', 'vehicleModel', 'vehicleValue', 'premium', 'policyholderPhone', 'validUntil'],
-        )
-      : [];
     const seen = new Set<string>();
-    for (const q of [...found, ...fallback]) {
+    for (const q of found) {
       const ref = String((q as any).reference);
       if (seen.has(ref)) continue;
       seen.add(ref);

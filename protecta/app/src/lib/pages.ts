@@ -215,18 +215,24 @@ export const renderKycPage = (submitPath: string, phone: string): string =>
 </form>`,
   );
 
-export const renderResumePage = (params: { quotes: RecordData[]; phone: string; ref: string; policyMap: Record<string, RecordData | null>; paymentsMap?: Record<string, RecordData[]> }): string => {
+export const renderResumePage = (params: { quotes: RecordData[]; phone: string; ref: string; policyMap: Record<string, RecordData | null>; paymentsMap?: Record<string, RecordData[]>; notice?: string }): string => {
   const q = params.quotes;
   const has = q.length > 0;
   const form = `
     <form method="get" action="/s/protecta/quotes/resume" class="no-print">
-      <div class="field"><label>Phone number</label><input name="phone" value="${escapeHtml(params.phone)}" placeholder="0701 440 613" /></div>
-      <div class="field"><label>Quote reference</label><input name="ref" value="${escapeHtml(params.ref)}" placeholder="PB-...." /></div>
-      <button class="btn" type="submit">Find my quotes</button>
+      <div class="field"><label>Phone number</label><input name="phone" type="tel" inputmode="tel" autofocus value="${escapeHtml(params.phone)}" placeholder="0701 440 613" /></div>
+      <div class="field"><label>Or quote reference (optional)</label><input name="ref" value="${escapeHtml(params.ref)}" placeholder="PB-...." /></div>
+      <button class="btn" type="submit">Search</button>
     </form>
-    <p class="muted">Enter the phone you used at purchase or your quote reference. You can then <b>Resume & complete payment</b> — a policy will be created and your PDF will be password-protected with that phone number.</p>`;
+    `;
   if (!has) {
-    return shell('Resume payment', `<h2>Resume & complete payment</h2><p class="muted">Your portal to return and finish cover. The policy is created only after payment is confirmed, and your PDF password is your phone number.</p>${form}<div class="note">No quotes found for that search. Check the number/reference and try again, or <a href="/s/protecta/">start a new quote</a>.</div>`);
+    const searched = Boolean(params.phone || params.ref);
+    const message = params.notice
+      ? escapeHtml(params.notice)
+      : searched
+        ? `No quotes found for <b>${escapeHtml(params.phone || params.ref)}</b>. Check the number or reference and try again, or <a href="/s/protecta/">start a new quote</a>.`
+        : '';
+    return shell('Find my quotes', `<h2>Find my quotes</h2><p class="muted">Enter the phone number you used to get your quote. We will list all your quotes so you can finish payment.</p>${form}${message ? `<div class="note">${message}</div>` : ''}`);
   }
   const rows = q.map((quote) => {
     const ref = String((quote as any).reference);

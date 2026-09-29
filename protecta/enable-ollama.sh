@@ -159,6 +159,7 @@ RUN=(docker run -d --name "$CONTAINER" --restart unless-stopped
 
 # Keep the previous environment except the keys we are replacing.
 while IFS= read -r env; do
+  [[ -n "$env" && "$env" == *=* ]] || continue
   key="${env%%=*}"
   case "$key" in
     OLLAMA_BASE_URL|OLLAMA_API_KEY|AI_PROVIDERS|AI_MODELS_DEFAULT_*|NODE_PORT|PATH|HOSTNAME|HOME) continue ;;

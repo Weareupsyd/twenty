@@ -455,7 +455,7 @@ button,input,select{font:inherit;color:inherit}
               </button>
               <a class="btn btn-outline btn-block" href="/s/protecta/claims/new" style="margin-top:12px">Report a claim</a>
               <div class="after fine">
-                <span>Terms and Conditions apply</span>
+                <a href="/s/protecta/terms" target="_blank" rel="noopener">Terms and Conditions apply</a>
                 <a href="${supportHref}">Call ${supportPhone}</a>
               </div>
             </div>
@@ -528,7 +528,7 @@ button,input,select{font:inherit;color:inherit}
                 </div>
                 <label class="check full" id="agreeWrap">
                   <input type="checkbox" id="agree" required />
-                  <span>I confirm these details are correct and I accept the Protecta Bode Terms and Conditions.</span>
+                  <span>I confirm these details are correct and I accept the Protecta Bode <a href="/s/protecta/terms" target="_blank" rel="noopener" style="color:var(--orange);font-weight:700">Terms and Conditions</a>.</span>
                 </label>
               </div>
               <p class="err" id="quoteErr" style="color:var(--error);font-size:13.5px;display:none;margin-top:12px"></p>

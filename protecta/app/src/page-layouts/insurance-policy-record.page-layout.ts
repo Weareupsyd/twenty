@@ -1,6 +1,9 @@
 import { definePageLayout, PageLayoutTabLayoutMode } from 'twenty-sdk/define';
 import {
+  FC_POLICY_DOCUMENTS,
   INSURANCE_POLICY,
+  LAY_TAB_POLICY_DOCS,
+  LAY_W_POLICY_DOCS,
   LAY_TAB_POLICY_CERT,
   LAY_TAB_POLICY_DETAILS,
   LAY_W_POLICY_CERT,
@@ -26,6 +29,24 @@ export default definePageLayout({
           title: 'Policy fields',
           type: 'FIELDS',
           configuration: { configurationType: 'FIELDS' },
+        },
+      ],
+    },
+    {
+      universalIdentifier: LAY_TAB_POLICY_DOCS,
+      title: 'Policy document',
+      position: 25,
+      icon: 'IconFileText',
+      layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+      widgets: [
+        {
+          universalIdentifier: LAY_W_POLICY_DOCS,
+          title: 'Generated policy document',
+          type: 'FRONT_COMPONENT',
+          configuration: {
+            configurationType: 'FRONT_COMPONENT',
+            frontComponentUniversalIdentifier: FC_POLICY_DOCUMENTS,
+          },
         },
       ],
     },

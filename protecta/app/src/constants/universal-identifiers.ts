@@ -583,3 +583,9 @@ export const WHATSAPP_BOT_PAGE_LAYOUT = 'aee67389-c855-41aa-b11b-7ac6784f1252';
 export const WHATSAPP_BOT_TAB = 'b60463ac-93bf-4e2c-affa-c9a48af97417';
 export const WHATSAPP_BOT_WIDGET = '6295c118-6079-4371-9a95-3c695824cc12';
 export const NAV_WHATSAPP_BOT = '7995f85d-25ce-4a2d-a1e1-6218f0ef3a72';
+
+// Policy record: Documents tab (generated policy document + regenerate).
+export const LAY_TAB_POLICY_DOCS = '5b0f6d2e-8c47-4a19-b3e2-91d7a4c6f058';
+export const LAY_W_POLICY_DOCS = 'c8e3a1f4-2d6b-4f7a-9e05-7b1d3c9a4e62';
+export const FC_POLICY_DOCUMENTS = 'e41a7c93-5f28-4b6d-8a1e-0c9b2d7f3a54';
+export const TERMS_PAGE = '9d2b6f41-7a3c-4e85-b0d9-6c1f8e2a5b37';

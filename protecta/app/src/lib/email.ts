@@ -19,7 +19,13 @@ export const emailConfigFromEnv = (
 
 export const sendEmail = async (
   config: EmailConfig,
-  input: { to: string; subject: string; html: string; idempotencyKey?: string },
+  input: {
+    to: string;
+    subject: string;
+    html: string;
+    idempotencyKey?: string;
+    attachments?: { filename: string; content: string }[];
+  },
 ): Promise<void> => {
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -35,6 +41,7 @@ export const sendEmail = async (
       to: [input.to],
       subject: input.subject,
       html: input.html,
+      ...(input.attachments?.length ? { attachments: input.attachments } : {}),
     }),
   });
   if (!response.ok) {

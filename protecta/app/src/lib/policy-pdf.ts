@@ -96,7 +96,7 @@ export const generatePolicyPdf = async (policy: RecordData, quote?: RecordData |
   drawRow('Number plate', String(policy.plate ?? (quote ? String((quote as any).plate ?? '') : '')));
   drawRow('Vehicle', `${String(policy.vehicleMake ?? '')} ${String(policy.vehicleModel ?? '')}`.trim() || (quote ? `${String((quote as any).vehicleMake ?? '')} ${String((quote as any).vehicleModel ?? '')}`.trim() : '—'));
   drawRow('Sum insured', sumInsured);
-  drawRow('Period', `${String(policy.periodStart ?? '—')}  →  ${String(policy.periodEnd ?? '—')}`);
+  drawRow('Period', `${String(policy.periodStart ?? '—')} to ${String(policy.periodEnd ?? '—')}`);
   drawRow('Premium paid', premium);
   if (policy.bodyType || (quote && (quote as any).bodyType)) drawRow('Body type', String(policy.bodyType ?? (quote ? String((quote as any).bodyType ?? '') : '')));
   if (policy.engineCc) drawRow('Engine (c.c.)', String(policy.engineCc));
@@ -128,7 +128,7 @@ export const generatePolicyPdf = async (policy: RecordData, quote?: RecordData |
     const displayPw = String(password);
     const digits = displayPw.replace(/[^0-9]/g, '');
     // Visible watermark that PDF is password-protected
-    page.drawText(`🔒 Password: ${displayPw} (your phone number) — required to open this PDF`, {
+    page.drawText(`Password: ${displayPw} (your phone number) — required to open this PDF`, {
       x: MARGIN,
       y: MARGIN - 36,
       size: 7,

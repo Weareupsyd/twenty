@@ -30,16 +30,17 @@ cd ~/twenty-fresh/protecta
 
 ### Production with Caddy — https://protectabode.weareupsyd.com
 
-One command to install **with Caddy TLS + Evolution API webhook** for `protectabode.weareupsyd.com`:
+If you already pulled the repo:
+
+```bash
+cd protecta
+./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com --email admin@weareupsyd.com
+```
+
+Or one-liner on a fresh VPS (no checkout needed):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/main/protecta/install.sh | bash -s -- --with-caddy --with-evolution --domain protectabode.weareupsyd.com --email admin@weareupsyd.com
-```
-
-Or from a checkout:
-
-```bash
-./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com --email admin@weareupsyd.com
 ```
 
 What it does extra:

@@ -284,6 +284,76 @@ button,input,select{font:inherit;color:inherit}
   .covers svg{width:20px;height:23px}
   #proceedBtn{margin-top:12px!important;padding:12px 18px}
 }
+
+/* ───────── Fit-to-screen layout ─────────
+   The card always fits the visible screen. Content that does not fit
+   scrolls inside the card, and the Next / Back / Pay buttons stay pinned
+   at the bottom so they never need a page scroll to reach. */
+.card-body{justify-content:flex-start!important;scrollbar-width:thin!important;-ms-overflow-style:auto!important;-webkit-overflow-scrolling:touch}
+.card-body::-webkit-scrollbar{display:block!important;width:6px}
+.card-body::-webkit-scrollbar-thumb{background:var(--sky-line);border-radius:6px}
+[data-step].active{display:flex;flex-direction:column;flex:1 0 auto;min-height:0}
+[data-step].active>form{display:flex;flex-direction:column;flex:1 0 auto}
+[data-step].active>form>.actions{margin-top:auto}
+[data-step=calc].active{justify-content:center}
+[data-step=calc].active>.calc{display:flex;flex-direction:column}
+.actions{position:sticky;bottom:0;z-index:2;background:var(--white);padding:12px 0 2px;margin-top:16px;box-shadow:0 -10px 12px -10px rgba(11,28,72,.18)}
+.actions .btn{flex:1 1 auto}
+.actions .btn-ghost{flex:0 0 auto}
+.btn,.title,.step-title,.step-sub,.fine,.lede,.covers li,.method,.stepper li{overflow-wrap:anywhere;hyphens:auto}
+.stepper li{font-size:clamp(10px,2.6vw,12px)}
+.title{font-size:clamp(20px,min(6vw,4.2svh),30px)}
+.step-title{font-size:clamp(19px,min(5.4vw,3.6svh),24px)}
+.money input{font-size:clamp(22px,min(8vw,5svh),38px)}
+.result-amount{font-size:clamp(22px,min(8vw,5svh),40px)!important}
+@media (min-width:520px){.grid{grid-template-columns:1fr 1fr}}
+
+/* Phones and tablets: the calculator comes first and fills the screen;
+   the poster follows below it. */
+@media not all and (min-width:1024px) and (min-aspect-ratio:5/4){
+  .stage{display:flex;flex-direction:column}
+  .panel{order:-1;height:100svh;min-height:0;justify-content:stretch}
+  .panel-inner{height:100%;min-height:0;padding:10px 10px 12px;justify-content:stretch}
+  .card{flex:1;min-height:0}
+  .card-body{flex:1;min-height:0;display:flex;flex-direction:column;overflow:auto}
+  .flow-head{padding:10px 16px}
+  .flow-head img{height:28px}
+}
+
+/* Short screens: tighten spacing so the whole step fits without scrolling. */
+@media (max-height:820px){
+  .card-body{padding:16px 18px}
+  .stepper{margin-bottom:12px}
+  .step-sub{margin-bottom:12px;font-size:13.5px}
+  .grid{gap:10px 12px}
+  .f input,.f select{padding:9px 11px;font-size:15px}
+  .title{margin:2px 0 6px}
+  .calc{margin-top:8px}
+  .range{margin:8px 0 2px}
+  .result{margin-top:10px;padding:10px 14px}
+  .covers{margin-top:8px}
+  .covers li{flex-direction:row;justify-content:center;padding:7px 6px;gap:6px;font-size:12.5px}
+  .covers svg{width:18px;height:21px}
+  #proceedBtn{margin-top:12px!important;padding:12px 16px}
+  #proceedBtn+.btn{margin-top:8px!important;padding:10px 16px}
+  .after{margin-top:8px}
+  .review{margin-bottom:12px}
+  .review-top{padding:10px 14px}
+  .review-top strong{font-size:22px}
+  .review dl{padding:10px 14px;gap:8px 12px}
+  .methods{margin-bottom:10px;gap:8px}
+  .method{padding:8px 6px;gap:4px}
+  .method img{height:24px}
+  .done-mark{width:56px;height:64px;margin:0 auto 8px}
+  .ref{margin:10px 0 4px}
+  .share{margin-top:12px}
+}
+@media (max-height:660px){
+  .covers,.result-meta,.step-sub{display:none}
+  .range-scale{font-size:11px}
+  .review .edit{padding-top:6px}
+  .f .hint{display:none}
+}
 @media print{
   .kv,.panel-band,.flow-head button,.share,.no-print{display:none!important}
   .panel{background:#fff}

@@ -76,7 +76,7 @@ export const whatsAppSettingsView = async (
     provider,
     webhookPath: '/s/protecta/whatsapp/webhook',
     webhookUrlDefault: defaultWebhook,
-    webhookUrlFromPublicBase,
+    webhookUrlFromPublicBase: webhookFromPublicBase,
     webhookUrlEnv: evolutionWebhookEnv,
     webhookUrlEffective: effectiveWebhook,
     publicBaseUrl: publicBaseUrl || defaultWebhook.replace('/s/protecta/whatsapp/webhook', ''),

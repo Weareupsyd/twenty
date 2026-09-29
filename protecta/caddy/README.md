@@ -34,6 +34,17 @@ protecta/
 ./scripts/setup-caddy.sh --domain protectabode.weareupsyd.com --port 2020 --email admin@weareupsyd.com
 ```
 
+Routing on the main domain:
+
+- `/` and `/admin` (plus `/admin/*`) → redirect to the public Protecta Bode
+  site `/s/protecta/`, so the domain never opens the CRM sign-in or another
+  app's admin panel
+- everything else (`/s/...`, `/welcome`, `/objects/...`, `/settings/...`,
+  APIs) → reverse proxy to the Twenty server on `localhost:PORT`
+
+Re-run `setup-caddy.sh` after changing the `Caddyfile` template — `start.sh`
+does not touch Caddy.
+
 ## Docker Caddy setup
 
 ```bash

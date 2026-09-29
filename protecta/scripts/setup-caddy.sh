@@ -107,6 +107,11 @@ write_caddyfile() {
 }
 
 $DOMAIN {
+    # Bare domain and legacy /admin open the public Protecta Bode landing.
+    @openHome path / /admin /admin/*
+    handle @openHome {
+        redir /s/protecta/ permanent
+    }
     reverse_proxy localhost:$PORT {
         header_up Host {host}
         header_up X-Real-IP {remote}
@@ -194,9 +199,12 @@ cat <<EOF
 
     Main:      https://$DOMAIN
     Landing:   https://$DOMAIN/s/protecta/
+    Root:      https://$DOMAIN/       → redirects to /s/protecta/
+    Legacy:    https://$DOMAIN/admin  → redirects to /s/protecta/
     Health:    https://$DOMAIN/s/protecta/health
     Webhook:   https://$DOMAIN/s/protecta/whatsapp/webhook  ← use this in Evolution API
     Evolution: https://$EVOLUTION_DOMAIN (if enabled, localhost:8080)
+    Staff:     https://$DOMAIN/welcome (CRM sign-in)
 
     Logs:      $LOG_DIR/protectabode.log
     Caddyfile: $CADDYFILE_DST

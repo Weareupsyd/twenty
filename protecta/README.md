@@ -45,6 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/main/protecta/ins
 
 What it does extra:
 - Installs Caddy, writes `Caddyfile` for `protectabode.weareupsyd.com → localhost:2020` and `evolution.protectabode.weareupsyd.com → localhost:8080` with auto TLS
+- The bare domain and any legacy `/admin` URL redirect to the public Protecta Bode site `/s/protecta/` — the domain never opens the CRM sign-in or a foreign admin panel; staff use `https://protectabode.weareupsyd.com/welcome`
 - Sets `PUBLIC_BASE_URL=https://protectabode.weareupsyd.com` so quote/policy/WhatsApp links use the public domain
 - Starts Evolution API + Caddy via `docker-compose.caddy.yml` with default webhook `https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook`
 - Auto-registers webhook on Evolution instance `protecta` via `scripts/setup-evolution-webhook.sh`
@@ -71,7 +72,7 @@ whole chain without asking anything:
 | API key | Reuses `TWENTY_API_KEY` or `.twenty-api-key`, otherwise mints one inside the container and saves it (chmod 600, git-ignored) |
 | Apps | Syncs Document Generator, SMS Sender and Protecta Bode into the workspace |
 | Verification | Checks that all three apps are registered in the workspace and prints the result |
-| Caddy (if --with-caddy) | Installs Caddy, writes `/etc/caddy/Caddyfile` from `Caddyfile` template for `--domain` → `localhost:PORT` with auto TLS, sets `PUBLIC_BASE_URL=https://DOMAIN` |
+| Caddy (if --with-caddy) | Installs Caddy, writes `/etc/caddy/Caddyfile` from `Caddyfile` template for `--domain` → `localhost:PORT` with auto TLS, sets `PUBLIC_BASE_URL=https://DOMAIN`; the domain root and legacy `/admin` redirect to `/s/protecta/` |
 | Evolution (if --with-evolution) | Creates `.env.evolution`, starts `evolution-api` + `caddy` via `docker-compose.caddy.yml` with `WEBHOOK_GLOBAL_URL=https://DOMAIN/s/protecta/whatsapp/webhook`, auto-registers webhook |
 
 | Flag | Meaning |
@@ -394,6 +395,7 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | --- | --- |
 | Install or redo everything | `./install.sh` |
 | Rebuild and sync | `./start.sh` |
+| Refresh Caddy routing (domain root and `/admin` → Protecta landing) | `./scripts/setup-caddy.sh` (or `./install.sh --with-caddy`) |
 | Sync one app on its own | `./twenty.sh sms` (also `app`, `docgen` or a path) |
 | Sync and watch source changes | `./start.sh --watch` |
 | Use a custom port | `./start.sh --port 3000` |

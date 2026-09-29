@@ -1,46 +1,59 @@
+import { getPublicAssetUrl } from 'twenty-sdk/utils';
+import { browserAssetUrl } from 'src/lib/browser-asset-url';
 import { escapeHtml } from 'src/lib/http';
 import { formatUgx } from 'src/lib/money';
 import { type RecordData } from 'src/lib/records';
 
 const STYLE = `
   :root { color-scheme: light; }
-  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #f4f6f8; color: #1c2b3a; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; margin: 0; background: #EEF8FB; color: #162044; }
   .wrap { max-width: 640px; margin: 0 auto; padding: 24px 16px 64px; }
   .card { background: #fff; border-radius: 16px; padding: 28px; box-shadow: 0 8px 30px rgba(20,40,70,.08); }
   .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-  .brand-mark { width: 44px; height: 44px; border-radius: 12px; background: #0a7a3d; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
+  .brand-mark { width: 44px; height: 44px; border-radius: 12px; background: #0B1C48; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
   .brand h1 { font-size: 20px; margin: 0; }
-  .brand p { margin: 2px 0 0; color: #5b6b7c; font-size: 13px; }
+  .brand p { margin: 2px 0 0; color: #56607F; font-size: 13px; }
   h2 { font-size: 16px; margin: 22px 0 10px; }
-  .rows { border-top: 1px solid #e6ecf2; }
-  .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #eef2f6; font-size: 14px; }
-  .row span:first-child { color: #5b6b7c; }
+  .rows { border-top: 1px solid #BCDCE7; }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid #DDF1F6; font-size: 14px; }
+  .row span:first-child { color: #56607F; }
   .row span:last-child { font-weight: 600; text-align: right; }
-  .pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #e8f5ec; color: #0a7a3d; }
+  .pill { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #DDF1F6; color: #0B1C48; }
   .pill.warn { background: #fff4dd; color: #9a6200; }
   .pill.bad { background: #fdeceb; color: #b3261e; }
-  .total { font-size: 22px; font-weight: 800; color: #0a7a3d; }
-  .cta { display: block; margin-top: 22px; background: #0a7a3d; color: #fff !important; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; text-decoration: none; }
-  .muted { color: #5b6b7c; font-size: 13px; margin-top: 14px; line-height: 1.5; }
+  .total { font-size: 22px; font-weight: 800; color: #CA6E2B; }
+  .cta:hover { background: #B25E20; }
+  .brand-logo { height: 56px; width: auto; display: block; }
+  .cta { display: block; margin-top: 22px; background: #CA6E2B; color: #fff !important; text-align: center; padding: 14px; border-radius: 12px; font-weight: 700; text-decoration: none; }
+  .muted { color: #56607F; font-size: 13px; margin-top: 14px; line-height: 1.5; }
   .field { margin: 12px 0; }
   .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
   .field input, .field select, .field textarea { width: 100%; padding: 12px; border: 1px solid #d4dde6; border-radius: 10px; font-size: 15px; box-sizing: border-box; }
-  .btn { width: 100%; margin-top: 8px; background: #0a7a3d; color: #fff; border: 0; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
-  .btn-outline { background: #fff; color: #0a7a3d; border: 1px solid #0a7a3d; }
+  .btn { width: 100%; margin-top: 8px; background: #0B1C48; color: #fff; border: 0; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn-outline { background: #fff; color: #0B1C48; border: 1px solid #0B1C48; }
   .btn-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
   .btn-row .btn { margin-top: 0; }
   @media (max-width: 420px) { .btn-row { grid-template-columns: 1fr; } }
-  .note { background: #f0f6ff; border: 1px solid #d6e6ff; border-radius: 10px; padding: 12px; font-size: 13px; margin-top: 16px; }
+  .note { background: #EEF8FB; border: 1px solid #BCDCE7; border-radius: 10px; padding: 12px; font-size: 13px; margin-top: 16px; }
   .alert { background: #fff4dd; border: 1px solid #f0d48a; color: #7a4a00; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-top: 12px; display: none; }
   .alert.show { display: block; }
   @media print { .no-print { display: none !important; } body { background: #fff; } .card { box-shadow: none; } }
 `;
 
+const brandLogo = (): string => {
+  try {
+    const url = browserAssetUrl(getPublicAssetUrl('brand/assets/protecta-bode-logo.png'));
+    return `<img class="brand-logo" src="${escapeHtml(url)}" alt="Protecta Bode">`;
+  } catch {
+    return '<h1>Protecta Bode</h1>';
+  }
+};
+
 const shell = (title: string, body: string): string => `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} · Protecta Bode</title><style>${STYLE}</style></head>
 <body><div class="wrap"><div class="card">
-<div class="brand"><div class="brand-mark">P</div><div><h1>Protecta Bode</h1><p>Motor cover in minutes · 1.5% of value</p></div></div>
+<div class="brand">${brandLogo()}<div><p>Motor cover in minutes · 1.5% of value</p></div></div>
 ${body}</div></div></body></html>`;
 
 const statusPill = (status: string): string => {
@@ -68,11 +81,6 @@ export const renderQuotePage = (quote: RecordData, payUrl: string): string =>
 <div class="total">${escapeHtml(formatUgx(Number(quote.premium ?? 0)))}</div>
 <p class="muted">1.5% of vehicle value · 12 months comprehensive-equivalent motor cover.</p>
 ${quote.status === 'QUOTED' ? `<a class="cta" href="/s/protecta/?ref=${encodeURIComponent(String(quote.reference))}">Pay with mobile money — resume & complete</a><p class="muted" style="margin-top:10px">Your quote is saved. If you abandon payment you can return via <a href="/s/protecta/quotes/resume?ref=${encodeURIComponent(String(quote.reference))}">this link</a> or <a href="/s/protecta/quotes/resume">Find my quotes</a> with phone ${escapeHtml(String(quote.policyholderPhone ?? ''))} to complete payment and your policy will be created. Your PDF will be password-protected with your phone number.</p>` : (quote.status === 'ACCEPTED' ? `<div class="note">This quote is already paid. <a href="/s/protecta/policies/doc?ref=${encodeURIComponent(String(quote.reference))}">View policy</a> · <a href="/s/protecta/policies/pdf?ref=${encodeURIComponent(String(quote.reference))}">Download PDF (phone as password)</a></div>` : '')}
-<div class="btn-row no-print">
-  <button class="btn btn-outline" onclick="window.print()">🖨 Print quote</button>
-  <a class="btn btn-outline" href="/s/protecta/policies/doc?ref=${escapeHtml(String(quote.reference))}" onclick="event.preventDefault(); window.open('/s/protecta/policies/doc?ref=${encodeURIComponent(String(quote.reference))}','_blank'); return false;" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">View as policy</a>
-  <a class="btn btn-outline" href="/s/protecta/quotes/pdf?ref=${escapeHtml(String(quote.reference))}" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">Download PDF</a>
-</div>
 ${quote.status === 'QUOTED' ? `<div class="no-print" style="margin-top:10px"><button class="btn" id="convertBtn" onclick="convertQuote('${escapeHtml(String(quote.reference))}')">✓ Convert to policy</button><div id="convertAlert" class="alert"></div></div>` : ''}
 <p class="muted">Questions? WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')}.</p>
 <script>
@@ -233,7 +241,7 @@ export const renderResumePage = (params: { quotes: RecordData[]; phone: string; 
       : status === 'QUOTED'
         ? (pending ? `<div class="note" style="margin-bottom:10px">Pending payment <b>${escapeHtml(String((pending as any).paymentRef ?? ''))}</b> — check your phone for the prompt, or retry.</div><a class="cta" href="/s/protecta/?ref=${encodeURIComponent(ref)}" style="margin-top:0">Resume & pay ${escapeHtml(premium)}</a> <a class="btn btn-outline" href="#" onclick="event.preventDefault(); fetch('/s/protecta/api/payments/get?ref='+encodeURIComponent('${escapeHtml(String((pending as any).paymentRef ?? ''))}')).then(r=>r.json()).then(d=>{ if(d.policy && d.policy.policyNo){ alert('Payment confirmed! Policy '+d.policy.policyNo); location.href='/s/protecta/policies/doc?ref='+encodeURIComponent(d.policy.policyNo);} else alert('Still '+d.payment.status+'. Approve on phone or try again.');}); return false;" style="margin-top:8px;display:block;text-align:center">Check status</a>` : `<a class="cta" href="/s/protecta/?ref=${encodeURIComponent(ref)}" style="margin-top:0">Resume & pay ${escapeHtml(premium)}</a>`)
         : `<span class="pill ${status === 'EXPIRED' ? 'bad' : 'warn'}">${escapeHtml(status)}</span>`;
-    return `<div class="rows" style="margin-top:16px;padding:16px;border:1px solid #e6ecf2;border-radius:12px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><strong>${escapeHtml(ref)}</strong> ${statusPill(status)}</div><div class="row"><span>Plate</span><span>${escapeHtml(String((quote as any).plate ?? ''))}</span></div><div class="row"><span>Vehicle</span><span>${escapeHtml(`${(quote as any).vehicleMake ?? ''} ${(quote as any).vehicleModel ?? ''}`.trim() || '—')}</span></div><div class="row"><span>Premium</span><span>${escapeHtml(premium)}</span></div>${policyNo ? `<div class="row"><span>Policy</span><span>${escapeHtml(policyNo)}</span></div>` : ''}<div style="margin-top:12px">${action}</div></div>`;
+    return `<div class="rows" style="margin-top:16px;padding:16px;border:1px solid #BCDCE7;border-radius:12px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><strong>${escapeHtml(ref)}</strong> ${statusPill(status)}</div><div class="row"><span>Plate</span><span>${escapeHtml(String((quote as any).plate ?? ''))}</span></div><div class="row"><span>Vehicle</span><span>${escapeHtml(`${(quote as any).vehicleMake ?? ''} ${(quote as any).vehicleModel ?? ''}`.trim() || '—')}</span></div><div class="row"><span>Premium</span><span>${escapeHtml(premium)}</span></div>${policyNo ? `<div class="row"><span>Policy</span><span>${escapeHtml(policyNo)}</span></div>` : ''}<div style="margin-top:12px">${action}</div></div>`;
   }).join('');
   return shell('Resume payment', `<h2>Resume & complete payment</h2><p class="muted">Found ${q.length} quote(s). Complete payment to create your policy — your PDF will be password-protected with <b>${escapeHtml(params.phone || 'your phone')}</b>.</p>${form}<div style="margin-top:18px">${rows}</div><p class="muted" style="margin-top:18px"><a href="/s/protecta/">Start a new quote</a></p>`);
 };

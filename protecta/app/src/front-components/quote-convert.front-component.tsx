@@ -14,7 +14,7 @@ const Component = () => (
         🖨 Print this record
       </button>
       <span style={{ marginLeft: 8, fontSize: 12 }}>
-        Tip: open the public quote page (<code>/s/protecta/quotes/view?ref=QUOTE_REF</code>) and use <b>Print quote</b> there for a clean certificate.
+        Tip: open the public quote page (<code>/s/protecta/quotes/view?ref=QUOTE_REF</code>) to share it with the customer.
       </span>
     </div>
   </div>

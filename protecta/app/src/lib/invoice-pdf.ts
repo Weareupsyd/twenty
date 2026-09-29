@@ -1,6 +1,6 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { formatUgx } from 'src/lib/money';
-import { brandFooter, createSheet, INK, NAVY, ORANGE } from 'src/lib/pdf-draw';
+import { brandFooter, createSheet, embedBrandLogo, INK, NAVY, ORANGE } from 'src/lib/pdf-draw';
 import { type RecordData } from 'src/lib/records';
 
 /** Bank transfer details, matching the payment page instructions. */
@@ -23,7 +23,7 @@ export const generatePaymentInvoice = async (
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const page = doc.addPage();
-  const sheet = createSheet(page, { font, bold }, 'Payment invoice');
+  const sheet = createSheet(page, { font, bold }, 'Payment invoice', await embedBrandLogo(doc));
 
   const ref = String(quote.reference ?? '');
   const payer = options.payerPhone || String(quote.policyholderPhone ?? '—');

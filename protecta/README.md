@@ -1,7 +1,15 @@
 # Protecta Bode
 
 Motor insurance on Twenty CRM: 1.5% quotes, mobile-money payments, policies,
-claims, a WhatsApp bot, and a partner API.
+claims, a WhatsApp bot, automatic agent commissions, and a partner API.
+
+When a policy is created or updated with an **Agent** relation, Protecta creates
+an idempotent accrued commission from the policy premium. Set the agent's
+**Commission rate (fraction)** on their Person record (for example `0.10` for
+10%); when blank, the workspace default commission rate is used. This runs for
+policy assignments made in the CRM frontend as well as policies written through
+Protecta's backend. The policy's assigned agent and commission are linked to
+existing People and Commission records.
 
 Protecta is a **Twenty app**, not a separate Docker container or a replacement
 for the Twenty homepage. `start.sh` builds and syncs `app/` into a Twenty

@@ -29,6 +29,84 @@ export type IssuedPolicy = {
   commission: RecordData | null;
 };
 
+export const ensurePolicyCommission = async (
+  db: DbClient,
+  policy: RecordData,
+  agentPersonId?: string,
+  commissionRateOverride?: number,
+): Promise<RecordData | null> => {
+  const policyId = String(policy.id ?? '');
+  const agentId = String(agentPersonId ?? policy.agentId ?? '').trim();
+  const premium = Number(policy.premiumUgx ?? 0);
+  if (!policyId || !agentId || !Number.isFinite(premium) || premium <= 0) {
+    return null;
+  }
+
+  const policyNo = String(policy.policyNo ?? '').trim();
+  const ref = `CM-${policyId}`;
+  const existing =
+    (await db.findFirst('commissions', { protectaRef: { eq: ref } }, [
+      'amountUgx',
+      'rate',
+      'policyNo',
+      'status',
+    ])) ??
+    (policyNo
+      ? await db.findFirst(
+          'commissions',
+          { protectaRef: { eq: `CM-${policyNo}` } },
+          ['amountUgx', 'rate', 'policyNo', 'status'],
+        )
+      : null);
+  if (existing) return existing;
+
+  const agent = await db.findFirst(
+    'people',
+    { id: { eq: agentId } },
+    ['protectaCommissionRate'],
+  );
+  const configuredRate = Number(process.env.COMMISSION_DEFAULT ?? 0.1);
+  const rawAgentRate = agent?.protectaCommissionRate;
+  const agentRate =
+    rawAgentRate === null || rawAgentRate === undefined || rawAgentRate === ''
+      ? Number.NaN
+      : Number(rawAgentRate);
+  const rate =
+    commissionRateOverride !== undefined &&
+    Number.isFinite(commissionRateOverride) &&
+    commissionRateOverride >= 0 &&
+    commissionRateOverride <= 1
+      ? commissionRateOverride
+      : Number.isFinite(agentRate) && agentRate >= 0 && agentRate <= 1
+        ? agentRate
+        : configuredRate;
+  if (!Number.isFinite(rate) || rate <= 0 || rate > 1) return null;
+
+  const commissionData = {
+    protectaRef: ref,
+    rate,
+    amountUgx: Math.round(premium * rate),
+    status: 'ACCRUED',
+    statementMonth: statementMonth(),
+    payoutRef: '',
+    policyNo,
+    policyId,
+    beneficiaryId: agentId,
+  };
+  try {
+    return await db.create('commission', commissionData);
+  } catch (error) {
+    // Duplicate policy-created/updated events and an issuance request may race.
+    const raced = await db.findFirst(
+      'commissions',
+      { protectaRef: { eq: ref } },
+      ['amountUgx', 'rate', 'policyNo', 'status'],
+    );
+    if (raced) return raced;
+    throw error;
+  }
+};
+
 export const issuePolicy = async (
   db: DbClient,
   input: IssuePolicyInput,
@@ -56,6 +134,7 @@ export const issuePolicy = async (
       'premiumUgx',
       'periodStart',
       'periodEnd',
+      'agentId',
     ],
   );
   if (!policy) {
@@ -80,6 +159,7 @@ export const issuePolicy = async (
         ...(quote.policyholderId
           ? { policyholderId: quote.policyholderId }
           : {}),
+        ...(input.agentPersonId ? { agentId: input.agentPersonId } : {}),
       });
     } catch (error) {
       // A concurrent callback may have won the unique quoteRef constraint.
@@ -107,40 +187,21 @@ export const issuePolicy = async (
     });
   }
 
-  let commission: RecordData | null = null;
-  if (input.agentPersonId) {
-    const premium = Number(quote.premium ?? 0);
-    const rate =
-      input.commissionRate ?? Number(process.env.COMMISSION_DEFAULT ?? 0.1);
-    const commissionKey = `CM-${policy.policyNo}`;
-    commission = await db.findFirst(
-      'commissions',
-      { protectaRef: { eq: commissionKey } },
-      ['amountUgx', 'rate', 'policyNo'],
-    );
-    if (!commission) {
-      try {
-        commission = await db.create('commission', {
-          protectaRef: commissionKey,
-          rate,
-          amountUgx: Math.round(premium * rate),
-          status: 'ACCRUED',
-          statementMonth: statementMonth(),
-          payoutRef: '',
-          policyNo: policy.policyNo,
-          policyId: policy.id,
-          beneficiaryId: input.agentPersonId,
-        });
-      } catch (error) {
-        commission = await db.findFirst(
-          'commissions',
-          { protectaRef: { eq: commissionKey } },
-          ['amountUgx', 'rate', 'policyNo'],
-        );
-        if (!commission) throw error;
-      }
-    }
+  if (input.agentPersonId && policy.agentId !== input.agentPersonId) {
+    policy = {
+      ...policy,
+      ...(await db.update('insurancePolicy', String(policy.id), {
+        agentId: input.agentPersonId,
+      })),
+    };
   }
+
+  const commission = await ensurePolicyCommission(
+    db,
+    { ...policy, premiumUgx: policy.premiumUgx ?? quote.premium },
+    input.agentPersonId,
+    input.commissionRate,
+  );
 
   return { policy, quote, commission };
 };

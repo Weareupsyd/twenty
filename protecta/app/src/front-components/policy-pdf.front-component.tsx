@@ -1,76 +1,133 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { EFFECT_POLICY_PDF } from 'src/constants/universal-identifiers';
-import { useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { CoreApiClient } from 'twenty-client-sdk/core';
 import { useSelectedRecordIds } from 'twenty-sdk/front-component';
 
+const PRIMARY_STYLE: CSSProperties = {
+  marginLeft: 8,
+  padding: '10px 16px',
+  borderRadius: 8,
+  border: '1px solid #0B1C48',
+  background: '#0B1C48',
+  color: '#fff',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
+};
+
+const SECONDARY_STYLE: CSSProperties = {
+  marginLeft: 8,
+  padding: '10px 16px',
+  borderRadius: 8,
+  border: '1px solid #BCDCE7',
+  background: '#fff',
+  color: '#0B1C48',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  display: 'inline-block',
+};
+
 const Component = () => {
   const ids = useSelectedRecordIds();
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [policyNo, setPolicyNo] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
-  const download = async () => {
-    if (ids.length !== 1) {
-      setMsg('Select exactly one policy.');
+  // Front components run inside a sandboxed Web Worker: window.print,
+  // window.open, document and fetch-with-relative-URLs are unavailable
+  // there. Resolve the policy number, then use normal links to open the
+  // document viewer in the browser for printing or downloading.
+  useEffect(() => {
+    let cancelled = false;
+    setPolicyNo(null);
+    setError('');
+
+    if (ids.length > 1) {
+      setError('Select exactly one policy.');
       return;
     }
-    setBusy(true);
-    setMsg('');
-    try {
-      // Resolve policyNo from the selected record id via Core API
-      const client = new CoreApiClient();
-      const data = (await client.query({
-        insurancePolicies: {
-          __args: { filter: { id: { eq: ids[0] } }, first: 1 },
-          edges: { node: { policyNo: true } },
-        },
-      })) as any;
-      const policyNo = data?.insurancePolicies?.edges?.[0]?.node?.policyNo;
-      if (!policyNo) throw new Error('Policy not found or missing policyNo.');
-      // Fetch PDF as blob and trigger download
-      const res = await fetch(`/s/protecta/policies/pdf?ref=${encodeURIComponent(policyNo)}`);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text.slice(0, 300) || `PDF failed (${res.status})`);
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Protecta-${policyNo}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-      setMsg(`Certificate ${policyNo} downloaded. You can also print it from the viewer.`);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Download failed.');
-    } finally {
-      setBusy(false);
+    if (ids.length !== 1) {
+      return;
     }
-  };
 
-  // Fallback: also allow direct staff-action trigger if needed via REST
-  // (kept for symmetry, but download is primary)
+    (async () => {
+      try {
+        const client = new CoreApiClient();
+        const data = (await client.query({
+          insurancePolicies: {
+            __args: { filter: { id: { eq: ids[0] } }, first: 1 },
+            edges: { node: { policyNo: true } },
+          },
+        })) as any;
+        const no = data?.insurancePolicies?.edges?.[0]?.node?.policyNo;
+        if (!no) throw new Error('Policy not found or missing policyNo.');
+        if (!cancelled) setPolicyNo(String(no));
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error ? e.message : 'Could not resolve policy.',
+          );
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ids]);
+
+  const docUrl = policyNo
+    ? `/s/protecta/policies/doc?ref=${encodeURIComponent(policyNo)}`
+    : null;
+  const pdfUrl = policyNo
+    ? `/s/protecta/policies/pdf?ref=${encodeURIComponent(policyNo)}`
+    : null;
+
   return (
-    <section style={{ padding: 24, fontFamily: 'sans-serif', color: '#0B1C48' }}>
+    <section
+      style={{ padding: 24, fontFamily: 'sans-serif', color: '#0B1C48' }}
+    >
       <h2>Generate policy document</h2>
       <p>
-        {ids.length === 1 ? 'Download the printable PDF certificate for the selected policy. Works without the Document Generator app.' : 'Select exactly one policy.'}
+        {ids.length === 1
+          ? 'Open the printable policy certificate. Printing and PDF download happen in the document viewer — the certificate PDF is password-protected with the policyholder phone number.'
+          : 'Select exactly one policy.'}
       </p>
-      <button disabled={busy || ids.length !== 1} onClick={download} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #0B1C48', background: '#0B1C48', color: '#fff', cursor: 'pointer' }}>
-        {busy ? 'Generating…' : '⬇ Download PDF'}
-      </button>
-      <button
-        disabled={busy || ids.length !== 1}
-        onClick={() => window.print()}
-        style={{ marginLeft: 8, padding: '10px 16px', borderRadius: 8, border: '1px solid #BCDCE7', background: '#fff', cursor: 'pointer' }}
-      >
-        🖨 Print
-      </button>
-      <p role="status" style={{ marginTop: 12 }}>{msg}</p>
-      <p style={{ fontSize: 13, color: '#56607F' }}>
-        Tip: You can also open <code>/s/protecta/policies/doc?ref=POLICY_NO</code> and use the <b>Download PDF</b> button there. If the Document Generator app is installed, Word/PDF under <i>Documents</i> will also appear.
+
+      {ids.length === 1 && !policyNo && !error && (
+        <p style={{ marginTop: 12, color: '#56607F' }}>Resolving policy…</p>
+      )}
+
+      {error && (
+        <p role="status" style={{ marginTop: 12, color: '#B3261E' }}>
+          {error}
+        </p>
+      )}
+
+      {docUrl && (
+        <>
+          <a
+            href={docUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={PRIMARY_STYLE}
+          >
+            🖨 Print / view certificate
+          </a>
+          <a
+            href={pdfUrl!}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={SECONDARY_STYLE}
+          >
+            ⬇ Download PDF
+          </a>
+        </>
+      )}
+
+      <p style={{ fontSize: 13, color: '#56607F', marginTop: 12 }}>
+        Tip: The document viewer also lets you print. If the Document Generator
+        app is installed, Word/PDF under <i>Documents</i> will also appear.
       </p>
     </section>
   );

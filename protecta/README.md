@@ -28,6 +28,35 @@ cd ~/twenty-fresh/protecta
 ./install.sh
 ```
 
+### Production with Caddy — https://protectabode.weareupsyd.com
+
+One command to install **with Caddy TLS + Evolution API webhook** for `protectabode.weareupsyd.com`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Weareupsyd/twenty/main/protecta/install.sh | bash -s -- --with-caddy --with-evolution --domain protectabode.weareupsyd.com --email admin@weareupsyd.com
+```
+
+Or from a checkout:
+
+```bash
+./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com --email admin@weareupsyd.com
+```
+
+What it does extra:
+- Installs Caddy, writes `Caddyfile` for `protectabode.weareupsyd.com → localhost:2020` and `evolution.protectabode.weareupsyd.com → localhost:8080` with auto TLS
+- Sets `PUBLIC_BASE_URL=https://protectabode.weareupsyd.com` so quote/policy/WhatsApp links use the public domain
+- Starts Evolution API + Caddy via `docker-compose.caddy.yml` with default webhook `https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook`
+- Auto-registers webhook on Evolution instance `protecta` via `scripts/setup-evolution-webhook.sh`
+
+DNS required before TLS works:
+```
+A  protectabode.weareupsyd.com           → YOUR_SERVER_IP
+A  evolution.protectabode.weareupsyd.com → YOUR_SERVER_IP
+```
+Then open `https://protectabode.weareupsyd.com/s/protecta/` and `https://protectabode.weareupsyd.com/settings/whatsapp-bot` (main menu → WhatsApp bot).
+
+See `EVOLUTION.md` for full Caddy + Evolution docs, manual webhook setup, and troubleshooting.
+
 [`install.sh`](./install.sh) needs **git, curl and root (or sudo)** and then does the
 whole chain without asking anything:
 
@@ -41,10 +70,18 @@ whole chain without asking anything:
 | API key | Reuses `TWENTY_API_KEY` or `.twenty-api-key`, otherwise mints one inside the container and saves it (chmod 600, git-ignored) |
 | Apps | Syncs Document Generator, SMS Sender and Protecta Bode into the workspace |
 | Verification | Checks that all three apps are registered in the workspace and prints the result |
+| Caddy (if --with-caddy) | Installs Caddy, writes `/etc/caddy/Caddyfile` from `Caddyfile` template for `--domain` → `localhost:PORT` with auto TLS, sets `PUBLIC_BASE_URL=https://DOMAIN` |
+| Evolution (if --with-evolution) | Creates `.env.evolution`, starts `evolution-api` + `caddy` via `docker-compose.caddy.yml` with `WEBHOOK_GLOBAL_URL=https://DOMAIN/s/protecta/whatsapp/webhook`, auto-registers webhook |
 
 | Flag | Meaning |
 | --- | --- |
 | `--port 3000` | Publish the server on another port (default 2020) |
+| `--domain protectabode.weareupsyd.com` | Public domain for Caddy and PUBLIC_BASE_URL (default: protectabode.weareupsyd.com) |
+| `--email admin@weareupsyd.com` | Email for Let's Encrypt TLS certs |
+| `--with-caddy` | Install and configure Caddy reverse proxy for --domain with auto TLS |
+| `--with-evolution` | Also run Evolution API (WhatsApp gateway) via docker-compose.caddy.yml with default webhook `https://DOMAIN/s/protecta/whatsapp/webhook` |
+| `--evolution-domain evolution.protectabode.weareupsyd.com` | Evolution API subdomain (proxied to localhost:8080) |
+| `--webhook-url https://.../s/protecta/whatsapp/webhook` | Override Evolution webhook URL (default: https://DOMAIN/s/protecta/whatsapp/webhook) |
 | `--watch` | Keep watching `app/src` and re-sync after the install |
 | `--branch <ref>` | Branch to clone in bootstrap mode (default `main`) |
 | `--dir <path>` | Checkout to create/use in bootstrap mode (default `~/twenty-protecta`) |

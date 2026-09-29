@@ -21,6 +21,19 @@ export const evolutionConfigFromEnv = (
   return { baseUrl, instance, apiKey };
 };
 
+export const getDefaultEvolutionWebhookUrl = (
+  env: NodeJS.ProcessEnv = process.env,
+): string => {
+  const explicit =
+    env.EVOLUTION_WEBHOOK_URL?.trim() ||
+    env.WEBHOOK_GLOBAL_URL?.trim() ||
+    '';
+  if (explicit) return explicit.replace(/\/$/, '');
+  const publicBase = (env.PUBLIC_BASE_URL?.trim() || '').replace(/\/$/, '');
+  if (publicBase) return `${publicBase}/s/protecta/whatsapp/webhook`;
+  return 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook';
+};
+
 const endpoint = (config: EvolutionConfig, path: string): string =>
   `${config.baseUrl.replace(/\/$/, '')}${path}`;
 

@@ -369,6 +369,8 @@ export const W_TARGET_URL = '8a8234e1-53af-4800-8b57-d5923c7aa0f7';
 export const VAR_REQUIRE_PAYMENT_SIGNATURE =
   'f0dee9cf-211f-4656-a557-41b54c820547';
 
+export const EVOLUTION_WEBHOOK_URL = '47a4d1e1-6a3a-463f-a285-dd369be6a963';
+
 // View fields, groups, filters and layout tabs/widgets
 export const VF_VEH_00 = 'a866a9b2-7e63-4ad9-8860-9a8a0c0745b9';
 export const VF_VEH_01 = '391b42af-71c7-4627-b3bf-5638de94d752';

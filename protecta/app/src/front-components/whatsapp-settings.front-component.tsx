@@ -14,6 +14,11 @@ type SettingsView = {
   ok: boolean;
   provider: 'evolution' | 'meta';
   webhookPath: string;
+  webhookUrlDefault: string;
+  webhookUrlFromPublicBase: string;
+  webhookUrlEnv: string;
+  webhookUrlEffective: string;
+  publicBaseUrl: string;
   botRoutes: string[];
   botMenu: BotMenuItem[];
   welcomeMessage: string;
@@ -47,6 +52,9 @@ const Component = () => {
   const [instance, setInstance] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
+  const [defaultWebhook, setDefaultWebhook] = useState('https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook');
+  const [effectiveWebhook, setEffectiveWebhook] = useState('');
+  const [publicBaseUrl, setPublicBaseUrl] = useState('');
   const [routes, setRoutes] = useState<string[]>([]);
   const [botMenu, setBotMenu] = useState<BotMenuItem[]>(DEFAULT_MENU);
   const [welcome, setWelcome] = useState('Protecta Bode — Cover Your Ride, Cover Your Life');
@@ -63,15 +71,23 @@ const Component = () => {
       setRoutes(view.botRoutes ?? []);
       setBotMenu(view.botMenu && view.botMenu.length ? view.botMenu : DEFAULT_MENU);
       setWelcome(view.welcomeMessage || 'Protecta Bode — Cover Your Ride, Cover Your Life');
-      setWebhookUrl(`${window.location.origin}${view.webhookPath}`);
+      const seededDefault = (view as any).webhookUrlDefault || 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook';
+      const effective = (view as any).webhookUrlEffective || seededDefault;
+      const fromOrigin = `${window.location.origin}${view.webhookPath || '/s/protecta/whatsapp/webhook'}`;
+      setDefaultWebhook(seededDefault);
+      setEffectiveWebhook(effective);
+      setPublicBaseUrl((view as any).publicBaseUrl || '');
+      setWebhookUrl(effective || fromOrigin);
       setStatus(
         view.evolution?.apiKeySet
-          ? `✓ Evolution API key saved (${view.evolution.apiKeyHint}). Click "Save and connect" to verify and register the webhook.`
-          : 'Not connected yet — paste the Evolution API instance that already has the bot number onboarded.',
+          ? `✓ Evolution API key saved (${view.evolution.apiKeyHint}). Seeded webhook: ${effective}. Click "Save and connect" to verify and register.`
+          : `Default Evolution webhook seeded: ${effective}. Paste Evolution instance that already has bot number onboarded.`,
       );
     } catch {
       setWebhookUrl(`${window.location.origin}/s/protecta/whatsapp/webhook`);
-      setStatus('Could not load settings. Make sure you are signed in. Open via main menu: WhatsApp bot, or Settings → WhatsApp bot. If you still don’t see it, run “yarn twenty:push”.');
+      setDefaultWebhook('https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook');
+      setEffectiveWebhook('https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook');
+      setStatus('Could not load settings. Make sure you are signed in. Open via main menu: WhatsApp bot, or Settings → WhatsApp bot. If you still don’t see it, run "yarn twenty:push".');
     }
   };
 
@@ -217,10 +233,30 @@ const Component = () => {
             API key (instance apikey)
             <input style={input} type="password" value={apiKey} placeholder="Leave blank to keep saved key" onChange={(e) => setApiKey(e.target.value)} />
           </label>
-          <label style={field}>
-            Webhook URL (Evolution must reach this — keep as is for this Twenty host)
-            <input style={input} value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
-          </label>
+          <div style={{ ...card, background: '#fff', borderColor: '#0B1C48', borderWidth: 1.5 }}>
+            <h4 style={{ margin: '0 0 8px' }}>🔗 Default Evolution webhook (seeded in Twenty CRM)</h4>
+            <div style={{ fontSize: 13, color: '#0B1C48', marginBottom: 8 }}>
+              This URL is <b>seeded</b> as <code>EVOLUTION_WEBHOOK_URL</code> = <code>https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook</code> in application config and <code>PUBLIC_BASE_URL</code> = <code>{publicBaseUrl || 'https://protectabode.weareupsyd.com'}</code>. Evolution must POST inbound WhatsApp messages here.
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+              <input style={{ ...input, flex: 1, background: '#EEF8FB', fontWeight: 600 }} value={defaultWebhook} readOnly />
+              <button type="button" style={smallBtn} onClick={() => { navigator.clipboard.writeText(defaultWebhook); setStatus(`Copied default webhook: ${defaultWebhook}`); }}>Copy</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#56607F', marginBottom: 12 }}>
+              Effective (from PUBLIC_BASE_URL / env): <code>{effectiveWebhook}</code> {publicBaseUrl ? `(PUBLIC_BASE_URL=${publicBaseUrl})` : '(using production default)'}
+            </div>
+            <label style={field}>
+              Webhook URL to register on Evolution (editable — will be POSTed to Evolution via /webhook/set)
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input style={{ ...input, flex: 1 }} value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} />
+                <button type="button" style={smallBtn} onClick={() => { navigator.clipboard.writeText(webhookUrl); setStatus(`Copied: ${webhookUrl}`); }}>Copy</button>
+                <button type="button" style={smallBtn} onClick={() => setWebhookUrl(effectiveWebhook || defaultWebhook)}>Use seeded</button>
+              </div>
+            </label>
+            <div style={{ fontSize: 12, color: '#56607F', marginTop: 8 }}>
+              <b>Manual setup:</b> <code>./scripts/setup-evolution-webhook.sh --webhook {webhookUrl}</code> or curl POST <code>/webhook/set/{'{instance}'}</code> with <code>{{"webhook":{{"enabled":true,"url":"{webhookUrl}","events":["MESSAGES_UPSERT"]}}}}</code>. Auto-set by <code>install.sh --with-evolution</code>.
+            </div>
+          </div>
 
           <button type="button" onClick={connect} disabled={busy} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#0B1C48', color: '#fff', cursor: 'pointer' }}>
             {busy ? 'Connecting…' : 'Save and connect'}

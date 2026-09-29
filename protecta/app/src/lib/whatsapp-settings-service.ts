@@ -66,10 +66,20 @@ export const whatsAppSettingsView = async (
   const apiKey = saved?.evolutionApiKey || envEvolution?.apiKey || '';
   const botMenu = saved?.botMenu && saved.botMenu.length > 0 ? saved.botMenu : DEFAULT_BOT_MENU;
   const welcomeMessage = saved?.botWelcomeMessage || 'Protecta Bode — Cover Your Ride, Cover Your Life';
+  const publicBaseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+  const evolutionWebhookEnv = (process.env.EVOLUTION_WEBHOOK_URL || process.env.WEBHOOK_GLOBAL_URL || '').replace(/\/$/, '');
+  const defaultWebhook = 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook';
+  const webhookFromPublicBase = publicBaseUrl ? `${publicBaseUrl}/s/protecta/whatsapp/webhook` : '';
+  const effectiveWebhook = evolutionWebhookEnv || webhookFromPublicBase || defaultWebhook;
   return {
     ok: true,
     provider,
     webhookPath: '/s/protecta/whatsapp/webhook',
+    webhookUrlDefault: defaultWebhook,
+    webhookUrlFromPublicBase,
+    webhookUrlEnv: evolutionWebhookEnv,
+    webhookUrlEffective: effectiveWebhook,
+    publicBaseUrl: publicBaseUrl || defaultWebhook.replace('/s/protecta/whatsapp/webhook', ''),
     botRoutes: BOT_ROUTES,
     botMenu,
     welcomeMessage,

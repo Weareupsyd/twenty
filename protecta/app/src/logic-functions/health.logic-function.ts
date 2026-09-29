@@ -2,7 +2,7 @@ import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
 import { Response } from 'twenty-sdk/logic-function';
 import { HEALTH_CHECK } from 'src/constants/universal-identifiers';
 import { jsonResponse } from 'src/lib/http';
-import { evolutionConfigFromEnv } from 'src/lib/evolution-api';
+import { evolutionConfigFromEnv, getDefaultEvolutionWebhookUrl } from 'src/lib/evolution-api';
 
 const handler = async (_event: RoutePayload): Promise<Response> =>
   jsonResponse({
@@ -14,7 +14,9 @@ const handler = async (_event: RoutePayload): Promise<Response> =>
       default: 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
       local: '/s/protecta/whatsapp/webhook',
       full: `${process.env.PUBLIC_BASE_URL || 'https://protectabode.weareupsyd.com'}/s/protecta/whatsapp/webhook`,
-      evolutionGlobal: process.env.WEBHOOK_GLOBAL_URL || 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
+      effective: getDefaultEvolutionWebhookUrl(),
+      evolutionGlobal: process.env.WEBHOOK_GLOBAL_URL || process.env.EVOLUTION_WEBHOOK_URL || 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
+      seededInTwentyCRM: 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook (EVOLUTION_WEBHOOK_URL application variable + PUBLIC_BASE_URL)',
     },
     caddy: {
       domain: 'protectabode.weareupsyd.com',

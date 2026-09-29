@@ -2,6 +2,7 @@ import { FieldType, defineApplication } from 'twenty-sdk/define';
 import {
   COMMISSION_DEFAULT,
   COOLING_DAYS,
+  EVOLUTION_WEBHOOK_URL,
   MAX_VEHICLE_VALUE,
   MIN_VEHICLE_VALUE,
   POLICY_DAYS,
@@ -101,6 +102,14 @@ export default defineApplication({
       description:
         'Public Twenty URL used to build quote, policy and payment links. For production: https://protectabode.weareupsyd.com. Leave empty to use relative links.',
       value: 'https://protectabode.weareupsyd.com',
+      isSecret: false,
+    },
+    EVOLUTION_WEBHOOK_URL: {
+      universalIdentifier: EVOLUTION_WEBHOOK_URL,
+      label: 'Evolution webhook URL',
+      description:
+        'Default webhook URL that Evolution API POSTs WhatsApp messages to. For production: https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook. Auto-configured by install.sh --with-evolution and scripts/setup-evolution-webhook.sh.',
+      value: 'https://protectabode.weareupsyd.com/s/protecta/whatsapp/webhook',
       isSecret: false,
     },
     REQUIRE_KYC_PURCHASE: {

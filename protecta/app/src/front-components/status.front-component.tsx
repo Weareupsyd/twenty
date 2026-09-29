@@ -102,6 +102,10 @@ const Component = () => {
 
   return (
     <section style={{ padding: 24, maxWidth: 720, color: '#0B1C48' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <a href="/pages/aee67389-c855-41aa-b11b-7ac6784f1252" style={{ padding: '8px 14px', borderRadius: 999, background: '#0B1C48', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>Open WhatsApp bot menu →</a>
+        <a href="/settings/whatsapp-bot" style={{ padding: '8px 14px', borderRadius: 999, border: '1px solid #BCDCE7', background: '#fff', color: '#0B1C48', textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>Settings → WhatsApp bot</a>
+      </div>
       <h2 style={{ marginTop: 0 }}>WhatsApp bot</h2>
       <p>
         Connect the Evolution API instance that already has the bot onboarded.
@@ -109,6 +113,9 @@ const Component = () => {
         secrets separately. The bot calculates premiums and onboards cover the
         same way as the website.
       </p>
+      <div style={{ border: '1px solid #BCDCE7', borderRadius: 12, padding: 12, background: '#EEF8FB', marginBottom: 12, fontSize: 13 }}>
+        <b>New:</b> Bot menus are now configurable! Go to <b>main sidebar → WhatsApp bot</b> → <b>Menus & Welcome</b> tab to edit labels, toggle items, and set welcome message. Changes apply instantly to <code>menu</code> replies.
+      </div>
       <label style={field}>
         Evolution API base URL
         <input

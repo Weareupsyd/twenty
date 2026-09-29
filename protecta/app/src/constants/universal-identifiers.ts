@@ -573,3 +573,9 @@ export const PROTECTA_DASHBOARD_W_EXPIRING = 'f5c7b4f1-2a3e-41a8-bb5c-4d8e9d2c1f
 export const PROTECTA_DASHBOARD_W_PENDING_PAYMENTS_TABLE = 'e8a12f4e-7b1a-4c3e-9c2d-5e8a9f3d2c1e';
 export const NAV_REPORTS = 'c61f9675-6e5a-49e5-a859-7d3d100e6e4b';
 export const FC_SHARE_BUTTONS = 'cf55f571-89b3-4ccd-ac34-815af660230e';
+
+// WhatsApp bot configuration page (visible in main navigation, not only Settings gear)
+export const WHATSAPP_BOT_PAGE_LAYOUT = 'aee67389-c855-41aa-b11b-7ac6784f1252';
+export const WHATSAPP_BOT_TAB = 'b60463ac-93bf-4e2c-affa-c9a48af97417';
+export const WHATSAPP_BOT_WIDGET = '6295c118-6079-4371-9a95-3c695824cc12';
+export const NAV_WHATSAPP_BOT = '7995f85d-25ce-4a2d-a1e1-6218f0ef3a72';

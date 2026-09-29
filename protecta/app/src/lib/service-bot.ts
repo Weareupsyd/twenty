@@ -31,6 +31,7 @@ import {
   quoteIssuedMessage,
   renewalQuoteMessage,
 } from 'src/lib/whatsapp-text';
+import { loadStoredWhatsAppSettings } from 'src/lib/whatsapp-settings';
 
 export const executeBotAction = async (
   db: DbClient,
@@ -171,11 +172,14 @@ export const processBotMessage = async (
     // registered, the conversation greets them and skips the name question.
     const person = await findPersonByPhone(db, phone);
     const customerName = person ? personDisplayName(person) : '';
+    const waSettings = await loadStoredWhatsAppSettings(store).catch(() => null);
     const turn = handleBotTurn(session, message.text, {
       minValue: pricing.minValue,
       maxValue: pricing.maxValue,
       rate: pricing.rate,
       ...(customerName ? { customer: { name: customerName } } : {}),
+      ...(waSettings?.botMenu ? { botMenu: waSettings.botMenu } : {}),
+      ...(waSettings?.botWelcomeMessage ? { welcomeMessage: waSettings.botWelcomeMessage } : {}),
     });
     const reply = turn.action
       ? await executeBotAction(db, phone, turn.action)

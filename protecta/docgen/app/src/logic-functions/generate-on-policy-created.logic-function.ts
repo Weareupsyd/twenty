@@ -15,7 +15,7 @@ type PolicyRecord = {
 /**
  * Link to Protecta Bode: whenever a policy is issued anywhere in the
  * workspace (bot, portal, partner API or the CRM), generate its policy
- * certificate document.
+ * document from the installed text template (not the source DOCX layout).
  */
 export const handler = async (
   payload: DatabaseEventPayload<ObjectRecordCreateEvent<PolicyRecord>>,
@@ -36,7 +36,7 @@ export default defineLogicFunction({
   universalIdentifier: GEN_ON_POLICY,
   name: 'generate-on-policy-created',
   description:
-    'Generates the policy certificate document when a Protecta policy is created.',
+    'Generates the text-template policy document when a Protecta policy is created.',
   timeoutSeconds: 30,
   handler,
   databaseEventTriggerSettings: {

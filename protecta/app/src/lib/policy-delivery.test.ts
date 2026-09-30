@@ -14,23 +14,51 @@ const makeDb = (docs: any[] | Error) => ({
 });
 
 describe('deliverPolicyDocument', () => {
-  it('sends the template document on WhatsApp and email', async () => {
+  it('sends a phone-verified download link instead of an unencrypted PDF attachment', async () => {
     const db = makeDb([{ reference: 'DOC-1', status: 'GENERATED', content: '# MOTOR PROTECTA BODE POLICY\nHello\n| A | B |\n| 1 | 2 |' }]);
-    const sendDocument = vi.fn(async () => ({ messageId: 'm' }));
+    const sendText = vi.fn(async () => ({ messageId: 'm' }));
     const sendEmailFn = vi.fn(async () => {});
-    const r = await deliverPolicyDocument(db as any, 'PB-1', { sendDocument, email: { apiKey: 'k', from: 'f' }, sendEmailFn, sleep: async () => {} });
-    expect(r).toMatchObject({ source: 'template', whatsapp: 'sent', email: 'sent' });
-    expect((sendDocument.mock.calls as any)[0][0]).toBe('+256701440613');
-    expect((sendEmailFn.mock.calls as any)[0][1].attachments[0].filename).toContain('PB-1');
+    const result = await deliverPolicyDocument(db as any, 'PB-1', {
+      sendText,
+      email: { apiKey: 'k', from: 'f' },
+      sendEmailFn,
+      sleep: async () => {},
+    });
+
+    expect(result).toMatchObject({ documentStatus: 'ready', whatsapp: 'sent', email: 'sent' });
+    expect((sendText.mock.calls as any)[0][0]).toBe('+256701440613');
+    expect((sendText.mock.calls as any)[0][1]).toContain(
+      '/s/protecta/policies/doc?ref=PB-1',
+    );
+    expect((sendEmailFn.mock.calls as any)[0][1].html).toContain(
+      '/s/protecta/policies/doc?ref=PB-1',
+    );
+    expect((sendEmailFn.mock.calls as any)[0][1].attachments).toBeUndefined();
   });
-  it('falls back to the certificate when the generator is not installed', async () => {
+
+  it('does not send an insecure certificate attachment when the generator is unavailable', async () => {
     const db = makeDb(new Error('no object'));
-    const r = await deliverPolicyDocument(db as any, 'PB-1', { sendDocument: vi.fn(async () => ({ messageId: null })), email: null, sleep: async () => {} });
-    expect(r).toMatchObject({ source: 'certificate', whatsapp: 'sent', email: 'skipped' });
+    const sendText = vi.fn(async () => ({ messageId: null }));
+    const result = await deliverPolicyDocument(db as any, 'PB-1', {
+      sendText,
+      email: null,
+      sleep: async () => {},
+    });
+
+    expect(result).toMatchObject({ documentStatus: 'unavailable', whatsapp: 'sent', email: 'skipped' });
   });
+
   it('requests a document when none appears', async () => {
     const db = makeDb([]);
-    await deliverPolicyDocument(db as any, 'PB-1', { sendDocument: null, email: null, sleep: async () => {}, attempts: 4 });
-    expect(db.create).toHaveBeenCalledWith('generatedDocument', expect.objectContaining({ policyNo: 'PB-1' }));
+    await deliverPolicyDocument(db as any, 'PB-1', {
+      sendText: null,
+      email: null,
+      sleep: async () => {},
+      attempts: 4,
+    });
+    expect(db.create).toHaveBeenCalledWith(
+      'generatedDocument',
+      expect.objectContaining({ policyNo: 'PB-1' }),
+    );
   });
 });

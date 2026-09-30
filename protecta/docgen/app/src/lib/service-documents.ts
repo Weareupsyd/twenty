@@ -98,7 +98,9 @@ export const fillGeneratedDocument = async (
   }
 
   return db.update('generatedDocument', String(current.id), {
-    content: renderTemplate(body, data),
+    content: renderTemplate(body, data, {
+      escapeHtmlValues: format === 'HTML',
+    }),
     format,
     status: 'GENERATED',
     error: '',
@@ -142,12 +144,19 @@ export const findGeneratedDocumentByRef = (
     ['reference', 'kind', 'format', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
   );
 
-export const findLatestGeneratedDocument = (
+export const findLatestGeneratedDocument = async (
   db: DbClient,
   policyNo: string,
-): Promise<RecordData | null> =>
-  db.findFirst(
+): Promise<RecordData | null> => {
+  const documents = await db.findMany(
     'generatedDocuments',
-    { policyNo: { eq: policyNo }, status: { eq: 'GENERATED' } },
+    {
+      filter: { policyNo: { eq: policyNo }, status: { eq: 'GENERATED' } },
+      orderBy: [{ createdAt: 'DescNullsLast' }],
+      first: 1,
+    },
     ['reference', 'kind', 'format', 'policyNo', 'status', 'content', 'error', 'generatedAt'],
   );
+
+  return documents[0] ?? null;
+};

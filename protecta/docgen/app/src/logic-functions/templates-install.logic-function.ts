@@ -3,10 +3,10 @@ import { Response } from 'twenty-sdk/logic-function';
 import { TEMPLATES_INSTALL } from 'src/constants/universal-identifiers';
 import { jsonResponse, parseJsonBody, str } from 'src/lib/http';
 import {
-  POLICY_TEMPLATE_BODY,
   POLICY_TEMPLATE_NAME,
   POLICY_TEMPLATE_NOTES,
 } from 'src/lib/policy-template';
+import { POLICY_TEMPLATE_HTML } from 'src/lib/policy-template-html';
 import { CoreDbClient } from 'src/lib/records';
 import { DEFAULT_DOCUMENT_KIND } from 'src/lib/service-documents';
 
@@ -56,8 +56,8 @@ const handler = async (event: RoutePayload): Promise<Response> => {
       }
       const updated = await db.update('documentTemplate', String(existing.id), {
         name,
-        body: POLICY_TEMPLATE_BODY,
-        format: 'TEXT',
+        body: POLICY_TEMPLATE_HTML,
+        format: 'HTML',
         notes: POLICY_TEMPLATE_NOTES,
       });
       return jsonResponse({
@@ -66,15 +66,15 @@ const handler = async (event: RoutePayload): Promise<Response> => {
         id: String(updated.id ?? existing.id),
         kind,
         name,
-        characters: POLICY_TEMPLATE_BODY.length,
+        characters: POLICY_TEMPLATE_HTML.length,
       });
     }
 
     const created = await db.create('documentTemplate', {
       name,
       kind,
-      format: 'TEXT',
-      body: POLICY_TEMPLATE_BODY,
+      format: 'HTML',
+      body: POLICY_TEMPLATE_HTML,
       notes: POLICY_TEMPLATE_NOTES,
     });
     return jsonResponse(
@@ -84,7 +84,7 @@ const handler = async (event: RoutePayload): Promise<Response> => {
         id: String(created.id),
         kind,
         name,
-        characters: POLICY_TEMPLATE_BODY.length,
+        characters: POLICY_TEMPLATE_HTML.length,
       },
       201,
     );

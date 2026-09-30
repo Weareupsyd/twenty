@@ -112,6 +112,54 @@ describe('mergeCustomProvidersIntoCatalog', () => {
     });
   });
 
+  it('keeps catalog models when a custom provider only overrides connection details', () => {
+    const ollamaCatalog: AiProvidersConfig = {
+      ollama: {
+        npm: '@ai-sdk/openai-compatible',
+        name: 'ollama',
+        label: 'Ollama',
+        baseUrl: '{{OLLAMA_BASE_URL}}',
+        apiKey: '{{OLLAMA_API_KEY}}',
+        models: [
+          { name: 'llama3.2', label: 'Llama 3.2' },
+          { name: 'qwen2.5', label: 'Qwen 2.5' },
+        ],
+      },
+    } as unknown as AiProvidersConfig;
+
+    const merged = mergeCustomProvidersIntoCatalog({
+      catalog: ollamaCatalog,
+      custom: {
+        ollama: {
+          npm: '@ai-sdk/openai-compatible',
+          name: 'ollama',
+          label: 'Ollama',
+          baseUrl: 'http://ollama:11434/v1',
+          apiKey: 'ollama',
+        },
+      } as unknown as AiProvidersConfig,
+    });
+
+    expect(merged.ollama.baseUrl).toBe('http://ollama:11434/v1');
+    expect(merged.ollama.apiKey).toBe('ollama');
+    expect(merged.ollama.models).toEqual(ollamaCatalog.ollama.models);
+  });
+
+  it('respects an explicitly empty custom model list', () => {
+    const merged = mergeCustomProvidersIntoCatalog({
+      catalog,
+      custom: {
+        openai: {
+          npm: '@ai-sdk/openai',
+          baseUrl: 'https://gateway.internal',
+          models: [],
+        },
+      } as unknown as AiProvidersConfig,
+    });
+
+    expect(merged.openai.models).toEqual([]);
+  });
+
   it('leaves a model the catalog does not know untouched', () => {
     const merged = mergeCustomProvidersIntoCatalog({
       catalog,

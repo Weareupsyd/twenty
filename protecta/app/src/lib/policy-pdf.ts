@@ -34,7 +34,7 @@ const wrap = (text: string, font: any, size: number, maxW: number): string[] => 
   return lines;
 };
 
-export const generatePolicyPdf = async (policy: RecordData, quote?: RecordData | null, password?: string | null): Promise<Uint8Array> => {
+export const generatePolicyPdf = async (policy: RecordData, quote?: RecordData | null): Promise<Uint8Array> => {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -123,41 +123,6 @@ export const generatePolicyPdf = async (policy: RecordData, quote?: RecordData |
     font,
     color: rgb(0.45, 0.5, 0.58),
   });
-
-  if (password) {
-    const displayPw = String(password);
-    const digits = displayPw.replace(/[^0-9]/g, '');
-    // Visible watermark that PDF is password-protected
-    page.drawText(`Password: ${displayPw} (your phone number) — required to open this PDF`, {
-      x: MARGIN,
-      y: MARGIN - 36,
-      size: 7,
-      font,
-      color: rgb(0.6, 0.2, 0.2),
-    });
-    try {
-      const js = `
-var _pw = app.response({cQuestion: "This policy PDF is password protected.\\nEnter your phone number to open it:\\n(e.g. ${displayPw})", cTitle: "Protecta Bode — Password required", bPassword: true, cLabel: "Phone"});
-if (_pw) {
-  var _d = _pw.replace(/[^0-9]/g, "");
-  var _e = "${digits}";
-  var _last9 = function(s){ return s.slice(-9); };
-  if (_last9(_d) !== _last9(_e)) {
-    app.alert("Wrong password — please enter the phone number you used at purchase (e.g. ${displayPw}).", 1);
-    this.closeDoc(true);
-  }
-} else {
-  this.closeDoc(true);
-}
-`;
-      // pdf-lib JS embedding (if available)
-      if (typeof (doc as any).addJavaScript === 'function') {
-        (doc as any).addJavaScript('protecta_password', js);
-      }
-    } catch (e) {
-      console.error('pdf js password failed', e);
-    }
-  }
 
   return doc.save();
 };

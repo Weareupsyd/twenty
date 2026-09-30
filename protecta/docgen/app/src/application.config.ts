@@ -2,6 +2,7 @@ import { defineApplication } from 'twenty-sdk/define';
 import { FieldType } from 'twenty-sdk/define';
 import {
   APP_DOCGEN,
+  VAR_HTML_TO_PDF_URL,
   VAR_PRODUCT_NAME,
   VAR_STAMP_DUTY,
   VAR_STICKER_FEES,
@@ -16,8 +17,16 @@ export default defineApplication({
   universalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
   displayName: 'Document Generator',
   description:
-    'Renders document templates into PDF and Word files. Linked to Protecta Bode: generates policy certificates when policies are issued.',
+    'Fills the Protecta policy schedule in the Word-exported HTML template and renders PDF and Word documents.',
   applicationVariables: {
+    DOCGEN_HTML_TO_PDF_URL: {
+      universalIdentifier: VAR_HTML_TO_PDF_URL,
+      label: 'HTML-to-PDF renderer URL',
+      description:
+        'Internal Gotenberg Chromium endpoint used to render and password-protect policy PDFs.',
+      value: 'http://gotenberg:3000/forms/chromium/convert/html',
+      isSecret: false,
+    },
     PRODUCT_NAME: {
       universalIdentifier: VAR_PRODUCT_NAME,
       label: 'Product name',
@@ -32,9 +41,9 @@ export default defineApplication({
       value: '+256312246500',
       isSecret: false,
     },
-    // Premium breakdown defaults for the policy schedule. Leave a rate or
-    // amount at 0 to print "—" until the value is recorded on the policy
-    // (set them to the values Liberty charges this operation).
+    // Premium breakdown defaults for the policy schedule. A zero rate leaves
+    // an unknown levy blank; the supplied HTML's sticker/stamp amounts remain
+    // the defaults unless a positive override or per-policy value is recorded.
     POLICY_TRAINING_LEVY_RATE: {
       universalIdentifier: VAR_TRAINING_LEVY_RATE,
       label: 'Training levy rate',
@@ -56,7 +65,7 @@ export default defineApplication({
     POLICY_STICKER_FEES_UGX: {
       universalIdentifier: VAR_STICKER_FEES,
       label: 'Sticker fees (UGX)',
-      description: 'Fixed sticker fee added to every policy schedule. 0 leaves the line empty.',
+      description: 'Fixed sticker fee in UGX; zero keeps the source schedule default of 6,000.',
       type: FieldType.NUMBER,
       value: 0,
       isSecret: false,
@@ -64,7 +73,7 @@ export default defineApplication({
     POLICY_STAMP_DUTY_UGX: {
       universalIdentifier: VAR_STAMP_DUTY,
       label: 'Stamp duty (UGX)',
-      description: 'Fixed stamp duty (S/Duty) added to every policy schedule. 0 leaves the line empty.',
+      description: 'Fixed stamp duty (S/Duty) in UGX; zero keeps the source schedule default of 35,000.',
       type: FieldType.NUMBER,
       value: 0,
       isSecret: false,

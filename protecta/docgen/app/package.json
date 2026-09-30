@@ -1,7 +1,7 @@
 {
   "name": "protecta-docgen",
   "version": "1.0.0",
-  "description": "Document Generator for Twenty CRM: renders policy certificates from templates into PDF and Word, linked to the Protecta Bode app.",
+  "description": "Document Generator for Twenty CRM: fills the Protecta policy HTML schedule and renders PDF and Word documents.",
   "license": "AGPL-3.0",
   "private": true,
   "engines": {

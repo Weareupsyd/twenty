@@ -47,6 +47,7 @@ const getProviderDescription = (provider: AiProviderItem): string => {
 };
 
 const isProviderConfigured = (provider: AiProviderItem): boolean =>
+  (provider.npm === '@ai-sdk/openai-compatible' && !!provider.baseUrl) ||
   !!(provider.authType || provider.apiKey || provider.hasAccessKey);
 
 export const SettingsAdminAiProviderListCard = ({

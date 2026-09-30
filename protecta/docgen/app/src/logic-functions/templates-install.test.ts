@@ -33,10 +33,8 @@ vi.mock('src/lib/records', async (importOriginal) => {
 });
 
 import { CoreDbClient } from 'src/lib/records';
-import {
-  POLICY_TEMPLATE_BODY,
-  POLICY_TEMPLATE_NAME,
-} from 'src/lib/policy-template';
+import { POLICY_TEMPLATE_NAME } from 'src/lib/policy-template';
+import { POLICY_TEMPLATE_HTML } from 'src/lib/policy-template-html';
 import templatesInstall from 'src/logic-functions/templates-install.logic-function';
 
 type RouteHandler = (
@@ -74,13 +72,16 @@ describe('templates-install route', () => {
       ok: true,
       action: 'created',
       name: POLICY_TEMPLATE_NAME,
-      characters: POLICY_TEMPLATE_BODY.length,
+      characters: POLICY_TEMPLATE_HTML.length,
     });
     const stored = workspace.store.documentTemplates[0];
     expect(stored.kind).toBe('POLICY_CERTIFICATE');
-    expect(stored.format).toBe('TEXT');
-    expect(String(stored.body)).toContain('MOTOR PROTECTA BODE POLICY SCHEDULE');
+    expect(stored.format).toBe('HTML');
+    expect(String(stored.body)).toContain('MOTOR PROTECTA BODE');
+    expect(String(stored.body)).toContain('POLICY SCHEDULE');
     expect(String(stored.body)).toContain('{{policyNo}}');
+    expect(String(stored.body)).toContain('{{policyholderName}}');
+    expect(String(stored.body)).not.toContain('image001.png');
   });
 
   it('keeps a template that is already there, edits and all', async () => {
@@ -102,7 +103,7 @@ describe('templates-install route', () => {
     const response = await handle(event({ force: '1' }));
     expect(payloadOf(response)).toMatchObject({ action: 'updated' });
     expect(String(workspace.store.documentTemplates[0].body)).toBe(
-      POLICY_TEMPLATE_BODY,
+      POLICY_TEMPLATE_HTML,
     );
   });
 

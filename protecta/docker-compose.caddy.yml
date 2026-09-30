@@ -2,9 +2,10 @@
 # Usage:
 #   docker compose -f docker-compose.caddy.yml up -d
 #   ./install.sh --with-caddy --with-evolution --domain protectabode.weareupsyd.com
+#   docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg
 #
 # This file does NOT replace twenty-app-dev; Twenty still runs via `twenty docker:start`.
-# It adds Caddy (reverse proxy + auto TLS) and Evolution API (WhatsApp gateway).
+# It adds Caddy, Evolution API, and the optional private DocGen HTML-to-PDF service.
 
 services:
   caddy:
@@ -27,6 +28,18 @@ services:
     # Alternatively, use bridge and point to host.docker.internal:
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
+
+  # Optional Chromium-based HTML-to-PDF renderer for the DocGen app.
+  # It is only reachable on Twenty's private Docker network (no published port).
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: protecta-gotenberg
+    restart: unless-stopped
+    profiles: [docgen-renderer]
+    expose:
+      - "3000"
+    networks:
+      - twenty
 
   evolution-api:
     image: atendai/evolution-api:latest
@@ -67,6 +80,11 @@ services:
     # networks:
     #   - twenty
 
+networks:
+  twenty:
+    external: true
+    name: ${TWENTY_DOCKER_NETWORK:-twenty_default}
+
 volumes:
   caddy_data:
     driver: local
@@ -76,8 +94,3 @@ volumes:
     driver: local
   evolution_store:
     driver: local
-
-# networks:
-#   twenty:
-#     external: true
-#     name: twenty_default

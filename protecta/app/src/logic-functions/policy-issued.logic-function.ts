@@ -89,7 +89,7 @@ export const handler = async (payload: { quoteRef: string }) => {
     await sendEmail(config, {
       to,
       subject: `Protecta policy ${policy.policyNo}`,
-      html: `<p>Your policy ${escapeHtml(String(policy.policyNo))} is active.</p><p><a href="${escapeHtml(policyCertUrl(publicBaseUrl(), String(policy.policyNo)))}">View your certificate</a></p>`,
+      html: `<p>Your policy ${escapeHtml(String(policy.policyNo))} is active.</p><p><a href="${escapeHtml(policyCertUrl(publicBaseUrl(), String(policy.policyNo)))}">Download your full policy PDF</a></p>`,
       idempotencyKey: key,
     });
     await kv.set(key, true);

@@ -5,6 +5,7 @@ import { htmlResponse } from 'src/lib/http';
 import { renderErrorPage, renderPolicyPage } from 'src/lib/pages';
 import { CoreDbClient } from 'src/lib/records';
 import { findPolicyByNo } from 'src/lib/service-policies';
+import { findQuoteByRef } from 'src/lib/service-quotes';
 
 const handler = async (event: RoutePayload): Promise<Response> => {
   const ref = (event.queryStringParameters?.ref ?? '').trim().toUpperCase();
@@ -12,30 +13,33 @@ const handler = async (event: RoutePayload): Promise<Response> => {
     return htmlResponse(renderErrorPage('Missing reference', 'Provide ?ref=<policyNo>.'), 400);
   }
   const db = new CoreDbClient();
-  const policy = await findPolicyByNo(db, ref);
+  let policy = await findPolicyByNo(db, ref);
+  if (!policy) {
+    const quote = await findQuoteByRef(db, ref);
+    if (quote) {
+      policy = await db.findFirst(
+        'insurancePolicies',
+        { quoteRef: { eq: String(quote.reference) } },
+        [
+          'policyNo',
+          'status',
+          'plate',
+          'vehicleMake',
+          'vehicleModel',
+          'premiumUgx',
+          'periodStart',
+          'periodEnd',
+        ],
+      );
+    }
+  }
   if (!policy) {
     return htmlResponse(
       renderErrorPage('Policy not found', `No policy with number ${ref}.`),
       404,
     );
   }
-  // Generated documents come from the optional Document Generator app;
-  // when it is not installed the lookup simply finds nothing.
-  let documents: { reference: string }[] = [];
-  try {
-    const rows = await db.findMany(
-      'generatedDocuments',
-      {
-        filter: { policyNo: { eq: ref }, status: { eq: 'GENERATED' } },
-        first: 5,
-      },
-      ['reference'],
-    );
-    documents = rows.map((row) => ({ reference: String(row.reference) }));
-  } catch {
-    documents = [];
-  }
-  return htmlResponse(renderPolicyPage(policy, documents));
+  return htmlResponse(renderPolicyPage(policy));
 };
 
 export default defineLogicFunction({

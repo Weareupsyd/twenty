@@ -99,7 +99,7 @@ export const handlePaymentRequest = async (
               payment: { ...payment, status: 'CONFIRMED' },
               policy,
               draft: true,
-              instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Your PDF is protected with your phone number (${payerPhone}) as password.`,
+              instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Download the full policy PDF and verify the phone number used at purchase.`,
             },
             201,
           );
@@ -159,7 +159,7 @@ export const handlePaymentRequest = async (
             payment: { ...payment, status: 'CONFIRMED' },
             policy,
             draft: true,
-            instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Your PDF is protected with your phone number (${payerPhone}) as password.`,
+            instructions: `Demo payment confirmed — policy ${String(policy.policyNo)} is active. Download the full policy PDF and verify the phone number used at purchase.`,
           },
           201,
         );

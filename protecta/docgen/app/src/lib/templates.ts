@@ -3,6 +3,7 @@ import {
   POLICY_TEMPLATE_BODY,
   POLICY_TEMPLATE_NAME,
 } from 'src/lib/policy-template';
+import { POLICY_TEMPLATE_HTML } from 'src/lib/policy-template-html';
 
 /**
  * Placeholder convention: `{{name}}` in a template body is replaced with
@@ -42,6 +43,12 @@ export const PLACEHOLDERS: { key: string; description: string }[] = [
     key: 'totalPremium',
     description: 'Total premium due, formatted UGX (recorded total, else the sum of the recorded lines)',
   },
+  { key: 'premiumAmount', description: 'Premium amount without the UGX prefix for the original schedule column' },
+  { key: 'trainingLevyAmount', description: 'Training levy amount without the UGX prefix for the original schedule column' },
+  { key: 'stickerFeesAmount', description: 'Sticker fee amount without the UGX prefix for the original schedule column' },
+  { key: 'vatAmount', description: 'VAT amount without the UGX prefix for the original schedule column' },
+  { key: 'stampDutyAmount', description: 'Stamp duty amount without the UGX prefix for the original schedule column' },
+  { key: 'totalPremiumAmount', description: 'Total premium without the UGX prefix for the original schedule column' },
   { key: 'periodStart', description: 'Cover start date' },
   { key: 'periodEnd', description: 'Cover end date' },
   { key: 'proposalDate', description: 'Date the proposal/quote was signed' },
@@ -52,12 +59,13 @@ export const PLACEHOLDERS: { key: string; description: string }[] = [
 ];
 
 export const DEFAULT_POLICY_TEMPLATE = POLICY_TEMPLATE_BODY;
+export const DEFAULT_POLICY_TEMPLATE_HTML = POLICY_TEMPLATE_HTML;
 
 export const DEFAULT_POLICY_TEMPLATE_NAME = POLICY_TEMPLATE_NAME;
 
 export type TemplateFormat = 'TEXT' | 'HTML';
 
-export const DEFAULT_TEMPLATE_FORMAT: TemplateFormat = 'TEXT';
+export const DEFAULT_TEMPLATE_FORMAT: TemplateFormat = 'HTML';
 
 export const findTemplate = async (
   db: DbClient,
@@ -69,10 +77,16 @@ export const findTemplate = async (
     ['name', 'kind', 'format', 'body'],
   );
   const body = typeof template?.body === 'string' ? template.body.trim() : '';
+  const isLegacyBuiltIn =
+    kind === 'POLICY_CERTIFICATE' && body === POLICY_TEMPLATE_BODY;
+
+  // Upgrade the previously installed built-in text transcription in-place at
+  // read time; custom workspace templates remain untouched.
+  if (isLegacyBuiltIn || body.length === 0) {
+    return { body: POLICY_TEMPLATE_HTML, format: DEFAULT_TEMPLATE_FORMAT };
+  }
+
   const format: TemplateFormat =
     String(template?.format ?? '').toUpperCase() === 'HTML' ? 'HTML' : 'TEXT';
-  return {
-    body: body.length > 0 ? body : DEFAULT_POLICY_TEMPLATE,
-    format: body.length > 0 ? format : DEFAULT_TEMPLATE_FORMAT,
-  };
+  return { body, format };
 };

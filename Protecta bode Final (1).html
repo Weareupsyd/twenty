@@ -135,25 +135,7 @@ ul
 
 <div class=WordSection1>
 
-<p class=MsoNormal align=left style='margin-top:0in;margin-right:574.35pt;
-margin-bottom:0in;margin-left:-42.6pt;text-align:left;text-indent:0in;
-line-height:107%'>
 
-<table cellpadding=0 cellspacing=0 align=left>
- <tr>
-  <td width=1 height=0></td>
- </tr>
- <tr>
-  <td></td>
-  <td><img width=849 height=1056
-  src="Protecta%20bode%20Final%20(1)_files/image001.png"></td>
- </tr>
-</table>
-
-<br clear=ALL>
-<span lang=EN-ZA style='font-family:"Arial Narrow",sans-serif'><br clear=all
-style='page-break-before:always'>
-</span></p>
 
 <p class=MsoNormal align=center style='margin-top:0in;margin-right:0in;
 margin-bottom:0in;margin-left:7.1pt;text-align:center;text-indent:0in;
@@ -344,7 +326,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
 
 <p class=MsoNormal align=center style='margin:0in;text-align:center;text-indent:
 0in;line-height:107%'><b><span lang=EN-ZA style='font-size:10.0pt;line-height:
-107%;font-family:"Arial",sans-serif'>P/HQ/BODE/26/000008</span></b></p>
+107%;font-family:"Arial",sans-serif'>{{policyNo}}</span></b></p>
 
 <table class=TableGrid1 border=1 cellspacing=0 cellpadding=0 align=left
  width=709 style='border-collapse:collapse;border:none;margin-left:6.75pt;
@@ -386,7 +368,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{policyholderName}}</span></p>
   </td>
   <td width=218 rowspan=3 valign=top style='width:163.3pt;border-top:none;
   border-left:none;border-bottom:solid windowtext 1.0pt;border-right:solid black 1.0pt;
@@ -394,28 +376,28 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal style='margin:0in;text-indent:0in;line-height:normal'><span
   style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>Premium          
   </span><span style='font-size:10.0pt;font-family:"Arial",sans-serif'>  </span>  <span
-  lang=EN-ZA>  </span></p>
+  lang=EN-ZA>  </span><span lang="EN-ZA" style="font-size:10.0pt;font-family:Arial,sans-serif">{{premiumAmount}}</span></p>
   <p class=MsoNormal style='margin:0in;text-indent:0in;line-height:normal'><span
   style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>Training
   Levy        </span><span style='font-size:10.0pt;font-family:"Arial",sans-serif'> </span>   <span
-  lang=EN-ZA>  </span></p>
+  lang=EN-ZA>  </span><span lang="EN-ZA" style="font-size:10.0pt;font-family:Arial,sans-serif">{{trainingLevyAmount}}</span></p>
   <p class=MsoNormal style='margin:0in;text-indent:0in;line-height:normal'><span
   style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>Sticker
   fees   </span><span lang=EN-GB style='font-size:10.0pt;font-family:"Arial",sans-serif'>               </span><span
-  lang=EN-ZA style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>6,000.00</span></p>
+  lang=EN-ZA style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>{{stickerFeesAmount}}</span></p>
   <p class=MsoNormal style='margin:0in;text-indent:0in;line-height:normal'><span
   style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>VAT           
-  </span><span lang=EN-GB style='font-size:10.0pt;font-family:"Arial",sans-serif'>                </span></p>
+  </span><span lang=EN-GB style='font-size:10.0pt;font-family:"Arial",sans-serif'>                </span><span lang="EN-ZA" style="font-size:10.0pt;font-family:Arial,sans-serif">{{vatAmount}}</span></p>
   <p class=MsoNormal style='margin:0in;text-indent:0in;line-height:normal'><u><span
   style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>S/Duty       
   </span></u><u><span lang=EN-GB style='font-size:10.0pt;font-family:"Arial",sans-serif'>                </span></u><u><span
-  lang=EN-ZA style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>35,000.00</span></u></p>
+  lang=EN-ZA style='font-size:10.0pt;font-family:"Arial",sans-serif;color:windowtext'>{{stampDutyAmount}}</span></u></p>
   <p class=MsoNormal align=left style='margin:0in;text-align:left;text-indent:
   0in;line-height:normal'><b><u><span style='font-size:10.0pt;font-family:"Arial",sans-serif;
   color:windowtext'>Total           </span></u></b><u><span lang=EN-GB
   style='font-size:10.0pt;font-family:"Arial",sans-serif'>        </span><span
   lang=EN-ZA>     </span></u><b><u><span lang=EN-ZA style='font-size:10.0pt;
-  font-family:"Arial",sans-serif;color:windowtext'>XXXXXX</span></u></b></p>
+  font-family:"Arial",sans-serif;color:windowtext'>{{totalPremiumAmount}}</span></u></b></p>
   </td>
  </tr>
  <tr style='height:18.95pt'>
@@ -431,7 +413,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   padding:0in 5.4pt 0in 5.4pt;height:18.95pt'>
   <p class=MsoNormal align=left style='margin:0in;text-align:left;text-indent:
   0in;line-height:normal'><span style='font-size:10.0pt;font-family:"Arial",sans-serif;
-  color:windowtext'>&nbsp;</span></p>
+  color:windowtext'>{{insuredAddress}}</span></p>
   </td>
  </tr>
  <tr style='height:18.1pt'>
@@ -444,7 +426,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   </td>
   <td width=283 colspan=4 valign=top style='width:212.6pt;border-top:none;
   border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
-  padding:0in 5.4pt 0in 5.4pt;height:18.1pt'></td>
+  padding:0in 5.4pt 0in 5.4pt;height:18.1pt'><p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:"Arial",sans-serif;color:windowtext'>{{businessProfession}}</span></p></td>
  </tr>
  <tr style='height:28.05pt'>
   <td width=208 colspan=2 valign=top style='width:155.7pt;border:solid black 1.0pt;
@@ -462,7 +444,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   line-height:115%;font-family:"Arial",sans-serif;color:windowtext'>(a)<span
   style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp; </span></span><span
   style='font-size:10.0pt;line-height:115%;font-family:"Arial",sans-serif;
-  color:windowtext'>From _______________ TO _____________ (Both dates
+  color:windowtext'>From {{periodStart}} TO {{periodEnd}} (Both dates
   inclusive)</span></p>
   <p class=MsoNormal style='margin:0in;text-indent:0in'><span style='font-size:
   10.0pt;line-height:103%;font-family:"Arial",sans-serif'> </span></p>
@@ -484,7 +466,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>_______________---</span></p>
+  "Arial",sans-serif;color:windowtext'>{{proposalDate}}</span></p>
   </td>
  </tr>
  <tr style='height:28.55pt'>
@@ -568,7 +550,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{plate}}</span></p>
   </td>
   <td width=113 valign=top style='width:85.05pt;border-top:none;border-left:
   none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
@@ -576,7 +558,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{vehicle}}</span></p>
   </td>
   <td width=104 valign=top style='width:77.95pt;border-top:none;border-left:
   none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
@@ -584,7 +566,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{bodyType}}</span></p>
   </td>
   <td width=57 valign=top style='width:42.55pt;border-top:none;border-left:
   none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
@@ -592,7 +574,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=center style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:center;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{engineCc}}</span></p>
   </td>
   <td width=85 valign=top style='width:63.75pt;border-top:none;border-left:
   none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
@@ -600,7 +582,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=left style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:left;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{seatingCapacity}}</span></p>
   </td>
   <td width=256 colspan=2 valign=top style='width:191.65pt;border-top:none;
   border-left:none;border-bottom:solid black 1.0pt;border-right:solid black 1.0pt;
@@ -608,7 +590,7 @@ lang=EN-ZA style='font-size:10.0pt;line-height:107%;font-family:"Arial",sans-ser
   <p class=MsoNormal align=center style='margin-top:0in;margin-right:0in;
   margin-bottom:10.0pt;margin-left:0in;text-align:center;text-indent:0in;
   line-height:115%'><span style='font-size:10.0pt;line-height:115%;font-family:
-  "Arial",sans-serif;color:windowtext'>&nbsp;</span></p>
+  "Arial",sans-serif;color:windowtext'>{{sumInsured}}</span></p>
   </td>
  </tr>
  <tr height=0>

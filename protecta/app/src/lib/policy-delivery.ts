@@ -1,25 +1,13 @@
 import { emailConfigFromEnv, sendEmail, type EmailConfig } from 'src/lib/email';
 import { escapeHtml, publicBaseUrl } from 'src/lib/http';
-import { renderPdf } from 'src/lib/policy-document/render-pdf';
-import { generatePolicyPdf } from 'src/lib/policy-pdf';
 import { type DbClient, type RecordData } from 'src/lib/records';
 import { findPersonByPhone, findQuoteByRef, personPrimaryEmail } from 'src/lib/service-quotes';
-import {
-  whatsAppDocSender,
-  type OutboundWhatsAppDocument,
-  type WhatsAppDocSender,
-} from 'src/lib/whatsapp-transport';
+import { whatsAppSender, type WhatsAppSender } from 'src/lib/whatsapp-transport';
 
 /**
- * Final policy delivery: once a policy exists (payment confirmed), build the
- * full "Motor Protecta Bode Policy" document from the Liberty template
- * (Protecta bode Final.docx, rendered by the Document Generator app) and
- * send it to the buyer on WhatsApp and by email.
- *
- * The Document Generator fills the template on `insurancePolicy.created`.
- * We wait for that record; if it never appears we ask it to generate one;
- * if the Document Generator is not installed we fall back to the Protecta
- * certificate PDF so the buyer always receives something.
+ * Final policy delivery sends the customer a link to the phone-verified
+ * full-policy download. Do not attach a PDF here: until true PDF encryption
+ * is available, attachments would bypass the phone gate.
  */
 
 type Sleep = (ms: number) => Promise<void>;
@@ -98,43 +86,9 @@ export const waitForPolicyDocument = async (
   return null;
 };
 
-export type PolicyFile = OutboundWhatsAppDocument & { source: 'template' | 'certificate' };
-
-export const buildPolicyFile = async (
-  policy: RecordData,
-  quote: RecordData | null,
-  document: RecordData | null,
-): Promise<PolicyFile> => {
-  const policyNo = String(policy.policyNo ?? '');
-  const safeNo = policyNo.replace(/[^A-Za-z0-9-]/g, '');
-  const caption =
-    `Protecta Bode policy ${policyNo} is active. Attached is your Motor Protecta Bode ` +
-    `Policy from Liberty General Insurance Uganda. Keep it safe.`;
-  if (document) {
-    const bytes = await renderPdf(String(document.content), {
-      footerLeft: `Policy ${policyNo} · Document ${String(document.reference ?? '')}`,
-    });
-    return {
-      fileName: `Protecta-Bode-Policy-${safeNo}.pdf`,
-      caption,
-      base64: Buffer.from(bytes).toString('base64'),
-      mimeType: 'application/pdf',
-      source: 'template',
-    };
-  }
-  const bytes = await generatePolicyPdf(policy, quote);
-  return {
-    fileName: `Protecta-Bode-Certificate-${safeNo}.pdf`,
-    caption,
-    base64: Buffer.from(bytes).toString('base64'),
-    mimeType: 'application/pdf',
-    source: 'certificate',
-  };
-};
-
 export type DeliveryResult = {
   policyNo: string;
-  source: PolicyFile['source'];
+  documentStatus: 'ready' | 'pending' | 'unavailable';
   whatsapp: 'sent' | 'skipped' | 'failed';
   email: 'sent' | 'skipped' | 'failed';
   errors: string[];
@@ -147,8 +101,8 @@ const policyEmailHtml = (policy: RecordData, name: string, viewUrl: string): str
   <b>${escapeHtml(String(policy.policyNo ?? ''))}</b> is now active.</p>
   <p>Vehicle: ${escapeHtml(String(policy.plate ?? ''))}<br>
   Cover: ${escapeHtml(String(policy.periodStart ?? ''))} to ${escapeHtml(String(policy.periodEnd ?? ''))}</p>
-  <p>Your policy document is attached. You can also view it online:
-  <a href="${escapeHtml(viewUrl)}">${escapeHtml(viewUrl)}</a></p>
+  <p>Download your full policy PDF. You will verify the phone number used at purchase before downloading:
+  <a href="${escapeHtml(viewUrl)}">Open your policy</a></p>
   <p>Protecta Bode · underwritten by Liberty General Insurance Uganda</p>
 </div>`;
 
@@ -156,7 +110,7 @@ export const deliverPolicyDocument = async (
   db: DbClient,
   policyNo: string,
   deps: {
-    sendDocument?: WhatsAppDocSender | null;
+    sendText?: WhatsAppSender | null;
     email?: EmailConfig | null;
     sendEmailFn?: typeof sendEmail;
     sleep?: Sleep;
@@ -183,25 +137,28 @@ export const deliverPolicyDocument = async (
     sleep: deps.sleep,
     attempts: deps.attempts,
   });
-  const file = await buildPolicyFile(policy, quote, document);
   const base = publicBaseUrl();
-  const viewUrl = document
-    ? `${base}/s/docgen/documents/view?ref=${encodeURIComponent(String(document.reference))}`
-    : `${base}/s/protecta/policies/doc?ref=${encodeURIComponent(policyNo)}`;
-
+  const viewUrl = `${base}/s/protecta/policies/doc?ref=${encodeURIComponent(policyNo)}`;
   const result: DeliveryResult = {
     policyNo,
-    source: file.source,
+    documentStatus: isReady(document)
+      ? 'ready'
+      : document
+        ? 'pending'
+        : 'unavailable',
     whatsapp: 'skipped',
     email: 'skipped',
     errors: [],
   };
 
-  const sendDocument =
-    deps.sendDocument !== undefined ? deps.sendDocument : await whatsAppDocSender();
-  if (phone && sendDocument) {
+  const message =
+    `Your Protecta Bode policy ${policyNo} is active. Download the full policy PDF: ` +
+    `${viewUrl} Enter the phone number used at purchase to continue.`;
+  const sendText =
+    deps.sendText !== undefined ? deps.sendText : await whatsAppSender();
+  if (phone && sendText) {
     try {
-      await sendDocument(phone, { ...file, caption: `${file.caption} ${viewUrl}` });
+      await sendText(phone, message);
       result.whatsapp = 'sent';
     } catch (error) {
       result.whatsapp = 'failed';
@@ -217,7 +174,6 @@ export const deliverPolicyDocument = async (
         subject: `Your Protecta Bode policy ${policyNo}`,
         html: policyEmailHtml(policy, name, viewUrl),
         idempotencyKey: `policy-doc-${policyNo}`,
-        attachments: [{ filename: file.fileName, content: file.base64 }],
       });
       result.email = 'sent';
     } catch (error) {

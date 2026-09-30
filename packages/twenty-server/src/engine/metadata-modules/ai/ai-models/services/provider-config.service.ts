@@ -2,12 +2,30 @@ import { Injectable } from '@nestjs/common';
 
 import { type ConfigVariables } from 'src/engine/core-modules/twenty-config/config-variables';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { AI_SDK_OPENAI_COMPATIBLE } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-sdk-package.const';
 import { DefaultAiCatalogService } from 'src/engine/metadata-modules/ai/ai-models/services/default-ai-catalog.service';
 
 import { type AiProviderConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-provider-config.type';
 import { type AiProvidersConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-providers-config.type';
 import { extractConfigVariableName } from 'src/engine/metadata-modules/ai/ai-models/utils/extract-config-variable-name.util';
 import { mergeCustomProvidersIntoCatalog } from 'src/engine/metadata-modules/ai/ai-models/utils/merge-custom-providers-into-catalog.util';
+
+const isLocalOllamaUrl = (baseUrl?: string): boolean => {
+  if (!baseUrl) {
+    return false;
+  }
+
+  try {
+    const url = new URL(baseUrl);
+
+    return (
+      url.protocol === 'http:' &&
+      ['ollama', 'localhost', '127.0.0.1', '[::1]'].includes(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+};
 
 @Injectable()
 export class ProviderConfigService {
@@ -30,15 +48,36 @@ export class ProviderConfigService {
     // user-supplied custom providers, to prevent config variable exfiltration.
     const catalog = this.resolveTemplates(rawCatalog);
 
-    // Dropping the custom entries rather than filtering the merged map also
-    // restores a catalog provider that a custom entry of the same name shadows.
+    const customProviders = this.twentyConfigService.get('AI_PROVIDERS');
+
     if (!includeCustomProviders) {
-      return catalog;
+      // Ollama is also a first-party local catalog provider. Keep its local
+      // connection settings available above the custom-provider seat limit,
+      // but only for the bundled provider/model list and a local Docker/loopback
+      // endpoint. Other custom providers and user-added Ollama models stay
+      // subject to the Organization entitlement.
+      const ollamaOverride = customProviders.ollama;
+
+      if (
+        !catalog.ollama?.models?.length ||
+        ollamaOverride?.npm !== AI_SDK_OPENAI_COMPATIBLE ||
+        !isLocalOllamaUrl(ollamaOverride.baseUrl)
+      ) {
+        return catalog;
+      }
+
+      const localOllamaConfig = { ...ollamaOverride };
+      delete localOllamaConfig.models;
+
+      return mergeCustomProvidersIntoCatalog({
+        catalog,
+        custom: { ollama: localOllamaConfig },
+      });
     }
 
     return mergeCustomProvidersIntoCatalog({
       catalog,
-      custom: this.twentyConfigService.get('AI_PROVIDERS'),
+      custom: customProviders,
     });
   }
 

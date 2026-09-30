@@ -44,7 +44,7 @@ export const policyIssuedMessage = (args: {
     `• Policy: ${args.policyNo}`,
     `• Plate: ${args.plate}`,
     `• Cover until: ${args.periodEnd}`,
-    `Certificate: ${args.certUrl}`,
+    `Full policy PDF: ${args.certUrl}`,
   ].join('\n');
 
 export const claimUpdateMessage = (args: {

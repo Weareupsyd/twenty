@@ -7,8 +7,8 @@ import {
 
 export default defineCommandMenuItem({
   universalIdentifier: STAFF_POLICY_PDF,
-  label: 'Generate policy document (PDF)',
-  shortLabel: 'Generate PDF',
+  label: 'Download full policy PDF',
+  shortLabel: 'Policy PDF',
   isPinned: true,
   availabilityType: 'RECORD_SELECTION',
   availabilityObjectUniversalIdentifier: INSURANCE_POLICY,

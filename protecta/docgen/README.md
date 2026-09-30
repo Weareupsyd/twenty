@@ -1,11 +1,11 @@
 # Protecta Document Generator
 
-A standalone Twenty CRM app that turns document templates into **PDF** and
-**Word** files. It is linked to the **Protecta Bode** app: whenever a policy
-is issued in the workspace, the full **Liberty General Insurance Uganda
-Ltd "Motor Protecta Bode Policy"** document is generated automatically —
-cover page, policy schedule with the insured's and vehicle's particulars,
-premium breakdown, cover limits and the complete policy wording.
+A standalone Twenty CRM app that renders document templates into **PDF**
+and **Word** files. It is linked to the **Protecta Bode** app. The built-in
+policy template uses the Word-exported HTML at
+`Protecta bode Final (1).html`, fills the schedule from CRM records, and sends
+the HTML to a Chromium-based renderer for PDF output. The broken cover-image
+reference was removed as requested.
 
 Both apps install side by side into the same workspace (`start.sh` syncs
 them together). The link works through shared workspace records and events —
@@ -32,10 +32,10 @@ means creating another one, so earlier documents stay as they were.
 
 ## Templates and placeholders
 
-Templates live in the **Document templates** object. A template has a `kind`
-and a `body`. When no template exists for a kind (or its body is empty), the
-built-in template is used — the whole Liberty policy document, so a freshly
-installed workspace generates the correct document with no setup.
+Templates live in the **Document templates** object. A template has a `kind`,
+`format` and `body`. For the policy kind, the built-in HTML template is used
+when no template exists, when its body is empty, or when it finds the previous
+built-in text transcription. Custom workspace templates are preserved.
 
 To get an editable copy in the CRM:
 
@@ -45,8 +45,9 @@ curl -X POST "$PUBLIC_BASE_URL/s/docgen/templates/install?force=1"   # restore t
 ```
 
 The route returns the template record id. Without `force=1` an existing
-template is left alone, so local edits are never overwritten by accident.
-Text templates are plain text with a few layout markers:
+custom template is left alone. `force=1` restores the built-in Word-exported
+HTML template. The previous plain-text format remains supported for custom
+templates; its layout markers are:
 
 | Marker | Meaning |
 |---|---|
@@ -64,7 +65,8 @@ Text templates are plain text with a few layout markers:
 | `{{bodyType}}`, `{{engineCc}}`, `{{seatingCapacity}}` | policy fields, else the vehicle record for that plate |
 | `{{plate}}`, `{{vehicle}}`, `{{vehicleMake}}`, `{{vehicleModel}}`, `{{vehicleYear}}` | policy fields, else the vehicle record |
 | `{{policyholderName}}`, `{{insuredAddress}}`, `{{businessProfession}}`, `{{policyholderPhone}}` | the policyholder person (via the quote) |
-| `{{trainingLevy}}`, `{{stickerFees}}`, `{{vat}}`, `{{stampDuty}}`, `{{totalPremium}}` | policy fields, else the app settings below, else "—" |
+| `{{trainingLevy}}`, `{{stickerFees}}`, `{{vat}}`, `{{stampDuty}}`, `{{totalPremium}}` | formatted amounts for text templates |
+| `{{premiumAmount}}`, `{{trainingLevyAmount}}`, `{{stickerFeesAmount}}`, `{{vatAmount}}`, `{{stampDutyAmount}}`, `{{totalPremiumAmount}}` | amounts without a currency prefix for the original HTML schedule |
 | `{{proposalDate}}` | the quote's creation date, else the cover start |
 | `{{productName}}`, `{{supportPhone}}` | app settings |
 | `{{issuedDate}}`, `{{reference}}` | generation time / document reference |
@@ -85,20 +87,45 @@ lines:
 | `POLICY_STICKER_FEES_UGX` | fixed sticker fee per policy |
 | `POLICY_STAMP_DUTY_UGX` | fixed stamp duty per policy |
 
-`0` (the default) means "not set": that line prints "—" until either the
-setting or the matching per-policy field (`Training levy (UGX)`, `VAT (UGX)`,
-`Sticker fees (UGX)`, `Stamp duty (UGX)`, `Total premium (UGX)`) is filled in.
-Per-policy values always win. `Total` is the recorded total when there is
-one, otherwise the sum of the lines that are known.
+`0` means "not configured" for training levy and VAT, so those lines print
+"—" until a policy value or app setting is available. The supplied HTML
+schedule itself specifies sticker fees of UGX 6,000 and stamp duty of UGX
+35,000; recorded policy values or nonzero app settings override those source
+defaults. A recorded total always wins; otherwise the HTML schedule total is
+calculated from the premium and known line items.
 
-### The policy wording itself
+### The policy HTML and schedule mapping
 
-`src/lib/policy-template.ts` carries the wording verbatim from
-`Protecta bode Final.docx` (repository root), including its original
-spelling and its typographical quirks, so the generated document is the
-contract Liberty issued. Edit the wording in the CRM (install the template,
-then change the body) or in that file; `PLACEHOLDERS` is the single place
-that documents what may be referenced.
+The policy template is the Word-exported `Protecta bode Final (1).html` at
+the repository root, bundled as `src/lib/policy-template-html.ts` for the
+logic-function runtime. CRM values replace placeholders in the schedule;
+unknown premium components print as an em dash instead of a guessed amount.
+The converted file includes Word-specific styles and page-break rules. The
+Chromium result must still be visually checked against the source HTML because
+browser rendering can differ from Microsoft Word.
+
+The source HTML's broken external cover-image reference was intentionally
+removed; no sidecar image asset is required.
+
+### HTML-to-PDF runtime
+
+The policy PDF route submits the filled HTML to Gotenberg's Chromium endpoint and sets the phone number entered by the customer as the PDF open password.
+Set the DocGen application variable `DOCGEN_HTML_TO_PDF_URL` (or the equivalent Twenty server environment variable); it defaults to the internal Gotenberg address below:
+
+```text
+DOCGEN_HTML_TO_PDF_URL=http://gotenberg:3000/forms/chromium/convert/html
+```
+
+The optional renderer service is defined in `protecta/docker-compose.caddy.yml`.
+Start it with `docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg`.
+It joins the external Twenty network (default `twenty_default`) and does not
+publish a public port. Set `TWENTY_DOCKER_NETWORK` if your Twenty Docker network
+has a different name. The Twenty app runtime must be able to resolve and
+reach this service, and its `DOCGEN_HTML_TO_PDF_URL` application variable must
+match the endpoint; a missing or unreachable renderer produces a 503 rather
+than silently flattening the policy HTML to text.
+
+Gotenberg encrypts the resulting PDF with that same phone number as its user/open password. The response is checked for a PDF signature before it is offered to the customer. The phone form submits by POST so the phone number is not placed in the URL.
 
 ## Fields the document reads from Protecta
 
@@ -122,11 +149,10 @@ as quotes are created.
 - Route responses are string-only in the logic-function runtime, so the PDF
   preview and the Word download are delivered as base64 `data:` URLs on HTML
   pages (the PDF page also offers a Download PDF link).
-- The document view serves text templates as the styled document itself
-  (headings, clauses, lists and the schedule tables), with links to the PDF
-  and Word file; `?asPdf=1` gives the PDF preview. The PDF keeps the same
-  structure: headings, bullets, tables with a repeated header row, page
-  numbers and a `Policy … · Document …` footer.
+- Generic document views provide preview, PDF, Word and print actions. The
+  public Protecta policy route submits phone verification by POST, then offers
+  exactly one PDF download. Gotenberg protects the PDF with the entered phone
+  number as its open password.
 - `Generated documents.reference` is auto-generated (`DOC-XXXXXX`) with the
   same fill-on-create pattern Protecta uses for its record references.
 - The app's role reads Protecta's records (policies, quotes, people) in the

@@ -6,7 +6,7 @@ const Component = () => (
   <div>
     <StaffAction action="quote-convert" title="Convert quote to policy" />
     <div style={{ padding: '0 24px 24px', fontFamily: 'sans-serif', color: '#56607F', fontSize: 13 }}>
-      <p>After conversion you can print the quote or open the policy certificate.</p>
+      <p>After conversion the customer can download the full policy PDF through the phone-verified policy page.</p>
       <button
         onClick={() => window.print()}
         style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #BCDCE7', background: '#fff', cursor: 'pointer' }}

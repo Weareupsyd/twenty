@@ -1,20 +1,15 @@
 /**
- * The Protecta Bode motor policy as issued by Liberty General Insurance
- * Uganda Ltd (LGIUL): cover page, policy schedule, the full policy
- * wording, general conditions and endorsements.
- *
- * Source: `Protecta bode Final.docx` (repository root). The wording is
- * reproduced verbatim, including its original spelling, so the document
- * stays the contract that was signed; the schedule values come from the
- * Protecta records at generation time. Edit the wording in the CRM
- * (Document templates) or here - see README.md.
+ * Legacy text transcription of the Protecta Bode policy, retained for
+ * existing custom text-template workflows. New policy generation uses the
+ * Word-exported HTML in `policy-template-html.ts`, with CRM fields populated
+ * in its original schedule.
  *
  * Layout markers: `#`/`##`/`###` headings, `-` bullets, `| … |` tables.
  */
 export const POLICY_TEMPLATE_NAME = 'Liberty Motor Protecta Bode policy';
 
 export const POLICY_TEMPLATE_NOTES =
-  'Full policy wording with schedule: insured particulars, vehicle, premium breakdown and cover limits come from the Protecta records.';
+  'Word-exported HTML policy template; available schedule values are filled from Protecta records before Chromium PDF rendering.';
 
 export const POLICY_TEMPLATE_BODY = `# MOTOR PROTECTA BODE POLICY
 Liberty General Insurance Uganda Ltd (LGIUL)

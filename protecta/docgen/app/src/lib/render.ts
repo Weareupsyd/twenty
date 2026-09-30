@@ -21,6 +21,9 @@ const numberOrNull = (value: unknown): number | null => {
 const moneyOrEmpty = (value: number | null): string =>
   value === null ? '' : formatUgx(value);
 
+const moneyWithoutCurrency = (value: number | null): string =>
+  value === null ? '—' : Math.round(value).toLocaleString('en-US');
+
 /** Configuration an operator sets once per deployment (app settings). */
 export type ScheduleConfig = {
   trainingLevyRate: number | null;
@@ -192,6 +195,19 @@ export const assembleDocumentData = async (
     .join(' ');
 
   const breakdown = premiumBreakdown(policy, args.config);
+  // The supplied policy HTML specifies these fixed schedule charges. Recorded
+  // per-policy values or deployment settings override the source defaults.
+  const htmlStickerFees = breakdown.stickerFees ?? 6_000;
+  const htmlStampDuty = breakdown.stampDuty ?? 35_000;
+  const htmlTotalPremium =
+    numberOrNull(policy.totalPremiumUgx) ??
+    (breakdown.premium === null
+      ? null
+      : breakdown.premium +
+        (breakdown.trainingLevy ?? 0) +
+        htmlStickerFees +
+        (breakdown.vat ?? 0) +
+        htmlStampDuty);
 
   const data: DocumentData = {
     policyNo: String(policy.policyNo ?? args.policyNo),
@@ -222,6 +238,12 @@ export const assembleDocumentData = async (
     vat: moneyOrEmpty(breakdown.vat),
     stampDuty: moneyOrEmpty(breakdown.stampDuty),
     totalPremium: moneyOrEmpty(breakdown.total),
+    premiumAmount: moneyWithoutCurrency(breakdown.premium),
+    trainingLevyAmount: moneyWithoutCurrency(breakdown.trainingLevy),
+    stickerFeesAmount: moneyWithoutCurrency(htmlStickerFees),
+    vatAmount: moneyWithoutCurrency(breakdown.vat),
+    stampDutyAmount: moneyWithoutCurrency(htmlStampDuty),
+    totalPremiumAmount: moneyWithoutCurrency(htmlTotalPremium),
     periodStart: isoDate(policy.periodStart),
     periodEnd: isoDate(policy.periodEnd),
     proposalDate: isoDate(quote?.createdAt) || isoDate(policy.periodStart),
@@ -233,8 +255,21 @@ export const assembleDocumentData = async (
   return { data, error: null };
 };
 
-/** Replace `{{key}}` placeholders; unknown keys are left visible. */
-export const renderTemplate = (body: string, data: DocumentData): string =>
-  body.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, key: string) =>
-    key in data ? (data[key] || '—') : match,
+const escapeHtmlValue = (value: string): string =>
+  value.replace(/[&<>"']/g, (char) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[
+      char
+    ] ?? char,
   );
+
+/** Replace `{{key}}` placeholders; unknown keys are left visible. */
+export const renderTemplate = (
+  body: string,
+  data: DocumentData,
+  options: { escapeHtmlValues?: boolean } = {},
+): string =>
+  body.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (match, key: string) => {
+    if (!(key in data)) return match;
+    const value = data[key] || '—';
+    return options.escapeHtmlValues ? escapeHtmlValue(value) : value;
+  });

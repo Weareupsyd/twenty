@@ -145,15 +145,40 @@ export const inheritCatalogReadings = ({
   return result;
 };
 
-// A custom entry replaces the catalog provider of the same name; providers it
-// does not name stay as the catalog has them.
+// A custom entry overrides the catalog provider's settings; catalog models
+// stay in place unless the custom entry explicitly provides its own list.
 export const mergeCustomProvidersIntoCatalog = ({
   catalog,
   custom,
 }: {
   catalog: AiProvidersConfig;
   custom: AiProvidersConfig;
-}): AiProvidersConfig => ({
-  ...catalog,
-  ...inheritCatalogReadings({ catalog, providers: custom }),
-});
+}): AiProvidersConfig => {
+  const customWithReadings = inheritCatalogReadings({
+    catalog,
+    providers: custom,
+  });
+  const merged: AiProvidersConfig = { ...catalog };
+
+  for (const [providerName, customProvider] of Object.entries(
+    customWithReadings,
+  )) {
+    const catalogProvider = catalog[providerName];
+
+    // A custom entry that only overrides connection details should not erase
+    // the catalog's known models. This is especially important for local
+    // providers such as Ollama: they need a base URL, not a paid API key, and
+    // should work without requiring a separately-added model (which is gated
+    // as a custom-provider feature). An explicit models array still replaces
+    // the catalog list, including an explicit empty array.
+    merged[providerName] = {
+      ...(catalogProvider ?? {}),
+      ...customProvider,
+      ...(!isDefined(customProvider.models) && isDefined(catalogProvider?.models)
+        ? { models: catalogProvider.models }
+        : {}),
+    };
+  }
+
+  return merged;
+};

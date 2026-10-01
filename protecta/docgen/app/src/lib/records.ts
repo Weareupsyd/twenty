@@ -1,4 +1,4 @@
-import { CoreApiClient } from 'twenty-client-sdk/core';
+import { coreGraphQlClient, type CoreGraphQlClient } from 'src/lib/core-client';
 
 export type RecordData = Record<string, unknown>;
 
@@ -48,10 +48,10 @@ const selection = (
 type GraphQlEdge = { node: RecordData };
 
 export class CoreDbClient implements DbClient {
-  private readonly client: CoreApiClient;
+  private readonly client: CoreGraphQlClient;
 
   constructor(options: { runAs?: 'user' | 'application' } = {}) {
-    this.client = new CoreApiClient(options);
+    this.client = coreGraphQlClient(options);
   }
 
   async findFirst(
@@ -85,7 +85,7 @@ export class CoreDbClient implements DbClient {
         },
         edges: { node: selection(select, objectPlural) },
       },
-    })) as unknown as Record<string, { edges?: GraphQlEdge[] }>;
+    })) as Record<string, { edges?: GraphQlEdge[] }>;
     return (result[objectPlural]?.edges ?? []).map((edge) => edge.node);
   }
 
@@ -96,7 +96,7 @@ export class CoreDbClient implements DbClient {
         __args: { data },
         id: true,
       },
-    })) as unknown as Record<string, RecordData>;
+    })) as Record<string, RecordData>;
     if (!result[key]?.id)
       throw new Error(`Record mutation ${key} returned no record.`);
     return { ...data, ...result[key] };
@@ -113,7 +113,7 @@ export class CoreDbClient implements DbClient {
         __args: { id, data },
         id: true,
       },
-    })) as unknown as Record<string, RecordData>;
+    })) as Record<string, RecordData>;
     if (!result[key]?.id)
       throw new Error(`Record mutation ${key} returned no record.`);
     return { ...data, ...result[key] };

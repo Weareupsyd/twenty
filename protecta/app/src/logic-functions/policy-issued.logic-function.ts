@@ -1,9 +1,9 @@
 import { defineLogicFunction } from 'twenty-sdk/define';
 import { kv, RetryableLogicFunctionError } from 'twenty-sdk/logic-function';
 import { POLICY_ISSUED } from 'src/constants/universal-identifiers';
+import { coreGraphQlClient } from 'src/lib/core-client';
 import { emailConfigFromEnv, sendEmail } from 'src/lib/email';
 import { escapeHtml, publicBaseUrl } from 'src/lib/http';
-import { CoreApiClient } from 'twenty-client-sdk/core';
 import { CoreDbClient } from 'src/lib/records';
 import { policyCertUrl } from 'src/lib/service-policies';
 import { findQuoteByRef } from 'src/lib/service-quotes';
@@ -72,7 +72,7 @@ export const handler = async (payload: { quoteRef: string }) => {
   }
   const key = `policy-email:${policy.id}`;
   if (await kv.get(key)) return { alreadySent: true, sms };
-  const data = (await new CoreApiClient().query({
+  const data = (await coreGraphQlClient().query({
     people: {
       __args: {
         filter: { protectaPhone: { eq: quote.policyholderPhone } },

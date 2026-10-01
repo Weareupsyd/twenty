@@ -1,6 +1,6 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
-import { CoreApiClient } from 'twenty-client-sdk/core';
+import { coreGraphQlClient, type CoreGraphQlClient } from 'src/lib/core-client';
 import { useRecordId } from 'twenty-sdk/front-component';
 import { FC_POLICY_DOCUMENTS } from 'src/constants/universal-identifiers';
 import {
@@ -33,7 +33,7 @@ const BTN_OUTLINE: CSSProperties = { ...BTN, background: '#fff', color: '#0B1C48
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const fetchDocs = async (client: CoreApiClient, policyNo: string): Promise<Doc[]> => {
+const fetchDocs = async (client: CoreGraphQlClient, policyNo: string): Promise<Doc[]> => {
   const data = (await client.query({
     generatedDocuments: {
       __args: {
@@ -112,7 +112,7 @@ const Component = () => {
   const [message, setMessage] = useState('');
 
   const load = useCallback(async (no: string) => {
-    const client = new CoreApiClient();
+    const client = coreGraphQlClient();
     try {
       setDocs(await fetchDocs(client, no));
     } catch {
@@ -126,7 +126,7 @@ const Component = () => {
   useEffect(() => {
     if (!recordId) return;
     (async () => {
-      const client = new CoreApiClient();
+      const client = coreGraphQlClient();
       const data = (await client.query({
         insurancePolicies: {
           __args: { filter: { id: { eq: recordId } }, first: 1 },
@@ -144,7 +144,7 @@ const Component = () => {
     setBusy(true);
     setMessage('Generating a new policy document…');
     try {
-      const client = new CoreApiClient();
+      const client = coreGraphQlClient();
       const created = (await client.mutation({
         createGeneratedDocument: {
           __args: {

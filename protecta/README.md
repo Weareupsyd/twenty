@@ -498,6 +498,30 @@ affected; run the full `./start.sh` when Protecta also cannot see
 `generatedDocuments`. While a client is stale the download route answers with a
 page naming the command above instead of a bare 500.
 
+### App sync stops with "Conversion of type ... may be a mistake"
+
+`twenty apply` regenerates each app's API client from the workspace schema after
+every successful sync, so the next typecheck compiles the app against a client
+whose `query`/`mutation` types are exactly the objects that existed at that
+moment. A plain `as` cast of a query result then stops being valid and the sync
+dies with
+
+```
+src/lib/records.ts(79,20): error TS2352: Conversion of type 'Pick<...>' to type
+'Record<string, ...>' may be a mistake because neither type sufficiently
+overlaps with the other. If this was intentional, convert the expression to
+'unknown' first.
+```
+
+App code never touches the generated client directly: each app's
+`src/lib/core-client.ts` holds the single `as unknown as` cast and hands out a
+client whose requests are plain objects, so records built from runtime names and
+raw values keep typechecking whatever the client was generated from.
+`tests/app-clients.test.sh` (part of `npm run check`) fails when a file imports
+`twenty-client-sdk/core` directly again. Re-run `./start.sh` after the fix; a
+typecheck failure stops the sync before anything is uploaded, so there is
+nothing to repair.
+
 ### The browser calls the REST API on localhost
 
 Twenty builds the absolute URLs it publishes from the container's `SERVER_URL`:

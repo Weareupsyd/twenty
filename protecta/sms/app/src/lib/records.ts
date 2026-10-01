@@ -1,4 +1,4 @@
-import { CoreApiClient } from 'twenty-client-sdk/core';
+import { coreGraphQlClient, type CoreGraphQlClient } from 'src/lib/core-client';
 
 export type RecordData = Record<string, unknown>;
 
@@ -48,10 +48,10 @@ const selection = (
 type GraphQlEdge = { node: RecordData };
 
 export class CoreDbClient implements DbClient {
-  private readonly client: CoreApiClient;
+  private readonly client: CoreGraphQlClient;
 
   constructor(options: { runAs?: 'user' | 'application' } = {}) {
-    this.client = new CoreApiClient(options);
+    this.client = coreGraphQlClient(options);
   }
 
   async findFirst(

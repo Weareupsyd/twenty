@@ -363,8 +363,61 @@ To use Ollama as a Twenty language model on this VPS, from `protecta/`:
 That keeps the Twenty database and volumes, starts Ollama, and points the CRM
 at it. Then open Settings → Admin panel → AI.
 
-If nothing appears, confirm the sync completed, the browser is on the same
-workspace as the deployment key, and your user has the appropriate permissions.
+`--apply` is the step that actually turns Ollama on, and it is easy to skip:
+without it the script only starts Ollama and prints the next command. Putting
+both containers on one Docker network is also not enough on its own. The
+network only makes Ollama *reachable*; Twenty has to be told the URL, and it
+reads it from `OLLAMA_BASE_URL`, from an `AI_PROVIDERS` `ollama` entry, or from
+a value saved under Settings → Admin panel → Config variables. A container
+environment cannot be edited in place, which is why `--apply` recreates the
+container. The admin-panel route needs no restart at all: the model registry
+re-reads the LLM config group on the next request.
+
+To find out which link is broken, run the read-only diagnostic:
+
+```bash
+./scripts/diagnose-ollama.sh
+./scripts/diagnose-ollama.sh --model qwen2.5
+```
+
+It checks the Ollama daemon and its pulled models, the shared network, the base
+URL Twenty actually resolves (including a database value overriding the
+container environment), the `/v1` suffix, a real HTTP probe from inside the
+Twenty container, the tier chains, and whether a model was switched off in the
+admin panel. It changes nothing, and it ends by naming the first blocker with
+the command that repairs it.
+
+If nothing appears in Settings → Admin panel → AI once the diagnostic is clean,
+confirm the sync completed, the browser is on the same workspace as the
+deployment key, and your user has the appropriate permissions.
+
+### Invoice and receipt documents
+
+The customer-facing invoice and payment receipt are built from the black &
+white document templates committed at the repository root
+(`invoice-sample.html`, `receipt-sample.html`). Their layout, type scale and
+rules are used as-is; the brand block is the Protecta Bode logo and every line
+is live data — premium, quote reference, vehicle and plate, the payer's masked
+number behind the Ugandan flag, the Stanbic account, and the support phone and
+email from `SUPPORT_PHONE` / `SUPPORT_EMAIL`.
+
+- The **invoice** is generated when a customer starts the pay flow
+  (`generatePaymentInvoice`) and attached to the WhatsApp reply as before.
+- The **receipt** is new: once an `insurancePayment` reaches `CONFIRMED`, the
+  `deliver-payment-receipt` logic function sends the payer the receipt PDF on
+  WhatsApp, once per payment (KV idempotency).
+
+Both render through the Chromium HTML-to-PDF service so the CSS is what reaches
+the customer:
+
+```bash
+docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg
+```
+
+Set the endpoint with the `HTML_TO_PDF_URL` application variable (default
+`http://gotenberg:3000/forms/chromium/convert/html`). When the renderer is not
+running, both documents fall back to a drawn PDF so a payment or a WhatsApp
+send never fails on missing infrastructure.
 
 Live WhatsApp, payments and email still need provider configuration and smoke
 tests. Follow [DEPLOYMENT.md](./DEPLOYMENT.md) before processing real traffic.
@@ -401,8 +454,13 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | Use a custom port | `./start.sh --port 3000` |
 | Rotate the workspace API key | `./start.sh --new-api-key` |
 | Repair a failed first-boot seed | `./start.sh --reseed` |
+| Repair a policy download that 500s on a missing object | `./start.sh` (re-syncs and verifies both clients) |
+| Publish the server as the domain instead of localhost | `./scripts/set-server-url.sh --url https://… --apply` |
+| Set the URL used in customer links | `./scripts/set-public-url.sh https://…` |
 | Mint a key without deploying | `./create-api-key.sh` |
 | Check a key | `./create-api-key.sh --check` |
+| Enable local Ollama as a language model | `./enable-ollama.sh --pull --apply` |
+| Find out why Ollama is not usable | `./scripts/diagnose-ollama.sh` (read-only) |
 | Preview metadata changes | `app/node_modules/.bin/twenty plan app` |
 | Server logs without Node/Yarn | `docker logs --tail 200 twenty-app-dev` |
 | Server status | `app/node_modules/.bin/twenty docker:status` |
@@ -411,6 +469,88 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 Changing the source checkout does not change a running container's port mapping.
 Investigate existing mappings before choosing another port; a wrong port is not
 by itself a reason to erase the database.
+
+### Policy PDF download fails with "does not have a field"
+
+Every app's API client is generated from the workspace schema at sync time and
+only contains the objects that existed then. Applying the Document Generator
+before Protecta leaves its client without `insurancePolicies`, and the policy
+download (`/s/docgen/documents/view?policyNo=...`) then fails with
+
+```json
+{"statusCode":500,"messages":["type `Query` does not have a field `insurancePolicies`"]}
+```
+
+The generated client rejects the query itself, before any request reaches the
+server, so the fix is a re-sync rather than a data repair. `./start.sh` now
+syncs docgen and sms twice — once before the Protecta app (so Protecta's client
+can see `generatedDocument`) and once after it (so theirs can see the insurance
+objects) — and finishes by reporting any client that still misses a cross-app
+object. To repair a workspace synced with an older script:
+
+```bash
+cd ~/twenty/protecta      # your checkout
+./start.sh                # re-syncs both apps' clients and verifies them
+```
+
+`./twenty.sh docgen apply .` alone is enough when only the Document Generator is
+affected; run the full `./start.sh` when Protecta also cannot see
+`generatedDocuments`. While a client is stale the download route answers with a
+page naming the command above instead of a bare 500.
+
+### The browser calls the REST API on localhost
+
+Twenty builds the absolute URLs it publishes from the container's `SERVER_URL`:
+the config the front-end reads, OAuth redirects, emails and asset links. The
+`twenty docker:start` default is `http://localhost:<port>`, so on a VPS the
+browser ends up requesting `http://localhost:<port>/rest/...` and fails, even
+though the IP and the domain both work. Check what the container publishes:
+
+```bash
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' twenty-app-dev | grep '^SERVER_URL='
+```
+
+If it says localhost, repair it without touching the database — about a minute
+of downtime, and the previous container is kept until the new one is healthy:
+
+```bash
+cd ~/twenty/protecta
+./scripts/set-server-url.sh --url https://protectabode.weareupsyd.com          # shows the plan
+./scripts/set-server-url.sh --url https://protectabode.weareupsyd.com --apply  # recreates it
+```
+
+A container keeps the environment it was created with, so neither a restart nor
+a re-sync changes it, and the published `twenty` CLI always creates it with
+`SERVER_URL=http://localhost:<port>`. `start.sh` therefore hands the URL to
+`docker:start` (which a CLI built from this repository honours) *and* can run the
+recreate itself once the syncs are done:
+
+```bash
+./start.sh --public-url https://protectabode.weareupsyd.com --apply-public-url
+SERVER_URL_APPLY=1 ./start.sh --public-url http://203.0.113.10:2020   # same switch
+```
+
+New deployments get it right from the start:
+
+- `./install.sh --with-caddy --domain <domain>` passes
+  `--public-url https://<domain> --apply-public-url` to `start.sh`;
+- `PUBLIC_URL=<url> ./start.sh`, or `./start.sh --public-url <url>`, says it by
+  hand — an IP works too: `PUBLIC_URL=http://203.0.113.10:2020 ./start.sh`. Without
+  `--apply-public-url` an already-running container is left alone and `start.sh`
+  prints the `set-server-url.sh` command instead;
+- with Caddy installed on that machine, `./start.sh` reads the domain from the
+  Caddyfile (the committed template is ignored elsewhere, so a development
+  machine never publishes the production domain).
+
+What the scripts do *on the VPS itself* still uses `http://localhost:<port>`:
+health checks, the CLI remote, `create-api-key.sh` and `set-public-url.sh` all
+run on that machine, where localhost is the correct address. Customer-facing
+links are a separate setting — the `PUBLIC_BASE_URL` application variable, which
+should match the published URL:
+
+```bash
+./scripts/set-public-url.sh https://protectabode.weareupsyd.com
+```
 
 ### Environment
 

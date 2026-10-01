@@ -17,6 +17,7 @@ export const API_QUOTE_GET = '1a83e5ef-516b-435e-99c8-8c38fa0dfa3e';
 export const API_TICKET_CREATE = 'dfc563eb-a04f-4ae9-9bad-5a5cc799a297';
 export const AUTO_CREATE_POLICY_COMMISSION = 'd24502df-7641-46f1-b47b-3d3e78c2c06f';
 export const DELIVER_POLICY_DOCUMENT = '7c1e9a52-3f4b-4d8e-9a61-2b5f0c7d8e13';
+export const DELIVER_PAYMENT_RECEIPT = 'a7d3c1e8-5b24-4f6a-9c07-3e8b1d4a6f52';
 export const BOT_CONVERSATION = '618979b7-7373-4530-b92a-deb6456c00b7';
 export const BOT_INBOUND = 'a349b365-e515-4c33-83da-6ea32434ccc0';
 export const BOT_SEND = '232e1b56-cbb2-4125-ad32-be36f8b80140';
@@ -369,6 +370,7 @@ export const W_STATUS = '3f41100d-c25a-4ff4-8d70-954f086a5a80';
 export const W_TARGET_URL = '8a8234e1-53af-4800-8b57-d5923c7aa0f7';
 export const VAR_REQUIRE_PAYMENT_SIGNATURE =
   'f0dee9cf-211f-4656-a557-41b54c820547';
+export const VAR_HTML_TO_PDF_URL = 'b4e6d2f9-8a13-4c75-9d26-6f0a2c8e5b71';
 
 export const EVOLUTION_WEBHOOK_URL = '47a4d1e1-6a3a-463f-a285-dd369be6a963';
 

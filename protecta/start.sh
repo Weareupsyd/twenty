@@ -8,6 +8,11 @@
 #   ./start.sh --port 3000
 #   ./start.sh --new-api-key  mint a fresh workspace API key in the container first
 #   ./start.sh --reseed       re-run the dev seed in the container, then sync
+#   ./start.sh --public-url https://crm.example.com
+#                             URL the server publishes itself as (see PUBLIC_URL)
+#   ./start.sh --public-url https://crm.example.com --apply-public-url
+#                             also recreate the running container to publish it
+#                             (SERVER_URL_APPLY=1 does the same)
 #
 # The app is not a standalone process: it is compiled and synced into a running
 # Twenty workspace by the `twenty` CLI. This script just wires those steps up.
@@ -31,6 +36,18 @@
 #   SKIP_INSTALL=1        don't install the app's node_modules
 #   SKIP_REMOTE=1         don't (re)authenticate the CLI remote
 #   SKIP_NODE_BOOTSTRAP=1 don't re-run under Node 24 via npx on old system Node
+#   PUBLIC_URL            URL browsers use to reach this server, e.g.
+#                         https://protectabode.weareupsyd.com or
+#                         http://<vps-ip>:2020. Taken from PUBLIC_BASE_URL or
+#                         the Caddyfile site address when not set. The
+#                         container is created with it as SERVER_URL, which is
+#                         what Twenty uses for the absolute URLs it publishes
+#                         (front-end config, OAuth redirects, emails, assets).
+#                         Left unset, the container publishes localhost and
+#                         browsers on other machines call
+#                         http://localhost:<port>/rest/... and fail. Commands in
+#                         this script keep using localhost: that is correct on
+#                         the machine running them.
 
 set -euo pipefail
 
@@ -44,6 +61,7 @@ KEY_FILE="${TWENTY_API_KEY_FILE:-$SCRIPT_DIR/.twenty-api-key}"
 CREATE_KEY_SCRIPT="$SCRIPT_DIR/create-api-key.sh"
 NEW_API_KEY=0
 RESEED=0
+APPLY_PUBLIC_URL="${SERVER_URL_APPLY:-0}"
 REPAIR_SEED="${SEED_REPAIR:-1}"
 CONTAINER="${TWENTY_CONTAINER:-twenty-app-dev}"
 ORIGINAL_ARGS=("$@")
@@ -54,6 +72,9 @@ while [[ $# -gt 0 ]]; do
     --port) PORT="${2:?--port needs a value}"; shift 2 ;;
     --port=*) PORT="${1#*=}"; shift ;;
     --new-api-key) NEW_API_KEY=1; shift ;;
+    --public-url) PUBLIC_URL="${2:?--public-url needs a value}"; shift 2 ;;
+    --public-url=*) PUBLIC_URL="${1#*=}"; shift ;;
+    --apply-public-url) APPLY_PUBLIC_URL=1; shift ;;
     --reseed) RESEED=1; shift ;;
     -h|--help) awk 'NR>1 && /^#/ { sub(/^# ?/, ""); print; next } NR>1 { exit }' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
@@ -66,6 +87,43 @@ step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 info() { printf '    %s\n' "$*"; }
 warn() { printf '    \033[1;33m%s\033[0m\n' "$*" >&2; }
 die() { printf '\n\033[1;31mError: %s\033[0m\n' "$*" >&2; exit 1; }
+
+# --- Public URL ---------------------------------------------------------------
+#
+# SERVER_URL is local to this script: every health check, remote and CLI call it
+# makes runs on this machine, where localhost is the right address. What the
+# container publishes itself as is a different thing and has to be reachable by
+# browsers, so it is resolved separately and handed to `docker:start`.
+PUBLIC_URL="${PUBLIC_URL:-${PUBLIC_BASE_URL:-}}"
+PUBLIC_URL="${PUBLIC_URL%/}"
+
+# The committed Caddyfile is a template that ships with every checkout, so it is
+# only used as the public URL when Caddy is actually installed here — otherwise a
+# development machine would publish the production domain. CADDYFILE overrides
+# the file that is read.
+if [[ -z "$PUBLIC_URL" ]]; then
+  caddyfile="${CADDYFILE:-}"
+  if [[ -z "$caddyfile" && -f "$SCRIPT_DIR/Caddyfile" ]] && command -v caddy >/dev/null 2>&1; then
+    caddyfile="$SCRIPT_DIR/Caddyfile"
+  fi
+  if [[ -n "$caddyfile" && -f "$caddyfile" ]]; then
+    # The first site address is the domain Caddy terminates TLS for, which is the
+    # URL browsers use. Portable awk: mawk has no {n,} intervals.
+    caddy_domain="$(awk '
+      /^[a-z0-9][a-z0-9.-]*\.[a-z]+[ \t]*\{/ {
+        sub(/[ \t]*\{.*/, "", $0); print; exit
+      }' "$caddyfile")"
+    [[ -n "$caddy_domain" ]] && PUBLIC_URL="https://$caddy_domain"
+  fi
+fi
+
+if [[ -n "$PUBLIC_URL" && ! "$PUBLIC_URL" =~ ^https?://[^/[:space:]]+$ ]]; then
+  PUBLIC_URL=""
+fi
+
+if [[ -n "$PUBLIC_URL" ]]; then
+  info "public URL: $PUBLIC_URL"
+fi
 
 with_timeout() {
   if [[ -n "${TIMEOUT_BIN:-}" ]]; then "$TIMEOUT_BIN" 120 "$@"; else "$@"; fi
@@ -550,7 +608,10 @@ step "Starting Twenty server (port $PORT)"
 if curl -fsS --max-time 2 "$SERVER_URL/healthz" >/dev/null 2>&1; then
   info "already healthy at $SERVER_URL"
 else
-  if ! "$TWENTY" docker:start --port "$PORT"; then
+  # `env` keeps start.sh's own SERVER_URL (localhost, correct on this machine)
+  # separate from the URL the container publishes itself as. An empty value
+  # makes the CLI fall back to its localhost default.
+  if ! env SERVER_URL="$PUBLIC_URL" "$TWENTY" docker:start --port "$PORT"; then
     if [[ "$(docker inspect --format '{{.State.Running}}' "$CONTAINER" 2>/dev/null || true)" != "true" ]]; then
       die "Twenty did not start. Inspect: docker logs --tail 200 $CONTAINER"
     fi
@@ -703,22 +764,59 @@ fi
 # when policies are issued; the SMS Sender notifies customers on quote,
 # policy and claim events through EgoSMS, with per-language templates.
 
-for LINKED_APP in docgen sms; do
-  LINKED_DIR="$SCRIPT_DIR/$LINKED_APP/app"
+# Each app's API client is generated from the workspace schema at apply time and
+# only contains the objects that exist then. Protecta reads the Document
+# Generator's generatedDocument records, and the Document Generator reads
+# Protecta's insurancePolicy/insuranceQuote records, so neither client is
+# complete after a single pass on a fresh workspace: the linked apps go first
+# (their objects must exist before Protecta's client is generated) and again
+# after Protecta (Protecta's objects must exist before theirs are). A missing
+# field is not a server error at request time - the generated client refuses
+# the query itself with "type `Query` does not have a field ...".
+sync_linked_apps() {
+  for LINKED_APP in docgen sms; do
+    LINKED_DIR="$SCRIPT_DIR/$LINKED_APP/app"
 
-  if [[ -d "$LINKED_DIR" ]]; then
-    step "Syncing $LINKED_APP app"
-    if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
-      info "skipping dependency install (SKIP_INSTALL=1)"
-    elif [[ ! -x "$LINKED_DIR/node_modules/.bin/twenty" ]]; then
-      (cd "$LINKED_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
-      info "installed with npm"
-    else
-      info "dependencies are up to date, skipping install"
+    if [[ -d "$LINKED_DIR" ]]; then
+      step "Syncing $LINKED_APP app"
+      if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
+        info "skipping dependency install (SKIP_INSTALL=1)"
+      elif [[ ! -x "$LINKED_DIR/node_modules/.bin/twenty" ]]; then
+        (cd "$LINKED_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
+        info "installed with npm"
+      else
+        info "dependencies are up to date, skipping install"
+      fi
+      "$TWENTY" apply "$LINKED_DIR"
     fi
-    "$TWENTY" apply "$LINKED_DIR"
+  done
+}
+
+# Fails loud rather than letting the first policy download 500: greps each
+# app's generated client for the other app's objects.
+verify_cross_app_clients() {
+  step "Checking cross-app API clients"
+  local schema problem=0
+  for entry in     "$SCRIPT_DIR/docgen/app|insurancePolicies|Document Generator"     "$APP_DIR|generatedDocuments|Protecta Bode"; do
+    local dir="${entry%%|*}" rest="${entry#*|}"
+    local field="${rest%%|*}" label="${rest#*|}"
+    schema="$dir/node_modules/twenty-client-sdk/dist/core/generated"
+    if [[ ! -d "$schema" ]]; then
+      warn "$label: no generated client under $schema (apply did not run?)"
+      problem=1
+    elif grep -rq "$field" "$schema"; then
+      info "$label: can query $field"
+    else
+      warn "$label: generated schema has no '$field'; its cross-app reads fail"
+      problem=1
+    fi
+  done
+  if (( problem )); then
+    warn "run ./start.sh once more; if it persists, re-apply the named app with ./twenty.sh <app> apply ."
   fi
-done
+}
+
+sync_linked_apps
 
 # --- Sync the app ------------------------------------------------------------
 #
@@ -726,11 +824,48 @@ done
 # src/, re-syncing on every change.
 
 if (( WATCH )); then
+  # The watch loop blocks, so the second linked-app pass happens before it:
+  # on a workspace that already ran once, Protecta's objects exist and the
+  # linked apps pick them up here.
+  sync_linked_apps
   step "Syncing app and watching src/ (Ctrl-C to stop watching)"
   "$TWENTY" dev "$APP_DIR"
 else
   step "Syncing app into the workspace"
   "$TWENTY" apply "$APP_DIR"
+  # Second pass: Protecta's objects now exist, so the linked apps regenerate
+  # clients that can read them.
+  sync_linked_apps
+  verify_cross_app_clients
+fi
+
+# --- What the container publishes itself as -----------------------------------
+#
+# Twenty builds the absolute URLs it publishes from the container's SERVER_URL,
+# and a container keeps the value it was created with. The published CLI creates
+# it as http://localhost:<port>, so browsers on other machines call
+# http://localhost:<port>/rest/... and fail. Handing SERVER_URL to `docker:start`
+# covers a CLI built from this repository; everywhere else the container has to
+# be recreated, which scripts/set-server-url.sh does while keeping the volumes.
+# That is why this runs last: the syncs are finished and nothing is interrupted.
+if [[ -n "$PUBLIC_URL" ]]; then
+  published_url="$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$CONTAINER" 2>/dev/null \
+    | awk -F= '$1 == "SERVER_URL" { print substr($0, index($0, "=") + 1); exit }')"
+
+  if [[ -z "$published_url" ]]; then
+    info "could not read SERVER_URL from $CONTAINER; check with: docker inspect $CONTAINER"
+  elif [[ "$published_url" != "$PUBLIC_URL" ]]; then
+    if (( APPLY_PUBLIC_URL )); then
+      step "Publishing the server as $PUBLIC_URL"
+      bash "$SCRIPT_DIR/scripts/set-server-url.sh" --url "$PUBLIC_URL" --apply \
+        || warn "could not recreate $CONTAINER; run: ./scripts/set-server-url.sh --url $PUBLIC_URL --apply"
+    else
+      warn "$CONTAINER publishes itself as $published_url, not $PUBLIC_URL"
+      warn "browsers will load the REST API from that address; repair it with:"
+      warn "  ./scripts/set-server-url.sh --url $PUBLIC_URL --apply"
+      warn "or re-run this script with --apply-public-url"
+    fi
+  fi
 fi
 
 # --- Done --------------------------------------------------------------------
@@ -745,9 +880,11 @@ $(printf '\033[1;32m==> Ready\033[0m')
     App:        protecta-bode (synced from $APP_DIR)
     Docs app:   Document Generator (synced from $SCRIPT_DIR/docgen/app)
     SMS app:    SMS Sender (synced from $SCRIPT_DIR/sms/app)
-    Landing:    $SERVER_URL/s/protecta/
-    Documents:  $SERVER_URL/s/docgen/documents/view?policyNo=<policy no>
-    SMS API:    POST $SERVER_URL/s/sms/send
+    Publishes:  ${PUBLIC_URL:-localhost — set PUBLIC_URL or --public-url}
+    Landing:    ${PUBLIC_URL:-$SERVER_URL}/s/protecta/
+    Documents:  ${PUBLIC_URL:-$SERVER_URL}/s/docgen/documents/view?policyNo=<policy no>
+    SMS API:    POST ${PUBLIC_URL:-$SERVER_URL}/s/sms/send
+    Server URL: ./scripts/set-server-url.sh (what the container publishes as)
     WhatsApp:   Settings → WhatsApp bot (Evolution API)
     Ollama:     ./enable-ollama.sh --pull && ./enable-ollama.sh --apply
     API key:    ./create-api-key.sh (mint) / ./start.sh --new-api-key (rotate)

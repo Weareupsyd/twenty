@@ -5,12 +5,14 @@ import {
   CONTAINER_NAME,
   containerExists,
   getContainerDigest,
+  getContainerEnvVar,
   getContainerPort,
   getDockerNotRunningMessage,
   getImageDigest,
   getImageForVersion,
   TEST_CONTAINER_NAME,
 } from '@/cli/utilities/server/docker-container';
+import { resolveServerUrl } from '@/cli/utilities/server/public-server-url';
 import { execSync, spawnSync } from 'node:child_process';
 
 export type ServerUpgradeOptions = {
@@ -94,6 +96,11 @@ const innerServerUpgrade = async (
 
   const port = getContainerPort(containerName);
 
+  // Read before the removal: a public SERVER_URL has to survive the upgrade
+  // instead of falling back to localhost.
+  const publishedUrl = getContainerEnvVar('SERVER_URL', containerName);
+  const serverUrl = resolveServerUrl({ port, publishedUrl });
+
   onProgress?.('Removing existing container...');
   execSync(`docker rm -f ${containerName}`, { stdio: 'ignore' });
 
@@ -121,7 +128,7 @@ const innerServerUpgrade = async (
       '-e',
       `NODE_PORT=${port}`,
       '-e',
-      `SERVER_URL=http://localhost:${port}`,
+      `SERVER_URL=${serverUrl}`,
       '-v',
       `${volumeData}:/data/postgres`,
       '-v',

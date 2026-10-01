@@ -10,7 +10,7 @@ describe('WhatsApp orchestration', () => {
     const db = new MemoryDbClient();
     const store = new MemoryState();
     const send = vi.fn(async (_phone: string, _text: string) => {});
-    const texts = ['2', '10000000', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'];
+    const texts = ['2', '10000000', 'YES', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'];
     for (const [i, text] of texts.entries()) {
       await processBotMessage(
         db,
@@ -29,7 +29,7 @@ describe('WhatsApp orchestration', () => {
       { from: '0772000000', id: 'm-4', text: 'YES', timestamp: '' },
       { store, send },
     );
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(db.store.insuranceQuotes).toHaveLength(1);
   });
   it('retries a failed reply without creating a second support ticket', async () => {
@@ -100,10 +100,11 @@ describe('WhatsApp orchestration', () => {
     );
     await say('r2', '1');
     await say('r3', '5000000');
-    await say('r4', 'Toyota');
-    await say('r5', 'Premio');
-    await say('r6', '2018');
-    await say('r7', 'UAX 123D');
+    await say('r4', 'YES');
+    await say('r5', 'Toyota');
+    await say('r6', 'Premio');
+    await say('r7', '2018');
+    await say('r8', 'UAX 123D');
     expect(send).toHaveBeenLastCalledWith(
       '+256772000000',
       expect.stringContaining('Name: Sarah Kato'),
@@ -112,7 +113,7 @@ describe('WhatsApp orchestration', () => {
       String(text).includes('What is your full name'),
     );
     expect(askedForName).toBe(false);
-    await say('r8', 'YES');
+    await say('r9', 'YES');
     // The new quote reuses the same person — no duplicate is created.
     expect(db.store.insuranceQuotes).toHaveLength(2);
     expect(db.store.people).toHaveLength(1);
@@ -231,7 +232,7 @@ describe('quote and invoice PDFs in the conversation', () => {
         calls.push(`doc:${doc.fileName}`);
       },
     );
-    const texts = ['2', '10000000', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'];
+    const texts = ['2', '10000000', 'YES', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'];
     for (const [i, text] of texts.entries()) {
       await processBotMessage(
         db,
@@ -239,7 +240,7 @@ describe('quote and invoice PDFs in the conversation', () => {
         { store, send, sendDocument },
       );
     }
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(sendDocument).toHaveBeenCalledTimes(1);
     const quoteRef = String(db.store.insuranceQuotes[0].reference);
     expect(sendDocument.mock.calls[0][0]).toBe('+256772000000');
@@ -258,7 +259,7 @@ describe('quote and invoice PDFs in the conversation', () => {
         { store, send, sendDocument },
       );
     }
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(sendDocument).toHaveBeenCalledTimes(1);
   });
   it('retries only the attachment when the document send fails', async () => {
@@ -268,7 +269,7 @@ describe('quote and invoice PDFs in the conversation', () => {
     const failing = vi.fn(async (_phone: string, _doc: unknown) => {
       throw new Error('media down');
     });
-    const texts = ['2', '10000000', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe'];
+    const texts = ['2', '10000000', 'YES', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe'];
     for (const [i, text] of texts.entries()) {
       await processBotMessage(
         db,
@@ -280,28 +281,28 @@ describe('quote and invoice PDFs in the conversation', () => {
     await expect(
       processBotMessage(
         db,
-        { from: '0772000000', id: 'm-7', text: 'YES', timestamp: '' },
+        { from: '0772000000', id: 'm-8', text: 'YES', timestamp: '' },
         { store, send, sendDocument: failing },
       ),
     ).rejects.toThrow('media down');
-    // 7 drive-up texts plus the quote reply: 8 texts, all already delivered.
-    expect(send).toHaveBeenCalledTimes(8);
+    // 8 drive-up texts plus the quote reply: 9 texts, all already delivered.
+    expect(send).toHaveBeenCalledTimes(9);
     // Text was already delivered: the retry sends only the PDF.
     const ok = vi.fn(async (_phone: string, _doc: unknown) => {});
     await processBotMessage(
       db,
-      { from: '0772000000', id: 'm-7', text: 'YES', timestamp: '' },
+      { from: '0772000000', id: 'm-8', text: 'YES', timestamp: '' },
       { store, send, sendDocument: ok },
     );
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(ok).toHaveBeenCalledTimes(1);
     // Fully delivered: a third delivery is a no-op.
     await processBotMessage(
       db,
-      { from: '0772000000', id: 'm-7', text: 'YES', timestamp: '' },
+      { from: '0772000000', id: 'm-8', text: 'YES', timestamp: '' },
       { store, send, sendDocument: ok },
     );
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(ok).toHaveBeenCalledTimes(1);
   });
   it('still delivers the text when no document transport is configured', async () => {
@@ -310,21 +311,21 @@ describe('quote and invoice PDFs in the conversation', () => {
     const send = vi.fn(async (_phone: string, _text: string) => {});
     // No sendDocument override and no Evolution/Meta env: whatsAppDocSender
     // resolves to null, so the PDF is skipped but the text goes out.
-    for (const [i, text] of ['2', '10000000', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'].entries()) {
+    for (const [i, text] of ['2', '10000000', 'YES', 'Toyota', 'Premio', '2018', 'UAX 123C', 'Jane Doe', 'YES'].entries()) {
       await processBotMessage(
         db,
         { from: '0772000000', id: `m-${i}`, text, timestamp: '' },
         { store, send },
       );
     }
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
     expect(db.store.insuranceQuotes).toHaveLength(1);
     // The receipt is complete, so replays stay quiet.
     await processBotMessage(
       db,
-      { from: '0772000000', id: 'm-7', text: 'YES', timestamp: '' },
+      { from: '0772000000', id: 'm-8', text: 'YES', timestamp: '' },
       { store, send },
     );
-    expect(send).toHaveBeenCalledTimes(8);
+    expect(send).toHaveBeenCalledTimes(9);
   });
 });

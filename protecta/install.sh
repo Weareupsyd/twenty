@@ -344,6 +344,15 @@ START_ARGS=()
 if [[ -n "$PORT" ]]; then START_ARGS+=(--port "$PORT"); fi
 if (( WATCH )); then START_ARGS+=(--watch); fi
 if (( RESEED )); then START_ARGS+=(--reseed); fi
+# Behind Caddy the browser reaches Twenty at https://$DOMAIN, and the container
+# has to publish itself as that URL: SERVER_URL is what Twenty builds its
+# absolute links from, including the REST base the front-end uses.
+if [[ "$WITH_CADDY" == "1" && -z "${PUBLIC_URL:-}" ]]; then
+  # --apply-public-url recreates the container at the end of start.sh, once the
+  # syncs are done: the published CLI creates it with SERVER_URL=localhost, and
+  # a container keeps the environment it was created with.
+  START_ARGS+=(--public-url "https://$DOMAIN" --apply-public-url)
+fi
 
 step "Installing Protecta (server, API key, apps)"
 info "this runs start.sh: dependencies -> Twenty container -> API key -> app syncs"

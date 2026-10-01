@@ -8,6 +8,7 @@ import {
   containerExists,
   DEFAULT_PORT,
   DEFAULT_TEST_PORT,
+  getContainerEnvVar,
   getContainerImageTag,
   getContainerPort,
   getDockerNotRunningMessage,
@@ -19,6 +20,7 @@ import {
   checkServerHealth,
   detectLocalServer,
 } from '@/cli/utilities/server/detect-local-server';
+import { resolveServerUrl } from '@/cli/utilities/server/public-server-url';
 import { serverUpgrade } from '@/cli/operations/server-upgrade';
 import { checkServerVersionCompatibility } from '@/cli/utilities/version/check-server-version-compatibility';
 import { resolveHighestEngineVersion } from '@/cli/utilities/version/resolve-highest-engine-version';
@@ -294,12 +296,28 @@ const innerServerStart = async (
 
     port = existingPort;
 
+    // A container keeps the SERVER_URL it was created with, so an explicit
+    // public URL only takes effect when the container is recreated.
+    const publishedUrl = getContainerEnvVar('SERVER_URL', containerName);
+    const requestedUrl = resolveServerUrl({ port, publishedUrl });
+
+    if (publishedUrl && publishedUrl !== requestedUrl) {
+      onProgress?.(
+        `The container publishes itself as ${publishedUrl}, but ${requestedUrl} was requested. Recreate it to apply the new URL.`,
+      );
+    }
+
     onProgress?.('Starting existing container...');
     execSync(`docker start ${containerName}`, { stdio: 'ignore' });
   } else {
     onProgress?.(
       `Pulling Docker image (${image}) and starting Twenty container...`,
     );
+
+    // SERVER_URL is the URL the server publishes itself as: absolute links it
+    // generates (OAuth redirects, emails, assets, front-end config) use it, so
+    // a deployment reached by IP or domain must not stay on localhost.
+    const serverUrl = resolveServerUrl({ port });
 
     const runResult = spawnSync(
       'docker',
@@ -313,7 +331,7 @@ const innerServerStart = async (
         '-e',
         `NODE_PORT=${port}`,
         '-e',
-        `SERVER_URL=http://localhost:${port}`,
+        `SERVER_URL=${serverUrl}`,
         ...ollamaDockerArgs(),
         '-v',
         `${volumeData}:/data/postgres`,

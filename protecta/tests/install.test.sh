@@ -293,3 +293,25 @@ grep -q 'still in PENDING_CREATION' "$TMP/err"
 grep -q 'the first-boot seed never finished' "$TMP/err"
 grep -q './start.sh --reseed' "$TMP/err"
 echo 'PASS verification: an unfinished seed is named as the cause'
+
+# --- 13. --with-caddy tells start.sh the URL browsers use --------------------
+# The container is created before Caddy is configured, so the domain has to be
+# handed to start.sh: SERVER_URL is what Twenty publishes, and localhost there
+# makes a browser call http://localhost:<port>/rest/...
+reset
+run --port 3030 --with-caddy
+grep -q 'start.sh --port 3030 --public-url https://protectabode.weareupsyd.com --apply-public-url' "$COMMAND_LOG"
+grep -q 'Install complete' "$TMP/out"
+echo 'PASS --with-caddy: the public URL is forwarded to start.sh'
+
+reset
+run --port 3030 --with-caddy --domain crm.example.com
+grep -q 'start.sh --port 3030 --public-url https://crm.example.com --apply-public-url' "$COMMAND_LOG"
+echo 'PASS --domain: the chosen domain is the published URL'
+
+# Without Caddy nothing is guessed: the operator states PUBLIC_URL explicitly.
+reset
+run --port 3030
+grep -q 'start.sh --port 3030' "$COMMAND_LOG"
+! grep -q -- '--public-url' "$COMMAND_LOG"
+echo 'PASS without Caddy: no public URL is invented'

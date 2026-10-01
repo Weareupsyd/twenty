@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import {
   BANK_TRANSFER,
@@ -25,6 +25,21 @@ const quote = {
   vehicleValue: 10000000,
   shareUrl: 'https://protectabode.weareupsyd.com/s/protecta/quotes/view?ref=482913',
 };
+
+// Without a renderer the invoice is drawn with pdf-lib, exactly as before the
+// HTML templates existed.
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new Error('renderer unreachable');
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('payment invoice PDF', () => {
   it('renders the invoice with amount, bank details, and the payer', async () => {
@@ -63,5 +78,40 @@ describe('payment invoice PDF', () => {
     expect(caption).toContain('INV-482913');
     expect(caption).toContain('UGX 150,000');
     expect(caption).toContain('+256772000000');
+  });
+});
+
+describe('payment invoice through the HTML template', () => {
+  it('submits the rendered template to the Chromium renderer', async () => {
+    const rendered = new TextEncoder().encode('%PDF-1.7\nrendered-invoice');
+    const fetchMock = vi.fn(async () => new Response(rendered, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const bytes = await generatePaymentInvoice(quote, {
+      name: 'Jane Doe',
+      payerPhone: '+256772000000',
+      baseUrl: 'https://protectabode.weareupsyd.com',
+    });
+
+    expect(bytes).toEqual(rendered);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const [, request] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const form = request.body as FormData;
+    const html = await (form.get('files') as File).text();
+    expect(html).toContain('INV-482913');
+    expect(html).toContain('Jane Doe');
+    expect(html).toContain('Stanbic Bank Uganda');
+    expect(html).toContain(quote.shareUrl);
+    expect(html).toContain('data:image/png;base64,');
+  });
+
+  it('falls back to the drawn PDF when the renderer answers with an error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('boom', { status: 503 })),
+    );
+    const bytes = await generatePaymentInvoice(quote, { name: 'Jane Doe' });
+    expect(isPdf(bytes)).toBe(true);
+    expect(pdfContains(bytes, 'INV-482913')).toBe(true);
   });
 });

@@ -8,6 +8,10 @@ import {
 } from 'src/lib/doc-pages';
 import { htmlToText } from 'src/lib/html';
 import { htmlResponse, renderDocPage } from 'src/lib/http';
+import {
+  missingSchemaField,
+  staleClientMessage,
+} from 'src/lib/schema-errors';
 import { renderHtmlToPdf } from 'src/lib/html-pdf';
 import { renderPdf } from 'src/lib/pdf';
 import { CoreDbClient, type DbClient } from 'src/lib/records';
@@ -149,7 +153,7 @@ const policyPdfDownloadPage = (
  * offer one download for the full, filled-in policy PDF. Other generated
  * documents keep the staff-facing preview and Word/PDF actions below.
  */
-export const handleDocumentView = async (
+const renderDocumentView = async (
   event: RoutePayload,
 ): Promise<Response> => {
   const body = requestBody(event);
@@ -315,6 +319,34 @@ ${DOCUMENT_STYLES}
 <embed src="${dataUrl}" type="application/pdf" style="width:100%;height:80vh;border:0;border-radius:8px;background:#fff">`,
     }),
   );
+};
+
+/**
+ * Reads the policy schedule through records owned by the Protecta app. If this
+ * app was synced before those objects existed, its generated client rejects the
+ * query itself, so the failure is turned into a page naming the fix rather than
+ * an opaque 500 from the download route.
+ */
+export const handleDocumentView = async (
+  event: RoutePayload,
+): Promise<Response> => {
+  try {
+    return await renderDocumentView(event);
+  } catch (error) {
+    const field = missingSchemaField(error);
+
+    if (!field) throw error;
+
+    return htmlResponse(
+      renderDocPage({
+        title: 'Document Generator is out of sync',
+        heading: 'This document app cannot read policy records yet',
+        bodyHtml: `
+<p>${staleClientMessage(field)}</p>`,
+      }),
+      503,
+    );
+  }
 };
 
 export default defineLogicFunction({

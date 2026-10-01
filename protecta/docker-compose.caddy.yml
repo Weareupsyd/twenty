@@ -29,8 +29,11 @@ services:
     # extra_hosts:
     #   - "host.docker.internal:host-gateway"
 
-  # Optional Chromium-based HTML-to-PDF renderer for the DocGen app.
-  # It is only reachable on Twenty's private Docker network (no published port).
+  # Optional Chromium-based HTML-to-PDF renderer. The DocGen app renders policy
+  # documents with it, and the Protecta app renders its invoice and receipt
+  # templates with it (PROTECTA_HTML_TO_PDF_URL). Without it those documents
+  # fall back to a drawn PDF. It is only reachable on Twenty's private Docker
+  # network (no published port).
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: protecta-gotenberg

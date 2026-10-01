@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import {
   paymentInvoiceDocument,
@@ -25,6 +25,21 @@ const quote = {
 };
 
 const decode = (base64: string): Uint8Array => new Uint8Array(Buffer.from(base64, 'base64'));
+
+// These documents are the drawn-PDF variants: keep the HTML renderer out of the
+// test run so nothing depends on a Gotenberg container or on DNS.
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => {
+      throw new Error('renderer unreachable');
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('WhatsApp conversation documents', () => {
   it('packages the quote PDF as base64 with a safe caption', async () => {

@@ -117,6 +117,28 @@ describe('policy document PDF download route', () => {
     });
   });
 
+  it('explains a stale generated client instead of failing the download', async () => {
+    await seedGeneratedPolicy();
+    const originalFindFirst = workspace.findFirst;
+
+    workspace.findFirst = vi.fn(async () => {
+      throw new Error(
+        'type `Query` does not have a field `insurancePolicies`',
+      );
+    }) as typeof workspace.findFirst;
+
+    const response = await handle(
+      event({ policyNo: 'PB-2026-004213', asPdf: '1' }),
+    );
+    workspace.findFirst = originalFindFirst;
+    const html = String(response.body);
+
+    expect(response.status).toBe(503);
+    expect(html).toContain('cannot read `insurancePolicies`');
+    expect(html).toContain('Re-sync it with');
+    expect(html).toContain('./twenty.sh docgen apply .');
+  });
+
   it('rejects a wrong phone number', async () => {
     await seedGeneratedPolicy();
 

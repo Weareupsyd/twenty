@@ -363,8 +363,61 @@ To use Ollama as a Twenty language model on this VPS, from `protecta/`:
 That keeps the Twenty database and volumes, starts Ollama, and points the CRM
 at it. Then open Settings → Admin panel → AI.
 
-If nothing appears, confirm the sync completed, the browser is on the same
-workspace as the deployment key, and your user has the appropriate permissions.
+`--apply` is the step that actually turns Ollama on, and it is easy to skip:
+without it the script only starts Ollama and prints the next command. Putting
+both containers on one Docker network is also not enough on its own. The
+network only makes Ollama *reachable*; Twenty has to be told the URL, and it
+reads it from `OLLAMA_BASE_URL`, from an `AI_PROVIDERS` `ollama` entry, or from
+a value saved under Settings → Admin panel → Config variables. A container
+environment cannot be edited in place, which is why `--apply` recreates the
+container. The admin-panel route needs no restart at all: the model registry
+re-reads the LLM config group on the next request.
+
+To find out which link is broken, run the read-only diagnostic:
+
+```bash
+./scripts/diagnose-ollama.sh
+./scripts/diagnose-ollama.sh --model qwen2.5
+```
+
+It checks the Ollama daemon and its pulled models, the shared network, the base
+URL Twenty actually resolves (including a database value overriding the
+container environment), the `/v1` suffix, a real HTTP probe from inside the
+Twenty container, the tier chains, and whether a model was switched off in the
+admin panel. It changes nothing, and it ends by naming the first blocker with
+the command that repairs it.
+
+If nothing appears in Settings → Admin panel → AI once the diagnostic is clean,
+confirm the sync completed, the browser is on the same workspace as the
+deployment key, and your user has the appropriate permissions.
+
+### Invoice and receipt documents
+
+The customer-facing invoice and payment receipt are built from the black &
+white document templates committed at the repository root
+(`invoice-sample.html`, `receipt-sample.html`). Their layout, type scale and
+rules are used as-is; the brand block is the Protecta Bode logo and every line
+is live data — premium, quote reference, vehicle and plate, the payer's masked
+number behind the Ugandan flag, the Stanbic account, and the support phone and
+email from `SUPPORT_PHONE` / `SUPPORT_EMAIL`.
+
+- The **invoice** is generated when a customer starts the pay flow
+  (`generatePaymentInvoice`) and attached to the WhatsApp reply as before.
+- The **receipt** is new: once an `insurancePayment` reaches `CONFIRMED`, the
+  `deliver-payment-receipt` logic function sends the payer the receipt PDF on
+  WhatsApp, once per payment (KV idempotency).
+
+Both render through the Chromium HTML-to-PDF service so the CSS is what reaches
+the customer:
+
+```bash
+docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg
+```
+
+Set the endpoint with the `HTML_TO_PDF_URL` application variable (default
+`http://gotenberg:3000/forms/chromium/convert/html`). When the renderer is not
+running, both documents fall back to a drawn PDF so a payment or a WhatsApp
+send never fails on missing infrastructure.
 
 Live WhatsApp, payments and email still need provider configuration and smoke
 tests. Follow [DEPLOYMENT.md](./DEPLOYMENT.md) before processing real traffic.
@@ -403,6 +456,8 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | Repair a failed first-boot seed | `./start.sh --reseed` |
 | Mint a key without deploying | `./create-api-key.sh` |
 | Check a key | `./create-api-key.sh --check` |
+| Enable local Ollama as a language model | `./enable-ollama.sh --pull --apply` |
+| Find out why Ollama is not usable | `./scripts/diagnose-ollama.sh` (read-only) |
 | Preview metadata changes | `app/node_modules/.bin/twenty plan app` |
 | Server logs without Node/Yarn | `docker logs --tail 200 twenty-app-dev` |
 | Server status | `app/node_modules/.bin/twenty docker:status` |

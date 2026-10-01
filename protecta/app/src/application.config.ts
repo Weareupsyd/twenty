@@ -13,6 +13,7 @@ import {
   REQUIRE_KYC_PURCHASE,
   SUPPORT_EMAIL,
   SUPPORT_PHONE,
+  VAR_HTML_TO_PDF_URL,
   VAR_REQUIRE_PAYMENT_SIGNATURE,
 } from 'src/constants/universal-identifiers';
 
@@ -126,6 +127,14 @@ export default defineApplication({
       description: 'Reject provider callbacks without a valid HMAC signature.',
       type: FieldType.BOOLEAN,
       value: true,
+      isSecret: false,
+    },
+    HTML_TO_PDF_URL: {
+      universalIdentifier: VAR_HTML_TO_PDF_URL,
+      label: 'HTML-to-PDF renderer URL',
+      description:
+        'Internal Gotenberg Chromium endpoint that renders the invoice and receipt HTML templates to PDF. Defaults to the Gotenberg container started with: docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg. When unreachable, documents fall back to a drawn PDF.',
+      value: 'http://gotenberg:3000/forms/chromium/convert/html',
       isSecret: false,
     },
   },

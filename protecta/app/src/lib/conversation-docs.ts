@@ -4,6 +4,11 @@ import {
   invoiceFileName,
 } from 'src/lib/invoice-pdf';
 import { generateQuotePdf, quotePdfCaption, quotePdfFileName } from 'src/lib/quote-pdf';
+import {
+  generatePaymentReceipt,
+  receiptCaption,
+  receiptFileName,
+} from 'src/lib/receipt-pdf';
 import { publicBaseUrl } from 'src/lib/http';
 import { type RecordData } from 'src/lib/records';
 import { type OutboundWhatsAppDocument } from 'src/lib/whatsapp-transport';
@@ -43,6 +48,21 @@ export const paymentInvoiceDocument = async (
   return {
     fileName: invoiceFileName(quote),
     caption: invoiceCaption(quote, options.payerPhone),
+    base64: Buffer.from(bytes).toString('base64'),
+    mimeType: 'application/pdf',
+  };
+};
+
+export const paymentReceiptDocument = async (input: {
+  payment: RecordData;
+  quote: RecordData;
+  policy?: RecordData | null;
+  name?: string;
+}): Promise<OutboundWhatsAppDocument> => {
+  const bytes = await generatePaymentReceipt(input);
+  return {
+    fileName: receiptFileName(input.payment),
+    caption: receiptCaption(input.payment, input.quote, input.policy),
     base64: Buffer.from(bytes).toString('base64'),
     mimeType: 'application/pdf',
   };

@@ -1,23 +1,54 @@
 import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { renderInvoiceHtml } from 'src/lib/billing-document-html';
+import { BANK_TRANSFER } from 'src/lib/bank-transfer';
+import { renderHtmlToPdf } from 'src/lib/html-pdf';
 import { formatUgx } from 'src/lib/money';
 import { brandFooter, createSheet, embedBrandLogo, INK, NAVY, ORANGE } from 'src/lib/pdf-draw';
 import { type RecordData } from 'src/lib/records';
 
-/** Bank transfer details, matching the payment page instructions. */
-export const BANK_TRANSFER = {
-  bank: 'Stanbic Bank Uganda',
-  account: '9030005603063',
-  currency: 'UGX',
-} as const;
+export { BANK_TRANSFER };
 
 /**
  * The payment invoice for a quote: generated when the customer starts the
  * pay flow in WhatsApp and attached next to the text reply. Until a provider
  * confirms, it is a proforma invoice (amount due, how to pay, pay link).
+ *
+ * Rendered from the billing document HTML template through the Chromium
+ * renderer; when that renderer is not deployed the invoice is still produced,
+ * drawn with pdf-lib, so a WhatsApp pay flow never fails on missing infra.
  */
 export const generatePaymentInvoice = async (
   quote: RecordData,
   options: { name?: string; payerPhone?: string; baseUrl?: string } = {},
+): Promise<Uint8Array> => {
+  const ref = String(quote.reference ?? '');
+  const base = (options.baseUrl ?? '').replace(/\/$/, '');
+  const payUrl =
+    String(quote.shareUrl ?? '').trim() ||
+    `${base}/s/protecta/quotes/view?ref=${encodeURIComponent(ref)}`;
+
+  try {
+    return await renderHtmlToPdf(
+      renderInvoiceHtml({
+        quote,
+        ...(options.name ? { name: options.name } : {}),
+        ...(options.payerPhone ? { payerPhone: options.payerPhone } : {}),
+        payUrl,
+      }),
+    );
+  } catch (error) {
+    console.warn(
+      'invoice: HTML renderer unavailable, falling back to the drawn PDF',
+      error,
+    );
+    return drawPaymentInvoice(quote, options, payUrl);
+  }
+};
+
+const drawPaymentInvoice = async (
+  quote: RecordData,
+  options: { name?: string; payerPhone?: string } = {},
+  payUrl: string,
 ): Promise<Uint8Array> => {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -28,10 +59,6 @@ export const generatePaymentInvoice = async (
   const ref = String(quote.reference ?? '');
   const payer = options.payerPhone || String(quote.policyholderPhone ?? '—');
   const amount = Number(quote.premium ?? 0);
-  const base = (options.baseUrl ?? '').replace(/\/$/, '');
-  const payUrl =
-    String(quote.shareUrl ?? '').trim() ||
-    `${base}/s/protecta/quotes/view?ref=${encodeURIComponent(ref)}`;
 
   sheet.heading('Payment Invoice');
   sheet.note(

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Invoice INV-2026-0410 · AgriLink Uganda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Professional black & white document — no gradients, no card containers. */
+  :root {
+    --ink: #111111;
+    --mid: #4a4a4a;
+    --soft: #8a8a8a;
+    --rule: #e4e4e4;
+    --rule-strong: #c9c9c9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #ffffff; color: var(--ink); font-family: "Geist", -apple-system, system-ui, sans-serif; }
+  .page { max-width: 640px; margin: 0 auto; padding: 40px 24px; }
+  a { color: inherit; }
+
+  /* Header */
+  .doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding-bottom: 20px; border-bottom: 2px solid var(--ink); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 26px; height: 26px; }
+  .brand-name { font-weight: 600; font-size: 16px; letter-spacing: -.01em; line-height: 1.1; }
+  .brand-name small { display: block; font-family: "JetBrains Mono", monospace; font-size: 8.5px; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--mid); }
+  .doc-type { text-align: right; }
+  .doc-type .dt { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--soft); }
+  .doc-type .dn { font-family: "JetBrains Mono", monospace; font-size: 20px; font-weight: 600; letter-spacing: .01em; margin-top: 2px; }
+
+  /* Meta grid */
+  .doc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--rule); }
+  .meta-col h4 { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); margin-bottom: 8px; }
+  .meta-col p { font-size: 13px; line-height: 1.6; color: var(--ink); }
+  .meta-col p .muted { color: var(--mid); }
+  .doc-labels { text-align: right; }
+  .doc-labels h4 { text-align: right; }
+
+  /* Line items */
+  table { width: 100%; border-collapse: collapse; margin-top: 22px; }
+  thead th { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--rule-strong); }
+  thead th.r, tbody td.r { text-align: right; }
+  tbody td { font-size: 13px; padding: 12px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tbody td .sub { font-size: 11px; color: var(--soft); }
+  tbody td.num { font-family: "JetBrains Mono", monospace; }
+
+  /* Totals */
+  .totals { margin-top: 18px; margin-left: auto; width: 100%; max-width: 300px; }
+  .totals-row { display: flex; justify-content: space-between; font-size: 13px; padding: 6px 8px; color: var(--mid); }
+  .totals-row .lbl { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+  .totals-row.grand { border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 12px; color: var(--ink); font-weight: 600; font-size: 15px; }
+  .totals-row.grand .lbl { font-family: "Geist", sans-serif; font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+  /* Footer / notes */
+  .pay-terms { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--rule); }
+  .pay-terms h4 { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--soft); margin-bottom: 8px; }
+  .pay-terms p, .pay-terms li { font-size: 12px; line-height: 1.7; color: var(--mid); }
+  .pay-terms ul { list-style: none; }
+  .pay-terms li { padding-left: 14px; position: relative; }
+  .pay-terms li::before { content: "–"; position: absolute; left: 0; color: var(--soft); }
+
+  .stamp { margin-top: 26px; padding-top: 14px; border-top: 1px dashed var(--rule-strong); display: flex; justify-content: space-between; align-items: center; }
+  .stamp .amount { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--ink); }
+  .stamp .code { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+  .support { margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 10px; color: var(--soft); }
+  .support a { text-decoration: none; }
+
+  /* Inline rectangular flag — the flag IS the country code, so the numeric dial code is never shown. */
+  .dflag { display: inline-block; width: 15px; height: 10px; margin-right: 4px; vertical-align: -1px; border-radius: 1px; background-size: cover; background-repeat: no-repeat; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .dflag.dflag-ug { background-image: url("https://upload.wikimedia.org/wikipedia/commons/4/4e/Flag_of_Uganda.svg"); }
+
+  @media print { body { print-color-adjust: exact; } .page { padding: 24px 0; } }
+</style>
+</head>
+<body>
+<div class="page" id="invoice">
+  <div class="doc-head">
+    <div class="brand">
+      <svg viewBox="4.5 7.5 15 15" aria-hidden="true" fill="none" stroke="#111111" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22v-7" stroke="#111111" stroke-width="1.4"/>
+        <path d="M12 15c0-4-2.5-7-6-7 0 4 2.5 7 6 7Z"/>
+        <path d="M12 15c0-4 2.5-7 6-7 0 4-2.5 7-6 7Z"/>
+      </svg>
+      <div class="brand-name">AgriLink<small>Uganda</small></div>
+    </div>
+    <div class="doc-type">
+      <div class="dt">Invoice</div>
+      <div class="dn">INV-2026-0410</div>
+    </div>
+  </div>
+
+  <div class="doc-meta">
+    <div class="meta-col">
+      <h4>Billed to</h4>
+      <p>Kampala Grains Ltd<br><span class="muted">Nalukolongo, Kampala</span><br><span class="muted"><span class="dflag dflag-ug"></span>77•• 8890</span></p>
+    </div>
+    <div class="meta-col doc-labels">
+      <h4>Issued</h4>
+      <p><span class="muted">30 Aug 2026</span></p>
+      <p><span class="muted">Order</span> #B-1180</p>
+      <p><span class="muted">Due</span> On receipt</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="r">Qty</th>
+        <th class="r">Rate</th>
+        <th class="r">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Maize (grain) Grade A<br><span class="sub">Sacked in 50 kg bags · moisture 12.5%</span></td>
+        <td class="r num">3,000 kg</td>
+        <td class="r num">UGX 1,150</td>
+        <td class="r num">UGX 3,450,000</td>
+      </tr>
+      <tr>
+        <td>Delivery — Tuktuk (≤800 kg)<br><span class="sub">Bicycle · Motorbike · Tuktuk · Pickup · Canter · Truck</span></td>
+        <td class="r num">64 km</td>
+        <td class="r num">UGX 2,200</td>
+        <td class="r num">UGX 140,800</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span class="lbl">Subtotal</span><span class="num">UGX 3,590,800</span></div>
+    <div class="totals-row"><span class="lbl">AgriLink commission (2%)</span><span class="num">UGX 71,816</span></div>
+    <div class="totals-row grand"><span class="lbl">Total</span><span class="num">UGX 3,662,616</span></div>
+  </div>
+
+  <div class="pay-terms">
+    <h4>Payment &amp; notes</h4>
+    <ul>
+      <li>Pay by Mobile Money (MTN MoMo / Airtel Money) or bank transfer into AgricLink escrow.</li>
+      <li>Funds are released to the farmer in escrow once delivery is confirmed.</li>
+      <li>Commission (2%) is invoiced on fund liquidation where applicable.</li>
+      <li>This document is delivered through the Evolution API (WhatsApp / email with PDF attachment).</li>
+    </ul>
+  </div>
+
+  <div class="stamp">
+    <div class="amount">Amount due: UGX 2,240,000</div>
+    <div class="code">Payment pending · Escrow</div>
+  </div>
+
+  <p class="support">Support: <a href="tel:+256787165331">+256 787 165 331</a> · hello@agrilink.ug</p>
+</div>
+</body>
+</html>

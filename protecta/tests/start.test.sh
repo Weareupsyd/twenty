@@ -342,3 +342,40 @@ grep -q "^npm ci --no-audit --no-fund (cwd=$TMP/protecta/app)$" "$COMMAND_LOG"
 grep -q "^npm install --no-audit --no-fund (cwd=$TMP/protecta/app)$" "$COMMAND_LOG"
 grep -q '^apply ' "$COMMAND_LOG"
 echo 'PASS stale lockfile: npm install repairs it, then the app still syncs'
+
+# 19. Linked apps are synced twice, around the Protecta apply ----------------
+# Each app's generated API client only knows the objects that existed when it
+# was produced. Syncing docgen/sms before Protecta (so Protecta can see
+# generatedDocument) and again after (so they can see insurancePolicy) is what
+# keeps cross-app reads working; the verification step reports a client that
+# still misses a field instead of letting the first download 500.
+reset_env
+mkdir -p "$TMP/protecta/docgen/app" \
+  "$TMP/protecta/docgen/app/node_modules/twenty-client-sdk/dist/core/generated" \
+  "$TMP/protecta/app/node_modules/twenty-client-sdk/dist/core/generated"
+printf 'insurancePolicies insuranceQuotes\n' \
+  > "$TMP/protecta/docgen/app/node_modules/twenty-client-sdk/dist/core/generated/schema.d.ts"
+printf 'generatedDocuments\n' \
+  > "$TMP/protecta/app/node_modules/twenty-client-sdk/dist/core/generated/schema.d.ts"
+run
+first_docgen="$(grep -n "^apply $TMP/protecta/docgen/app$" "$COMMAND_LOG" | head -n 1 | cut -d: -f1)"
+protecta_apply="$(grep -n "^apply $TMP/protecta/app$" "$COMMAND_LOG" | head -n 1 | cut -d: -f1)"
+second_docgen="$(grep -n "^apply $TMP/protecta/docgen/app$" "$COMMAND_LOG" | tail -n 1 | cut -d: -f1)"
+[[ -n "$first_docgen" && -n "$protecta_apply" && -n "$second_docgen" ]]
+[[ "$first_docgen" -lt "$protecta_apply" && "$protecta_apply" -lt "$second_docgen" ]]
+grep -q 'Document Generator: can query insurancePolicies' "$TMP/output"
+grep -q 'Protecta Bode: can query generatedDocuments' "$TMP/output"
+echo 'PASS cross-app clients: linked apps synced before and after the app'
+
+# 20. A client missing a cross-app object is reported at deploy time ---------
+# Without this the failure surfaces much later as a 500 from the policy
+# download route: the generated client refuses the query itself.
+reset_env
+printf 'people insuranceQuotes\n' \
+  > "$TMP/protecta/docgen/app/node_modules/twenty-client-sdk/dist/core/generated/schema.d.ts"
+rm -f "$TMP/protecta/app/node_modules/twenty-client-sdk/dist/core/generated/schema.d.ts"
+run
+grep -q "Document Generator: generated schema has no 'insurancePolicies'" "$TMP/output"
+grep -q "Protecta Bode: generated schema has no 'generatedDocuments'" "$TMP/output"
+grep -q 'run ./start.sh once more' "$TMP/output"
+echo 'PASS cross-app clients: a missing object is reported with the remedy'

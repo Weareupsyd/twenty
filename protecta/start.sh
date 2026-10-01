@@ -703,22 +703,59 @@ fi
 # when policies are issued; the SMS Sender notifies customers on quote,
 # policy and claim events through EgoSMS, with per-language templates.
 
-for LINKED_APP in docgen sms; do
-  LINKED_DIR="$SCRIPT_DIR/$LINKED_APP/app"
+# Each app's API client is generated from the workspace schema at apply time and
+# only contains the objects that exist then. Protecta reads the Document
+# Generator's generatedDocument records, and the Document Generator reads
+# Protecta's insurancePolicy/insuranceQuote records, so neither client is
+# complete after a single pass on a fresh workspace: the linked apps go first
+# (their objects must exist before Protecta's client is generated) and again
+# after Protecta (Protecta's objects must exist before theirs are). A missing
+# field is not a server error at request time - the generated client refuses
+# the query itself with "type `Query` does not have a field ...".
+sync_linked_apps() {
+  for LINKED_APP in docgen sms; do
+    LINKED_DIR="$SCRIPT_DIR/$LINKED_APP/app"
 
-  if [[ -d "$LINKED_DIR" ]]; then
-    step "Syncing $LINKED_APP app"
-    if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
-      info "skipping dependency install (SKIP_INSTALL=1)"
-    elif [[ ! -x "$LINKED_DIR/node_modules/.bin/twenty" ]]; then
-      (cd "$LINKED_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
-      info "installed with npm"
-    else
-      info "dependencies are up to date, skipping install"
+    if [[ -d "$LINKED_DIR" ]]; then
+      step "Syncing $LINKED_APP app"
+      if [[ "${SKIP_INSTALL:-0}" == "1" ]]; then
+        info "skipping dependency install (SKIP_INSTALL=1)"
+      elif [[ ! -x "$LINKED_DIR/node_modules/.bin/twenty" ]]; then
+        (cd "$LINKED_DIR" && npm install --no-audit --no-fund --legacy-peer-deps)
+        info "installed with npm"
+      else
+        info "dependencies are up to date, skipping install"
+      fi
+      "$TWENTY" apply "$LINKED_DIR"
     fi
-    "$TWENTY" apply "$LINKED_DIR"
+  done
+}
+
+# Fails loud rather than letting the first policy download 500: greps each
+# app's generated client for the other app's objects.
+verify_cross_app_clients() {
+  step "Checking cross-app API clients"
+  local schema problem=0
+  for entry in     "$SCRIPT_DIR/docgen/app|insurancePolicies|Document Generator"     "$APP_DIR|generatedDocuments|Protecta Bode"; do
+    local dir="${entry%%|*}" rest="${entry#*|}"
+    local field="${rest%%|*}" label="${rest#*|}"
+    schema="$dir/node_modules/twenty-client-sdk/dist/core/generated"
+    if [[ ! -d "$schema" ]]; then
+      warn "$label: no generated client under $schema (apply did not run?)"
+      problem=1
+    elif grep -rq "$field" "$schema"; then
+      info "$label: can query $field"
+    else
+      warn "$label: generated schema has no '$field'; its cross-app reads fail"
+      problem=1
+    fi
+  done
+  if (( problem )); then
+    warn "run ./start.sh once more; if it persists, re-apply the named app with ./twenty.sh <app> apply ."
   fi
-done
+}
+
+sync_linked_apps
 
 # --- Sync the app ------------------------------------------------------------
 #
@@ -726,11 +763,19 @@ done
 # src/, re-syncing on every change.
 
 if (( WATCH )); then
+  # The watch loop blocks, so the second linked-app pass happens before it:
+  # on a workspace that already ran once, Protecta's objects exist and the
+  # linked apps pick them up here.
+  sync_linked_apps
   step "Syncing app and watching src/ (Ctrl-C to stop watching)"
   "$TWENTY" dev "$APP_DIR"
 else
   step "Syncing app into the workspace"
   "$TWENTY" apply "$APP_DIR"
+  # Second pass: Protecta's objects now exist, so the linked apps regenerate
+  # clients that can read them.
+  sync_linked_apps
+  verify_cross_app_clients
 fi
 
 # --- Done --------------------------------------------------------------------

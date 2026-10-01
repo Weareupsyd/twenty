@@ -4,6 +4,10 @@ import { GEN_ROUTE } from 'src/constants/universal-identifiers';
 import { jsonResponse, parseJsonBody, str } from 'src/lib/http';
 import { CoreDbClient } from 'src/lib/records';
 import {
+  missingSchemaField,
+  staleClientMessage,
+} from 'src/lib/schema-errors';
+import {
   DEFAULT_DOCUMENT_KIND,
   createGeneratedDocument,
   documentDocxUrl,
@@ -37,6 +41,21 @@ const handler = async (event: RoutePayload): Promise<Response> => {
       document.status === 'GENERATED' ? 201 : 422,
     );
   } catch (error) {
+    // A client synced before Protecta's objects existed rejects the read
+    // itself; report it as an app-sync problem rather than a bad request.
+    const missingField = missingSchemaField(error);
+
+    if (missingField) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: staleClientMessage(missingField),
+          missingField,
+        },
+        503,
+      );
+    }
+
     return jsonResponse(
       { ok: false, error: error instanceof Error ? error.message : 'Failed.' },
       400,

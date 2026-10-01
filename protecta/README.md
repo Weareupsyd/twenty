@@ -454,6 +454,7 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | Use a custom port | `./start.sh --port 3000` |
 | Rotate the workspace API key | `./start.sh --new-api-key` |
 | Repair a failed first-boot seed | `./start.sh --reseed` |
+| Repair a policy download that 500s on a missing object | `./start.sh` (re-syncs and verifies both clients) |
 | Mint a key without deploying | `./create-api-key.sh` |
 | Check a key | `./create-api-key.sh --check` |
 | Enable local Ollama as a language model | `./enable-ollama.sh --pull --apply` |
@@ -466,6 +467,34 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 Changing the source checkout does not change a running container's port mapping.
 Investigate existing mappings before choosing another port; a wrong port is not
 by itself a reason to erase the database.
+
+### Policy PDF download fails with "does not have a field"
+
+Every app's API client is generated from the workspace schema at sync time and
+only contains the objects that existed then. Applying the Document Generator
+before Protecta leaves its client without `insurancePolicies`, and the policy
+download (`/s/docgen/documents/view?policyNo=...`) then fails with
+
+```json
+{"statusCode":500,"messages":["type `Query` does not have a field `insurancePolicies`"]}
+```
+
+The generated client rejects the query itself, before any request reaches the
+server, so the fix is a re-sync rather than a data repair. `./start.sh` now
+syncs docgen and sms twice — once before the Protecta app (so Protecta's client
+can see `generatedDocument`) and once after it (so theirs can see the insurance
+objects) — and finishes by reporting any client that still misses a cross-app
+object. To repair a workspace synced with an older script:
+
+```bash
+cd ~/twenty/protecta      # your checkout
+./start.sh                # re-syncs both apps' clients and verifies them
+```
+
+`./twenty.sh docgen apply .` alone is enough when only the Document Generator is
+affected; run the full `./start.sh` when Protecta also cannot see
+`generatedDocuments`. While a client is stale the download route answers with a
+page naming the command above instead of a bare 500.
 
 ### Environment
 

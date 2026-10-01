@@ -151,6 +151,21 @@ describe('bot menu', () => {
     expect(turn.next.data.make).toBe('Toyota');
   });
 
+  it('asks again when a session left over from the old prompt answers YES', () => {
+    // A conversation saved before the messages were separated is already
+    // waiting for the make when the customer replies YES.
+    const stale = { ...startSession(), state: 'BUY_MAKE' as const };
+
+    const turn = handleBotTurn(stale, 'YES');
+
+    expect(turn.next.state).toBe('BUY_MAKE');
+    expect(turn.next.data.make).toBeUndefined();
+    expect(turn.reply).toContain('Reply with the car make, e.g. Toyota.');
+
+    const answered = handleBotTurn(turn.next, 'Toyota');
+    expect(answered.next.data.make).toBe('Toyota');
+  });
+
   it('greets a returning customer and skips the name question', () => {
     const options = { customer: { name: 'Sarah Kato' } };
     let turn = handleBotTurn(startSession(), '2', options);

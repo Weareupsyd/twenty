@@ -376,6 +376,15 @@ export const handleBotTurn = (
     }
 
     case 'BUY_MAKE': {
+      // A confirmation is not a make. Sessions left over from when the offer
+      // and this question shared one message arrive here expecting to answer
+      // YES, and "yes" used to be stored as the vehicle make.
+      if (yes(text)) {
+        return {
+          reply: withMenuHint('Reply with the car make, e.g. Toyota.'),
+          next: session,
+        };
+      }
       if (text.replace(/\s/g, '').length < 2) {
         return {
           reply: withMenuHint('Enter the make, e.g. Toyota.'),

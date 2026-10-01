@@ -45,7 +45,13 @@ cat > "$TMP/bin/docker" <<'MOCK'
 case "$1" in
   info) exit 0 ;;
   --version) echo 'Docker version 29.0.0' ;;
-  inspect) echo "${TEST_RUNNING:-true}" ;;
+  inspect)
+    if [[ "$*" == *Config.Env* ]]; then
+      printf '%b\n' "${TEST_CONTAINER_ENV:-SERVER_URL=http://localhost:2020}"
+      exit 0
+    fi
+    echo "${TEST_RUNNING:-true}"
+    ;;
   exec)
     printf 'docker exec %s\n' "$*" >> "$COMMAND_LOG"
     if [[ "$*" == *seed:dev* ]]; then
@@ -116,6 +122,9 @@ MOCK
 cat > "$TMP/protecta/app/node_modules/.bin/twenty" <<'MOCK'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$COMMAND_LOG"
+# start.sh hands the container's public URL over as SERVER_URL; its own
+# localhost SERVER_URL is not exported, so anything seen here was intended.
+[[ -n "${SERVER_URL-}" ]] && printf 'env SERVER_URL=%s\n' "$SERVER_URL" >> "$COMMAND_LOG"
 if [[ "$1" == docker:start ]]; then exit 1; fi
 if [[ "$1" == remote:status && "${TEST_REMOTE_VALID:-0}" == 1 ]]; then
   echo '  Auth:    api-key (valid)'
@@ -130,12 +139,15 @@ echo "$MINTED_TOKEN"
 MOCK
 chmod +x "$TMP/bin/"* "$TMP/protecta/app/node_modules/.bin/twenty" "$TMP/protecta/create-api-key.sh"
 
-run() { bash "$TMP/protecta/start.sh" --port 3030 > "$TMP/output" 2>&1; }
+run() { bash "$TMP/protecta/start.sh" --port 3030 "$@" > "$TMP/output" 2>&1; }
 reset_env() {
   unset TWENTY_API_KEY TWENTY_API_KEY_FILE TEST_REJECT_KEYS TEST_HEALTHY TEST_RUNNING TEST_COLD \
     TEST_NODE_MAJOR TEST_REMOTE_VALID SKIP_NODE_BOOTSTRAP PKG_MANAGER SEED_REPAIR \
     TEST_WORKSPACE_ROWS_FILE TEST_WORKSPACE_ROWS_AFTER_FILE TEST_MEMBER_COUNT TEST_SEED_LOG \
+    TEST_CONTAINER_ENV PUBLIC_URL PUBLIC_BASE_URL CADDYFILE \
     2>/dev/null || true
+  rm -f "$TMP/bin/caddy" "$TMP/protecta/Caddyfile" "$TMP/protecta/scripts/set-server-url.sh"
+  unset SERVER_URL_APPLY 2>/dev/null || true
   export SKIP_INSTALL=1
   rm -f "$TMP/protecta/.twenty-api-key" "$SEED_MARKER"
   : > "$COMMAND_LOG"
@@ -379,3 +391,100 @@ grep -q "Document Generator: generated schema has no 'insurancePolicies'" "$TMP/
 grep -q "Protecta Bode: generated schema has no 'generatedDocuments'" "$TMP/output"
 grep -q 'run ./start.sh once more' "$TMP/output"
 echo 'PASS cross-app clients: a missing object is reported with the remedy'
+
+# 21. A public URL is handed to the container, not used for local calls --------
+# Twenty builds the absolute URLs it publishes from SERVER_URL, so a VPS
+# container created with localhost makes browsers call http://localhost/rest.
+# start.sh keeps talking to localhost itself and passes the public URL on.
+reset_env
+export TEST_COLD=1 TWENTY_API_KEY=test-only PUBLIC_URL=https://crm.example.com
+run
+grep -q 'public URL: https://crm.example.com' "$TMP/output"
+grep -q 'docker:start --port 3030' "$COMMAND_LOG"
+grep -q '^env SERVER_URL=https://crm.example.com$' "$COMMAND_LOG"
+grep -q 'Publishes:' "$TMP/output"
+# The running container was created earlier, so it still publishes localhost and
+# cannot be changed without a recreate: name the command that does it.
+grep -q 'publishes itself as http://localhost:2020, not https://crm.example.com' "$TMP/output"
+grep -q './scripts/set-server-url.sh --url https://crm.example.com --apply' "$TMP/output"
+echo 'PASS public URL: passed to docker:start, mismatch reported with the repair'
+
+# 22. Without a public URL nothing changes and nothing is claimed --------------
+reset_env
+export TEST_COLD=1 TWENTY_API_KEY=test-only
+run
+! grep -q '^env SERVER_URL=' "$COMMAND_LOG"
+! grep -q 'publishes itself as' "$TMP/output"
+grep -q 'Publishes:  localhost' "$TMP/output"
+echo 'PASS no public URL: the localhost default is kept and shown'
+
+# 23. A container that already publishes the URL is left alone ----------------
+reset_env
+export TWENTY_API_KEY=test-only PUBLIC_URL=https://crm.example.com
+export TEST_CONTAINER_ENV='SERVER_URL=https://crm.example.com'
+run
+! grep -q 'publishes itself as' "$TMP/output"
+! grep -q 'set-server-url.sh' "$TMP/output"
+echo 'PASS matching SERVER_URL: no repair is suggested'
+
+# 24. Caddy on this machine supplies the domain -------------------------------
+# The committed Caddyfile is a template in every checkout, so it may only decide
+# the public URL where Caddy is actually installed.
+reset_env
+export TEST_COLD=1 TWENTY_API_KEY=test-only
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/bin/caddy"
+chmod +x "$TMP/bin/caddy"
+printf 'protecta.example.org {\n    reverse_proxy localhost:2020\n}\n' > "$TMP/protecta/Caddyfile"
+run
+grep -q '^env SERVER_URL=https://protecta.example.org$' "$COMMAND_LOG"
+rm -f "$TMP/bin/caddy" "$TMP/protecta/Caddyfile"
+
+# Without Caddy the same template is ignored rather than published.
+reset_env
+export TEST_COLD=1 TWENTY_API_KEY=test-only
+printf 'protecta.example.org {\n    reverse_proxy localhost:2020\n}\n' > "$TMP/protecta/Caddyfile"
+run
+! grep -q '^env SERVER_URL=' "$COMMAND_LOG"
+rm -f "$TMP/protecta/Caddyfile"
+echo 'PASS Caddyfile: used when Caddy is installed, ignored otherwise'
+
+# 25. A malformed public URL is dropped instead of breaking the container -----
+reset_env
+export TEST_COLD=1 TWENTY_API_KEY=test-only PUBLIC_URL=https://crm.example.com/twenty
+run
+! grep -q '^env SERVER_URL=' "$COMMAND_LOG"
+grep -q 'Publishes:  localhost' "$TMP/output"
+echo 'PASS malformed public URL: ignored, localhost kept'
+
+# 26. --apply-public-url repairs the container at the end of the run ----------
+# The published CLI creates the container with SERVER_URL=localhost and a
+# container keeps the environment it was created with, so handing the URL to
+# docker:start is not enough: the recreate has to be offered as well.
+reset_env
+export TWENTY_API_KEY=test-only
+mkdir -p "$TMP/protecta/scripts"
+printf '#!/usr/bin/env bash\nprintf "set-server-url %%s\\n" "$*" >> "$COMMAND_LOG"\n' \
+  > "$TMP/protecta/scripts/set-server-url.sh"
+run --public-url https://crm.example.com --apply-public-url
+grep -q '^set-server-url --url https://crm.example.com --apply$' "$COMMAND_LOG"
+! grep -q 'publishes itself as' "$TMP/output"
+
+# SERVER_URL_APPLY=1 is the same switch for scripted deploys.
+reset_env
+export TWENTY_API_KEY=test-only SERVER_URL_APPLY=1
+mkdir -p "$TMP/protecta/scripts"
+printf '#!/usr/bin/env bash\nprintf "set-server-url %%s\\n" "$*" >> "$COMMAND_LOG"\n' \
+  > "$TMP/protecta/scripts/set-server-url.sh"
+run --public-url https://crm.example.com
+grep -q '^set-server-url --url https://crm.example.com --apply$' "$COMMAND_LOG"
+echo 'PASS --apply-public-url: the container is recreated to publish the URL'
+
+# 27. A failing repair is reported, not swallowed -----------------------------
+reset_env
+export TWENTY_API_KEY=test-only
+mkdir -p "$TMP/protecta/scripts"
+printf '#!/usr/bin/env bash\nexit 1\n' > "$TMP/protecta/scripts/set-server-url.sh"
+run --public-url https://crm.example.com --apply-public-url
+grep -q 'could not recreate twenty-app-dev' "$TMP/output"
+grep -q './scripts/set-server-url.sh --url https://crm.example.com --apply' "$TMP/output"
+echo 'PASS failed repair: reported with the command to run by hand'

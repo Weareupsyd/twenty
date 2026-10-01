@@ -455,6 +455,8 @@ the system Node is older (set `SKIP_NODE_BOOTSTRAP=1` to turn that off), so
 | Rotate the workspace API key | `./start.sh --new-api-key` |
 | Repair a failed first-boot seed | `./start.sh --reseed` |
 | Repair a policy download that 500s on a missing object | `./start.sh` (re-syncs and verifies both clients) |
+| Publish the server as the domain instead of localhost | `./scripts/set-server-url.sh --url https://… --apply` |
+| Set the URL used in customer links | `./scripts/set-public-url.sh https://…` |
 | Mint a key without deploying | `./create-api-key.sh` |
 | Check a key | `./create-api-key.sh --check` |
 | Enable local Ollama as a language model | `./enable-ollama.sh --pull --apply` |
@@ -495,6 +497,60 @@ cd ~/twenty/protecta      # your checkout
 affected; run the full `./start.sh` when Protecta also cannot see
 `generatedDocuments`. While a client is stale the download route answers with a
 page naming the command above instead of a bare 500.
+
+### The browser calls the REST API on localhost
+
+Twenty builds the absolute URLs it publishes from the container's `SERVER_URL`:
+the config the front-end reads, OAuth redirects, emails and asset links. The
+`twenty docker:start` default is `http://localhost:<port>`, so on a VPS the
+browser ends up requesting `http://localhost:<port>/rest/...` and fails, even
+though the IP and the domain both work. Check what the container publishes:
+
+```bash
+docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' twenty-app-dev | grep '^SERVER_URL='
+```
+
+If it says localhost, repair it without touching the database — about a minute
+of downtime, and the previous container is kept until the new one is healthy:
+
+```bash
+cd ~/twenty/protecta
+./scripts/set-server-url.sh --url https://protectabode.weareupsyd.com          # shows the plan
+./scripts/set-server-url.sh --url https://protectabode.weareupsyd.com --apply  # recreates it
+```
+
+A container keeps the environment it was created with, so neither a restart nor
+a re-sync changes it, and the published `twenty` CLI always creates it with
+`SERVER_URL=http://localhost:<port>`. `start.sh` therefore hands the URL to
+`docker:start` (which a CLI built from this repository honours) *and* can run the
+recreate itself once the syncs are done:
+
+```bash
+./start.sh --public-url https://protectabode.weareupsyd.com --apply-public-url
+SERVER_URL_APPLY=1 ./start.sh --public-url http://203.0.113.10:2020   # same switch
+```
+
+New deployments get it right from the start:
+
+- `./install.sh --with-caddy --domain <domain>` passes
+  `--public-url https://<domain> --apply-public-url` to `start.sh`;
+- `PUBLIC_URL=<url> ./start.sh`, or `./start.sh --public-url <url>`, says it by
+  hand — an IP works too: `PUBLIC_URL=http://203.0.113.10:2020 ./start.sh`. Without
+  `--apply-public-url` an already-running container is left alone and `start.sh`
+  prints the `set-server-url.sh` command instead;
+- with Caddy installed on that machine, `./start.sh` reads the domain from the
+  Caddyfile (the committed template is ignored elsewhere, so a development
+  machine never publishes the production domain).
+
+What the scripts do *on the VPS itself* still uses `http://localhost:<port>`:
+health checks, the CLI remote, `create-api-key.sh` and `set-public-url.sh` all
+run on that machine, where localhost is the correct address. Customer-facing
+links are a separate setting — the `PUBLIC_BASE_URL` application variable, which
+should match the published URL:
+
+```bash
+./scripts/set-public-url.sh https://protectabode.weareupsyd.com
+```
 
 ### Environment
 

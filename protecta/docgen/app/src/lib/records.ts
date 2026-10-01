@@ -85,7 +85,7 @@ export class CoreDbClient implements DbClient {
         },
         edges: { node: selection(select, objectPlural) },
       },
-    })) as Record<string, { edges?: GraphQlEdge[] }>;
+    })) as unknown as Record<string, { edges?: GraphQlEdge[] }>;
     return (result[objectPlural]?.edges ?? []).map((edge) => edge.node);
   }
 
@@ -96,7 +96,7 @@ export class CoreDbClient implements DbClient {
         __args: { data },
         id: true,
       },
-    })) as Record<string, RecordData>;
+    })) as unknown as Record<string, RecordData>;
     if (!result[key]?.id)
       throw new Error(`Record mutation ${key} returned no record.`);
     return { ...data, ...result[key] };
@@ -113,7 +113,7 @@ export class CoreDbClient implements DbClient {
         __args: { id, data },
         id: true,
       },
-    })) as Record<string, RecordData>;
+    })) as unknown as Record<string, RecordData>;
     if (!result[key]?.id)
       throw new Error(`Record mutation ${key} returned no record.`);
     return { ...data, ...result[key] };

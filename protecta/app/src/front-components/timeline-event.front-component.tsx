@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CoreApiClient } from 'twenty-client-sdk/core';
+import { coreGraphQlClient } from 'src/lib/core-client';
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { useTimelineActivityId } from 'twenty-sdk/front-component';
 import { FC_TIMELINE_EVENT } from 'src/constants/universal-identifiers';
@@ -9,7 +9,7 @@ const Component = () => {
   useEffect(() => {
     let active = true;
     if (id)
-      new CoreApiClient({ runAs: 'user' })
+      coreGraphQlClient({ runAs: 'user' })
         .query({
           timelineActivities: {
             __args: { filter: { id: { eq: id } }, first: 1 },

@@ -1,7 +1,7 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { EFFECT_POLICY_PDF } from 'src/constants/universal-identifiers';
 import { useEffect, useState, type CSSProperties } from 'react';
-import { CoreApiClient } from 'twenty-client-sdk/core';
+import { coreGraphQlClient } from 'src/lib/core-client';
 import { useSelectedRecordIds } from 'twenty-sdk/front-component';
 
 const PRIMARY_STYLE: CSSProperties = {
@@ -38,7 +38,7 @@ const Component = () => {
 
     (async () => {
       try {
-        const client = new CoreApiClient();
+        const client = coreGraphQlClient();
         const data = (await client.query({
           insurancePolicies: {
             __args: { filter: { id: { eq: ids[0] } }, first: 1 },

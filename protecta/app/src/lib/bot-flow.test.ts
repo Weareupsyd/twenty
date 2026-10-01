@@ -28,6 +28,10 @@ describe('bot menu', () => {
     expect(turn.next.state).toBe('BUY_VALUE');
 
     turn = handleBotTurn(turn.next, '5000000');
+    expect(turn.next.state).toBe('BUY_OFFER');
+    expect(turn.reply).not.toContain('What is the make?');
+
+    turn = handleBotTurn(turn.next, 'YES');
     expect(turn.next.state).toBe('BUY_MAKE');
 
     turn = handleBotTurn(turn.next, 'Toyota');
@@ -118,6 +122,35 @@ describe('bot menu', () => {
     expect(turn.action?.kind).toBe('CREATE_CLAIM');
   });
 
+  it('keeps the cover offer and the make question in separate messages', () => {
+    let turn = handleBotTurn(startSession(), '2');
+    turn = handleBotTurn(turn.next, '15000000');
+
+    expect(turn.next.state).toBe('BUY_OFFER');
+    expect(turn.reply).toContain('Reply YES to get this cover, or MENU.');
+    expect(turn.reply).not.toContain('What is the make?');
+    expect(turn.next.data.vehicleValue).toBe('15000000');
+
+    // Only an explicit YES starts the questions…
+    turn = handleBotTurn(turn.next, 'YES');
+    expect(turn.reply).toBe('What is the make? (e.g. Toyota)');
+    expect(turn.next.state).toBe('BUY_MAKE');
+
+    // …and anything else closes the offer instead of becoming the make.
+    const closed = handleBotTurn(turn.next, 'MENU');
+    expect(closed.next.state).toBe('IDLE');
+    expect(closed.reply).toContain('Protecta Bode');
+  });
+
+  it('never stores YES as the car make', () => {
+    let turn = handleBotTurn(startSession(), '2');
+    turn = handleBotTurn(turn.next, '15000000');
+    turn = handleBotTurn(turn.next, 'YES');
+    turn = handleBotTurn(turn.next, 'Toyota');
+
+    expect(turn.next.data.make).toBe('Toyota');
+  });
+
   it('greets a returning customer and skips the name question', () => {
     const options = { customer: { name: 'Sarah Kato' } };
     let turn = handleBotTurn(startSession(), '2', options);
@@ -130,6 +163,8 @@ describe('bot menu', () => {
     turn = handleBotTurn(turn.next, '1', options);
     expect(turn.next.state).toBe('BUY_VALUE');
     turn = handleBotTurn(turn.next, '5000000', options);
+    expect(turn.next.state).toBe('BUY_OFFER');
+    turn = handleBotTurn(turn.next, 'YES', options);
     turn = handleBotTurn(turn.next, 'Toyota', options);
     turn = handleBotTurn(turn.next, 'Premio', options);
     turn = handleBotTurn(turn.next, '2018', options);

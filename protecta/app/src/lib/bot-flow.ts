@@ -6,6 +6,7 @@ export type BotState =
   | 'CALC_OFFER'
   | 'BUY_INTENT'
   | 'BUY_VALUE'
+  | 'BUY_OFFER'
   | 'BUY_MAKE'
   | 'BUY_MODEL'
   | 'BUY_YEAR'
@@ -351,9 +352,27 @@ export const handleBotTurn = (
         };
       }
       return {
-        reply: `${moneyReply(value, rate)}\n\nWhat is the make? (e.g. Toyota)`,
-        next: withState(session, 'BUY_MAKE', { vehicleValue: String(value) }),
+        reply: moneyReply(value, rate),
+        next: withState(session, 'BUY_OFFER', { vehicleValue: String(value) }),
       };
+    }
+
+    // The offer and the first onboarding question stay in separate messages:
+    // asking for the make alongside "Reply YES" made YES itself land in
+    // BUY_MAKE, where it was accepted as the car make.
+    case 'BUY_OFFER': {
+      if (yes(text)) {
+        return {
+          reply: 'What is the make? (e.g. Toyota)',
+          next: withState(session, 'BUY_MAKE'),
+        };
+      }
+      return menuTurn(
+        session,
+        'Cover cancelled.',
+        options.botMenu,
+        options.welcomeMessage,
+      );
     }
 
     case 'BUY_MAKE': {

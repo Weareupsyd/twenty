@@ -816,6 +816,36 @@ verify_cross_app_clients() {
   fi
 }
 
+# The invoice, receipt and policy PDFs are HTML templates rendered to PDF by
+# the Gotenberg Chromium service. On the default setup it is
+# http://gotenberg:3000 on Twenty's private Docker network with no published
+# port, so from this host its health is decided by the container running; a
+# custom URL (HTML_TO_PDF_URL / PROTECTA_HTML_TO_PDF_URL / DOCGEN_HTML_TO_PDF_URL)
+# is probed directly. When the renderer is unreachable those documents fall
+# back to a plain drawn PDF, so a missing renderer is surfaced here instead of
+# silently degrading the first customer download.
+verify_renderer() {
+  step "Checking the HTML-to-PDF renderer"
+  local url="${HTML_TO_PDF_URL:-${PROTECTA_HTML_TO_PDF_URL:-${DOCGEN_HTML_TO_PDF_URL:-http://gotenberg:3000/forms/chromium/convert/html}}}"
+  local rest="${url#*//}"
+  local hostport="${rest%%/*}"
+  local host="${hostport%%:*}"
+  local origin="${url%%//*}//${hostport}"
+
+  if [[ "$host" == "gotenberg" || "$host" == "protecta-gotenberg" ]]; then
+    if docker ps --filter "name=protecta-gotenberg" --format '{{.Names}}' 2>/dev/null | grep -q .; then
+      info "renderer is running (protecta-gotenberg); invoice, receipt and policy PDFs render from their HTML templates"
+    else
+      warn "the Chromium renderer is not running - invoices, receipts and policy PDFs will fall back to the plain drawn version."
+      warn "start it with: docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg"
+    fi
+  elif curl -fsS --max-time 10 -o /dev/null "${origin}/health" 2>/dev/null; then
+    info "renderer answered at $origin"
+  else
+    warn "no answer from the renderer at $origin - invoices, receipts and policy PDFs will fall back to the plain drawn version."
+  fi
+}
+
 sync_linked_apps
 
 # --- Sync the app ------------------------------------------------------------
@@ -828,6 +858,7 @@ if (( WATCH )); then
   # on a workspace that already ran once, Protecta's objects exist and the
   # linked apps pick them up here.
   sync_linked_apps
+  verify_renderer
   step "Syncing app and watching src/ (Ctrl-C to stop watching)"
   "$TWENTY" dev "$APP_DIR"
 else
@@ -837,6 +868,7 @@ else
   # clients that can read them.
   sync_linked_apps
   verify_cross_app_clients
+  verify_renderer
 fi
 
 # --- What the container publishes itself as -----------------------------------

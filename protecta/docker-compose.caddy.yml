@@ -42,7 +42,13 @@ services:
     expose:
       - "3000"
     networks:
-      - twenty
+      twenty:
+        # The Protecta and DocGen apps dial http://gotenberg:3000, but the
+        # container_name is protecta-gotenberg. Pin the service name as a
+        # network alias so it resolves on Twenty's shared network regardless
+        # of how Compose registers service names on an external network.
+        aliases:
+          - gotenberg
 
   evolution-api:
     image: atendai/evolution-api:latest

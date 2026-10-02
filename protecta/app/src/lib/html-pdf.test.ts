@@ -11,12 +11,24 @@ describe('htmlToPdfUrl', () => {
     expect(htmlToPdfUrl({} as NodeJS.ProcessEnv)).toBe(DEFAULT_HTML_TO_PDF_URL);
   });
   it('prefers the app variable and accepts the DocGen one', () => {
+    expect(htmlToPdfUrl({ HTML_TO_PDF_URL: 'http://r/app' } as NodeJS.ProcessEnv)).toBe(
+      'http://r/app',
+    );
     expect(htmlToPdfUrl({ PROTECTA_HTML_TO_PDF_URL: 'http://r/a' } as NodeJS.ProcessEnv)).toBe(
       'http://r/a',
     );
     expect(htmlToPdfUrl({ DOCGEN_HTML_TO_PDF_URL: 'http://r/b' } as NodeJS.ProcessEnv)).toBe(
       'http://r/b',
     );
+  });
+
+  it('prefers the app variable over the DocGen fallback when both are set', () => {
+    expect(
+      htmlToPdfUrl({
+        HTML_TO_PDF_URL: 'http://r/app',
+        DOCGEN_HTML_TO_PDF_URL: 'http://r/b',
+      } as NodeJS.ProcessEnv),
+    ).toBe('http://r/app');
   });
 });
 

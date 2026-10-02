@@ -534,8 +534,7 @@ export const PERSON_AGENT_POLICIES = '55283414-2d87-4028-9ed5-4739890fa955';
 export const PERSON_COMMISSION_RATE = 'f59af6f5-9ea1-4d7d-a9f0-f992cae00f20';
 export const CREATE_POLICY_COMMISSION_ON_UPDATE = '372d75ff-f180-46d3-ae33-dc96cae6492a';
 
-// Quote → policy conversion + protected full-policy PDF download action
-export const QUOTE_CONVERT = '5b00700c-75f8-4588-8d9c-a6c48bf1ed82';
+// Staff-only quote → policy conversion + protected full-policy PDF download action
 export const EFFECT_QUOTE_CONVERT = '9bd5755c-084f-4ebb-b3c7-2607be00f86d';
 export const STAFF_QUOTE_CONVERT = '78cdc32c-50f7-4b47-9184-4a107a2c4a37';
 export const QUOTE_PDF = 'cd458616-b912-42da-9e8b-a83bcb98202d';

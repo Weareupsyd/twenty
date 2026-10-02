@@ -81,28 +81,7 @@ export const renderQuotePage = (quote: RecordData, payUrl: string): string =>
 <div class="total">${escapeHtml(formatUgx(Number(quote.premium ?? 0)))}</div>
 <p class="muted">1.5% of vehicle value · 12 months comprehensive-equivalent motor cover.</p>
 ${quote.status === 'QUOTED' ? `<a class="cta" href="/s/protecta/?ref=${encodeURIComponent(String(quote.reference))}">Pay with mobile money — resume & complete</a><p class="muted" style="margin-top:10px">Your quote is saved. If you abandon payment you can return via <a href="/s/protecta/quotes/resume?ref=${encodeURIComponent(String(quote.reference))}">this link</a> or <a href="/s/protecta/quotes/resume">Find my quotes</a> with phone ${escapeHtml(String(quote.policyholderPhone ?? ''))} to complete payment and your policy will be created.</p>` : (quote.status === 'ACCEPTED' ? `<div class="note">This quote is already paid. <a class="btn" href="/s/protecta/policies/doc?ref=${encodeURIComponent(String(quote.reference))}">Download full policy PDF</a></div>` : '')}
-${quote.status === 'QUOTED' ? `<div class="no-print" style="margin-top:10px"><button class="btn" id="convertBtn" onclick="convertQuote('${escapeHtml(String(quote.reference))}')">✓ Convert to policy</button><div id="convertAlert" class="alert"></div></div>` : ''}
-<p class="muted">Questions? WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')}.</p>
-<script>
-function convertQuote(ref){
-  var btn=document.getElementById('convertBtn'); var alert=document.getElementById('convertAlert');
-  if(!btn) return;
-  btn.disabled=true; btn.textContent='Converting…'; alert.classList.remove('show');
-  fetch('/s/protecta/quotes/convert', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({quoteRef: ref})})
-    .then(function(r){
-      if(r.status===401 || r.status===403) throw new Error('Please sign in as staff in Twenty, then use the quote record → “Convert to policy” (pinned command). This button requires staff auth.');
-      return r.json().then(function(j){ return {ok:r.ok, body:j}; });
-    })
-    .then(function(res){
-      if(!res.ok || res.body.ok===false) throw new Error(res.body.error||'Conversion failed');
-      var policyNo = res.body.policy ? res.body.policy.policyNo : (res.body.policyNo||'');
-      if(!policyNo) throw new Error('Policy created but number missing. Check Policies → search by quote ref '+ref);
-      alert.textContent='Policy '+policyNo+' created. Redirecting…'; alert.classList.add('show');
-      setTimeout(function(){ window.location.href='/s/protecta/policies/doc?ref='+encodeURIComponent(policyNo); }, 900);
-    })
-    .catch(function(e){ alert.textContent=e.message||'Could not convert quote.'; alert.classList.add('show'); btn.disabled=false; btn.textContent='✓ Convert to policy'; });
-}
-</script>`,
+<p class="muted">Questions? WhatsApp ${escapeHtml(process.env.SUPPORT_PHONE ?? '')}.</p>`,
   );
 
 export const renderPolicyPage = (policy: RecordData): string =>

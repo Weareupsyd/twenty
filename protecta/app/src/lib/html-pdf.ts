@@ -7,8 +7,14 @@ export const DEFAULT_HTML_TO_PDF_URL =
 
 /** The configured Chromium-backed renderer, if any. */
 export const htmlToPdfUrl = (env: NodeJS.ProcessEnv = process.env): string =>
-  (env.PROTECTA_HTML_TO_PDF_URL ?? env.DOCGEN_HTML_TO_PDF_URL ?? '').trim() ||
-  DEFAULT_HTML_TO_PDF_URL;
+  (
+    // HTML_TO_PDF_URL is this app's own variable (see application.config.ts);
+    // the PROTECTA_/DOCGEN_ names are accepted for cross-app parity.
+    env.HTML_TO_PDF_URL ??
+    env.PROTECTA_HTML_TO_PDF_URL ??
+    env.DOCGEN_HTML_TO_PDF_URL ??
+    ''
+  ).trim() || DEFAULT_HTML_TO_PDF_URL;
 
 /**
  * Render a billing document (invoice, receipt) with the configured Chromium

@@ -47,3 +47,32 @@ describe('renderPolicyPage', () => {
     expect(html).not.toContain('View policy</a>');
   });
 });
+
+describe('renderQuotePage', () => {
+  const quoted = {
+    reference: 'PB-2026-000999',
+    status: 'QUOTED',
+    plate: 'UAB 123X',
+    vehicleMake: 'Toyota',
+    vehicleModel: 'RAV4',
+    vehicleValue: 10_000_000,
+    premium: 150_000,
+    policyholderPhone: '+256701440613',
+  };
+
+  it('never exposes a convert-to-policy action to the customer', () => {
+    const html = renderQuotePage(quoted, '');
+
+    expect(html).not.toContain('Convert to policy');
+    expect(html).not.toContain('convertBtn');
+    expect(html).not.toContain('convertQuote');
+    expect(html).not.toContain('/s/protecta/quotes/convert');
+  });
+
+  it('tells the customer to pay, and that the policy is created automatically', () => {
+    const html = renderQuotePage(quoted, '');
+
+    expect(html).toContain('Pay with mobile money');
+    expect(html).toContain('your policy will be created');
+  });
+});

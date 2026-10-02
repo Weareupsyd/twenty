@@ -34,6 +34,7 @@
 #   SEED_REPAIR=0         never re-run the dev seed, only report the state
 #   PKG_MANAGER           npm (default) or yarn, to install the app's dependencies.
 #   SKIP_INSTALL=1        don't install the app's node_modules
+#   SKIP_RENDERER=1       don't auto-start the Gotenberg HTML-to-PDF renderer
 #   SKIP_REMOTE=1         don't (re)authenticate the CLI remote
 #   SKIP_NODE_BOOTSTRAP=1 don't re-run under Node 24 via npx on old system Node
 #   PUBLIC_URL            URL browsers use to reach this server, e.g.
@@ -819,30 +820,65 @@ verify_cross_app_clients() {
 # The invoice, receipt and policy PDFs are HTML templates rendered to PDF by
 # the Gotenberg Chromium service. On the default setup it is
 # http://gotenberg:3000 on Twenty's private Docker network with no published
-# port, so from this host its health is decided by the container running; a
-# custom URL (HTML_TO_PDF_URL / PROTECTA_HTML_TO_PDF_URL / DOCGEN_HTML_TO_PDF_URL)
-# is probed directly. When the renderer is unreachable those documents fall
-# back to a plain drawn PDF, so a missing renderer is surfaced here instead of
-# silently degrading the first customer download.
-verify_renderer() {
-  step "Checking the HTML-to-PDF renderer"
+# port, so from this host its health is decided by the container running. This
+# step STARTS it when it is down (SKIP_RENDERER=1 to opt out) so a single
+# ./start.sh brings up the server, the apps and the renderer together. A custom
+# URL (HTML_TO_PDF_URL / PROTECTA_HTML_TO_PDF_URL / DOCGEN_HTML_TO_PDF_URL)
+# lives outside this compose file, so it is only probed, never started. When the
+# renderer is unreachable those documents fall back to a plain drawn PDF, so a
+# renderer that will not come up is surfaced with the exact command to run.
+renderer_running() {
+  docker ps --filter "name=protecta-gotenberg" --format '{{.Names}}' 2>/dev/null | grep -q .
+}
+
+ensure_renderer() {
+  step "Ensuring the HTML-to-PDF renderer"
   local url="${HTML_TO_PDF_URL:-${PROTECTA_HTML_TO_PDF_URL:-${DOCGEN_HTML_TO_PDF_URL:-http://gotenberg:3000/forms/chromium/convert/html}}}"
   local rest="${url#*//}"
   local hostport="${rest%%/*}"
   local host="${hostport%%:*}"
   local origin="${url%%//*}//${hostport}"
+  local compose="$SCRIPT_DIR/docker-compose.caddy.yml"
 
-  if [[ "$host" == "gotenberg" || "$host" == "protecta-gotenberg" ]]; then
-    if docker ps --filter "name=protecta-gotenberg" --format '{{.Names}}' 2>/dev/null | grep -q .; then
-      info "renderer is running (protecta-gotenberg); invoice, receipt and policy PDFs render from their HTML templates"
+  # A custom renderer URL is external to this compose file: probe it only.
+  if [[ "$host" != "gotenberg" && "$host" != "protecta-gotenberg" ]]; then
+    if curl -fsS --max-time 10 -o /dev/null "${origin}/health" 2>/dev/null; then
+      info "renderer answered at $origin"
     else
-      warn "the Chromium renderer is not running - invoices, receipts and policy PDFs will fall back to the plain drawn version."
-      warn "start it with: docker compose --profile docgen-renderer -f docker-compose.caddy.yml up -d gotenberg"
+      warn "no answer from the renderer at $origin - invoices, receipts and policy PDFs will fall back to the plain drawn version."
     fi
-  elif curl -fsS --max-time 10 -o /dev/null "${origin}/health" 2>/dev/null; then
-    info "renderer answered at $origin"
+    return
+  fi
+
+  if renderer_running; then
+    info "renderer is running (protecta-gotenberg); invoice, receipt and policy PDFs render from their HTML templates"
+    return
+  fi
+
+  if [[ "${SKIP_RENDERER:-0}" == "1" ]]; then
+    warn "renderer is not running and SKIP_RENDERER=1 - invoices, receipts and policy PDFs fall back to the plain drawn version."
+    return
+  fi
+
+  if ! command -v docker >/dev/null || [[ ! -f "$compose" ]]; then
+    warn "cannot start the renderer here (docker or $compose missing); run: docker compose --profile docgen-renderer -f $compose up -d gotenberg"
+    return
+  fi
+
+  info "starting the Chromium renderer (protecta-gotenberg)"
+  if docker compose --profile docgen-renderer -f "$compose" up -d gotenberg 2>/dev/null; then
+    local attempt
+    for attempt in 1 2 3 4 5; do
+      if renderer_running; then break; fi
+      sleep 1
+    done
+    if renderer_running; then
+      info "renderer started; invoice, receipt and policy PDFs render from their HTML templates"
+    else
+      warn "renderer was started but is not up yet; check: docker ps --filter name=protecta-gotenberg"
+    fi
   else
-    warn "no answer from the renderer at $origin - invoices, receipts and policy PDFs will fall back to the plain drawn version."
+    warn "could not start the renderer automatically; run: docker compose --profile docgen-renderer -f $compose up -d gotenberg"
   fi
 }
 
@@ -858,7 +894,7 @@ if (( WATCH )); then
   # on a workspace that already ran once, Protecta's objects exist and the
   # linked apps pick them up here.
   sync_linked_apps
-  verify_renderer
+  ensure_renderer
   step "Syncing app and watching src/ (Ctrl-C to stop watching)"
   "$TWENTY" dev "$APP_DIR"
 else
@@ -868,7 +904,7 @@ else
   # clients that can read them.
   sync_linked_apps
   verify_cross_app_clients
-  verify_renderer
+  ensure_renderer
 fi
 
 # --- What the container publishes itself as -----------------------------------
